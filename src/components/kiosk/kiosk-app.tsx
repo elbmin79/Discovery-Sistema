@@ -6,7 +6,7 @@ import { Camera, Keyboard, QrCode } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { KioskScan } from "@/components/kiosk/kiosk-scan";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { postJson, useSnapshot } from "@/hooks/use-snapshot";
+import { postJson, rememberSnapshot, useSnapshot } from "@/hooks/use-snapshot";
 import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 import { findStudent, findVehicle, findZone, studentGrade, studentName } from "@/lib/school";
 import type { PickupTrip, Snapshot, Student } from "@/lib/types";
@@ -20,14 +20,16 @@ export function KioskApp() {
   const [error, setError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [heldTrip, setHeldTrip] = useState<PickupTrip | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const codeRef = useRef(code);
   const snapshotRef = useRef(snapshot);
 
-  const trip = snapshot?.trips.find(
+  const liveTrip = snapshot?.trips.find(
     (item) => !item.cancelledAt && (item.code === code || item.qrToken === code),
   );
+  const trip = liveTrip ?? heldTrip;
 
   useEffect(() => {
     codeRef.current = code;
@@ -121,12 +123,15 @@ export function KioskApp() {
 
   function takePhoto() {
     if (videoRef.current && videoRef.current.videoWidth > 0) {
+      const source = videoRef.current;
+      const width = 640;
+      const height = Math.round((source.videoHeight / source.videoWidth) * width);
       const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      canvas.width = width;
+      canvas.height = height;
       const context = canvas.getContext("2d");
-      context?.drawImage(videoRef.current, 0, 0);
-      return canvas.toDataURL("image/jpeg", 0.8);
+      context?.drawImage(source, 0, 0, width, height);
+      return canvas.toDataURL("image/jpeg", 0.55);
     }
     return fallbackArrivalPhoto(trip?.pickerName ?? "Llegada");
   }
@@ -136,17 +141,34 @@ export function KioskApp() {
     setCode((current) => (current.length >= 4 ? current : current + digit));
   }
 
-  function lookup(nextCode = code) {
-    if (!snapshot || !nextCode) return;
-    const found = snapshot.trips.find(
+  async function lookup(nextCode = code) {
+    if (!nextCode) return;
+    let current = snapshot;
+    if (!current) return;
+    let found = current.trips.find(
       (item) => !item.cancelledAt && (item.code === nextCode || item.qrToken === nextCode),
     );
+    if (!found) {
+      try {
+        const response = await fetch("/api/state", { cache: "no-store" });
+        if (response.ok) {
+          current = (await response.json()) as Snapshot;
+          rememberSnapshot(current);
+          found = current.trips.find(
+            (item) => !item.cancelledAt && (item.code === nextCode || item.qrToken === nextCode),
+          );
+        }
+      } catch {
+        // keep the local snapshot
+      }
+    }
     if (!found) {
       setError("No encontramos una solicitud con ese código.");
       return;
     }
     setCode(found.code);
-    const open = snapshot.requests.some(
+    setHeldTrip(found);
+    const open = current.requests.some(
       (request) =>
         request.tripId === found.id &&
         request.status !== "cancelled" &&
@@ -180,6 +202,7 @@ export function KioskApp() {
   function reset() {
     stopCamera();
     setCode("");
+    setHeldTrip(null);
     setError(null);
     setCameraError(null);
     setStep("idle");

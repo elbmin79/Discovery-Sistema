@@ -2,6 +2,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 
+export function supabaseUrl() {
+  return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl() && supabaseServiceRoleKey());
 }
@@ -18,10 +22,6 @@ export function getSupabaseAdmin() {
     });
   }
   return client;
-}
-
-function supabaseUrl() {
-  return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 }
 
 function supabaseServiceRoleKey() {

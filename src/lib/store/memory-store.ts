@@ -187,6 +187,22 @@ export class MemoryPickupStore {
     return this.snapshot();
   }
 
+  cancelTrip(tripId: string) {
+    const siblings = this.data.requests.filter((item) => item.tripId === tripId);
+    if (siblings.length === 0) throw new Error("No encontramos esa solicitud.");
+    if (!siblings.every((item) => canCancel(item.status))) {
+      throw new Error("Esta solicitud ya no se puede cancelar.");
+    }
+    const now = new Date().toISOString();
+    for (const request of siblings) {
+      request.status = "cancelled";
+    }
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (trip) trip.cancelledAt = now;
+    this.emit();
+    return this.snapshot();
+  }
+
   deliverTrip(tripId: string, staffName?: string) {
     const requests = this.data.requests.filter(
       (item) => item.tripId === tripId && item.status !== "cancelled" && item.status !== "delivered",

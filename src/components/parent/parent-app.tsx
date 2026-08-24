@@ -76,13 +76,9 @@ export function ParentApp() {
   }
 
   async function cancelTrip(tripId: string) {
-    if (!snapshot) return;
     setBusy(true);
     try {
-      const requests = snapshot.requests.filter((request) => request.tripId === tripId);
-      await Promise.all(
-        requests.map((request) => postJson(`/api/requests/${request.id}/status`, { action: "cancel" })),
-      );
+      await postJson(`/api/trips/${tripId}/cancel`);
     } finally {
       setBusy(false);
     }

@@ -3,11 +3,37 @@
 import { useEffect, useState } from "react";
 import type { Snapshot } from "@/lib/types";
 
+type Listener = (snapshot: Snapshot) => void;
+
+const listeners = new Set<Listener>();
+let latest: Snapshot | null = null;
+
+function isSnapshot(value: unknown): value is Snapshot {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<Snapshot>;
+  return Array.isArray(data.trips) && Array.isArray(data.requests) && typeof data.updatedAt === "string";
+}
+
+function isNewer(next: Snapshot, current: Snapshot | null) {
+  if (!current) return true;
+  return next.updatedAt >= current.updatedAt;
+}
+
+export function rememberSnapshot(next: Snapshot) {
+  if (!isNewer(next, latest)) return;
+  latest = next;
+  for (const listener of listeners) listener(next);
+}
+
 export function useSnapshot() {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(latest);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const listener: Listener = (value) => setSnapshot(value);
+    listeners.add(listener);
+    if (latest) setSnapshot(latest);
+
     let cancelled = false;
 
     async function pull() {
@@ -16,7 +42,7 @@ export function useSnapshot() {
         if (!response.ok) throw new Error("No se pudo cargar el estado.");
         const data = (await response.json()) as Snapshot;
         if (!cancelled) {
-          setSnapshot(data);
+          rememberSnapshot(data);
           setError(null);
         }
       } catch (err) {
@@ -27,21 +53,11 @@ export function useSnapshot() {
     }
 
     pull();
-    const events = new EventSource("/api/events");
-    events.onmessage = (event) => {
-      if (!event.data) return;
-      try {
-        setSnapshot(JSON.parse(event.data) as Snapshot);
-        setError(null);
-      } catch {
-        // ignore malformed frames
-      }
-    };
-    const poll = window.setInterval(pull, 1500);
+    const poll = window.setInterval(pull, 2000);
 
     return () => {
       cancelled = true;
-      events.close();
+      listeners.delete(listener);
       window.clearInterval(poll);
     };
   }, []);
@@ -59,5 +75,6 @@ export async function postJson<T>(url: string, body?: unknown): Promise<T> {
   if (!response.ok) {
     throw new Error(data.error ?? "No se pudo completar la acción.");
   }
+  if (isSnapshot(data)) rememberSnapshot(data);
   return data as T;
 }
