@@ -1,5 +1,5 @@
-import { getStore } from "@/lib/store";
+import { mutateStore } from "@/lib/store";
 
 export async function POST() {
-  return Response.json(getStore().reset());
+  return Response.json(await mutateStore((store) => store.reset()));
 }

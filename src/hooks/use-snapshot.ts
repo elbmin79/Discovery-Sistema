@@ -37,7 +37,7 @@ export function useSnapshot() {
         // ignore malformed frames
       }
     };
-    const poll = window.setInterval(pull, 2500);
+    const poll = window.setInterval(pull, 1500);
 
     return () => {
       cancelled = true;

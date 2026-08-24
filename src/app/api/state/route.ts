@@ -1,7 +1,7 @@
-import { getStore } from "@/lib/store";
+import { readSnapshot } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return Response.json(getStore().snapshot());
+  return Response.json(await readSnapshot());
 }
