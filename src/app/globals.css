@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --forest: #1b4d3e;
+  --forest-deep: #12382d;
+  --forest-soft: #2d6b56;
+  --gold: #c4a15a;
+  --gold-deep: #a4843d;
+  --cream: #f6f1e8;
+  --cream-deep: #ebe3d3;
+  --cream-footer: #d4c8b4;
+  --paper: #fffdf8;
+  --ink: #1c241f;
+  --muted: #5d6b64;
+  --line: #d9cfc0;
+  --danger: #8f3a32;
+  --arrived: #c4a15a;
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-forest-soft: var(--forest-soft);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-cream-footer: var(--cream-footer);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-sans-body);
+  --font-serif: var(--font-serif-display);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+h1,
+h2,
+.font-serif {
+  font-family: var(--font-serif-display), ui-serif, Georgia, serif;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(196 161 90 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgb(196 161 90 / 0);
+  }
+}
+
+.pulse-gold {
+  animation: pulse-soft 1.8s ease-in-out infinite;
+}
+
+.bandia-glow {
+  color: #1558c0;
+  text-shadow:
+    0 0 6px rgb(21 88 192 / 0.55),
+    0 0 14px rgb(21 88 192 / 0.28);
+}
+
+.bandia-glow:hover {
+  color: #1f6ae0;
+  text-shadow:
+    0 0 8px rgb(21 88 192 / 0.75),
+    0 0 18px rgb(21 88 192 / 0.4);
+}
