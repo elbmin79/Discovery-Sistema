@@ -40,6 +40,29 @@ export function ParentTracker({
   const passUrl =
     typeof window !== "undefined" ? `${window.location.origin}/pase/${trip.qrToken}` : "";
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
+  const names = joinKidNames(students.map((student) => student.firstName));
+
+  if (allDelivered) {
+    return (
+      <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-forest px-8 text-center text-paper">
+        <p className="text-xs tracking-[0.22em] uppercase text-gold">{t.deliveredTitle}</p>
+        <h1 className="mt-5 font-serif text-4xl leading-tight">{names}</h1>
+        <p className="mt-3 text-lg text-cream">
+          {locale === "es"
+            ? `${students.length === 1 ? "Ya está" : "Ya están"} con ustedes.`
+            : "They're with you now."}
+        </p>
+        <p className="mt-6 max-w-xs text-base leading-7 text-gold">{t.deliveredWish}</p>
+        <button
+          type="button"
+          onClick={onStartOver}
+          className="mt-10 w-full rounded-full bg-gold py-4 text-lg font-semibold text-forest-deep"
+        >
+          {t.deliveredHome}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,16 +117,6 @@ export function ParentTracker({
         {trip.method === "walk" ? ` · ${t.walking}` : ""}
       </p>
 
-      {allDelivered ? (
-        <button
-          type="button"
-          onClick={onStartOver}
-          className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper"
-        >
-          {t.startOver}
-        </button>
-      ) : null}
-
       {canCancelTrip ? (
         <button type="button" disabled={busy} onClick={onCancel} className="text-sm font-medium text-danger">
           {t.cancelPickup}
@@ -111,6 +124,12 @@ export function ParentTracker({
       ) : null}
     </div>
   );
+}
+
+function joinKidNames(names: string[]) {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return /^[hi]/i.test(names[1]) ? `${names[0]} e ${names[1]}` : `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
 }
 
 function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
