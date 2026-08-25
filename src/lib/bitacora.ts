@@ -117,7 +117,7 @@ export function eventLabel(event: PickupEvent): string {
 export function actorLabel(event: PickupEvent): string {
   if (event.actorRole === "kiosk") return "Kiosco";
   if (event.actorRole === "parent") return "Familia";
-  return event.actorName ?? "Personal";
+  return "Personal";
 }
 
 function gradeLabel(student: Student) {
