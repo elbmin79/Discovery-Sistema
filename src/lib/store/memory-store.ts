@@ -4,12 +4,15 @@ import type {
   ArriveTripInput,
   AuthorizedPerson,
   CreateTripInput,
+  PickupEvent,
   PickupStatus,
   Snapshot,
   Vehicle,
 } from "../types";
 
 type Listener = (snapshot: Snapshot) => void;
+
+const MAX_EVENTS = 800;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -37,6 +40,20 @@ export class MemoryPickupStore {
 
   constructor(seed = createSeedSnapshot()) {
     this.data = seed;
+    if (!Array.isArray(this.data.events)) {
+      this.data.events = [];
+    }
+  }
+
+  private logEvent(event: Omit<PickupEvent, "id" | "at">, at?: string) {
+    this.data.events.unshift({
+      ...event,
+      id: createId("ev"),
+      at: at ?? new Date().toISOString(),
+    });
+    if (this.data.events.length > MAX_EVENTS) {
+      this.data.events = this.data.events.slice(0, MAX_EVENTS);
+    }
   }
 
   snapshot() {
@@ -108,6 +125,16 @@ export class MemoryPickupStore {
       });
     }
 
+    this.logEvent(
+      {
+        type: "trip_created",
+        tripId,
+        actorRole: "parent",
+        actorName: `${guardian.firstName} ${guardian.lastName}`,
+      },
+      now,
+    );
+
     if (input.pickerKind === "guest" || input.pickerKind === "authorized") {
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       this.data.guestPasses.unshift({
@@ -144,6 +171,16 @@ export class MemoryPickupStore {
       }
     }
 
+    this.logEvent(
+      {
+        type: "arrived",
+        tripId: trip.id,
+        actorRole: "kiosk",
+        actorName: trip.pickerName,
+      },
+      now,
+    );
+
     this.emit();
     return this.snapshot();
   }
@@ -158,6 +195,7 @@ export class MemoryPickupStore {
       if (!canCancel(request.status)) {
         throw new Error("Esta solicitud ya no se puede cancelar.");
       }
+      const fromStatus = request.status;
       request.status = "cancelled";
       const siblings = this.data.requests.filter((item) => item.tripId === request.tripId);
       const allStopped = siblings.every(
@@ -167,6 +205,18 @@ export class MemoryPickupStore {
         const trip = this.data.trips.find((item) => item.id === request.tripId);
         if (trip) trip.cancelledAt = now;
       }
+      this.logEvent(
+        {
+          type: "cancelled",
+          tripId: request.tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: staffName ? "staff" : "parent",
+          actorName: staffName,
+          fromStatus,
+        },
+        now,
+      );
       this.emit();
       return this.snapshot();
     }
@@ -177,11 +227,26 @@ export class MemoryPickupStore {
       throw new Error("Ese cambio de estado no está permitido.");
     }
 
+    const fromStatus = request.status;
     request.status = next;
     Object.assign(request, applyStatusTimestamp(next, now));
     if (next === "delivered") {
       request.deliveredByStaffName = staffName ?? "Personal de Discovery";
     }
+
+    this.logEvent(
+      {
+        type: next === "delivered" ? "delivered" : "status_changed",
+        tripId: request.tripId,
+        requestId: request.id,
+        studentId: request.studentId,
+        actorRole: "staff",
+        actorName: staffName ?? "Personal de Discovery",
+        fromStatus,
+        toStatus: next,
+      },
+      now,
+    );
 
     this.emit();
     return this.snapshot();
@@ -195,7 +260,20 @@ export class MemoryPickupStore {
     }
     const now = new Date().toISOString();
     for (const request of siblings) {
+      const fromStatus = request.status;
       request.status = "cancelled";
+      this.logEvent(
+        {
+          type: "cancelled",
+          tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "parent",
+          actorName: this.guardianName(tripId),
+          fromStatus,
+        },
+        now,
+      );
     }
     const trip = this.data.trips.find((item) => item.id === tripId);
     if (trip) trip.cancelledAt = now;
@@ -219,10 +297,29 @@ export class MemoryPickupStore {
       request.status = "delivered";
       request.deliveredAt = now;
       request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      this.logEvent(
+        {
+          type: "delivered",
+          tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "staff",
+          actorName: request.deliveredByStaffName,
+          fromStatus: "ready",
+          toStatus: "delivered",
+        },
+        now,
+      );
     }
 
     this.emit();
     return this.snapshot();
+  }
+
+  private guardianName(tripId: string) {
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    const guardian = trip && this.data.guardians.find((item) => item.id === trip.guardianId);
+    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
   }
 
   updateStudentPhoto(studentId: string, photoUrl: string) {

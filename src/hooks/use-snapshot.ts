@@ -32,7 +32,6 @@ export function useSnapshot() {
   useEffect(() => {
     const listener: Listener = (value) => setSnapshot(value);
     listeners.add(listener);
-    if (latest) setSnapshot(latest);
 
     let cancelled = false;
 

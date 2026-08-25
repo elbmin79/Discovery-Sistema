@@ -93,7 +93,14 @@ async function loadRow(): Promise<StateRow> {
     return { snapshot: seed, version: 1 };
   }
 
-  return { snapshot: data.snapshot as Snapshot, version: data.version ?? 1 };
+  return { snapshot: normalizeSnapshot(data.snapshot as Snapshot), version: data.version ?? 1 };
+}
+
+function normalizeSnapshot(snapshot: Snapshot): Snapshot {
+  if (!Array.isArray(snapshot.events)) {
+    snapshot.events = [];
+  }
+  return snapshot;
 }
 
 async function saveVersioned(snapshot: Snapshot, version: number) {

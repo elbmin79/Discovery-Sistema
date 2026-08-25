@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MonitorSmartphone, Smartphone, TabletSmartphone } from "lucide-react";
+import { ClipboardList, MonitorSmartphone, Smartphone, TabletSmartphone } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { postJson } from "@/hooks/use-snapshot";
 
@@ -27,6 +27,13 @@ const EXPERIENCES = [
     person: "Coordinación de salida",
     detail: "Ve quién llegó y despacha a cada alumno.",
     icon: MonitorSmartphone,
+  },
+  {
+    href: "/bitacora",
+    title: "Bitácora",
+    person: "Registro y auditoría",
+    detail: "Historial del día: entregas, tiempos y quién hizo qué.",
+    icon: ClipboardList,
   },
 ];
 
@@ -59,7 +66,7 @@ export function DemoHub() {
           </p>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3 md:gap-4">
+        <div className="grid gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
           {EXPERIENCES.map((experience) => {
             const Icon = experience.icon;
             return (
