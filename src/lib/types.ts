@@ -125,6 +125,28 @@ export interface PickupRequest {
   deliveredByStaffName?: string;
 }
 
+export type EventActorRole = "parent" | "kiosk" | "staff";
+
+export type PickupEventType =
+  | "trip_created"
+  | "arrived"
+  | "status_changed"
+  | "delivered"
+  | "cancelled";
+
+export interface PickupEvent {
+  id: string;
+  at: string;
+  type: PickupEventType;
+  tripId: string;
+  requestId?: string;
+  studentId?: string;
+  actorRole: EventActorRole;
+  actorName?: string;
+  fromStatus?: PickupStatus;
+  toStatus?: PickupStatus;
+}
+
 export interface Snapshot {
   school: {
     name: string;
@@ -140,6 +162,7 @@ export interface Snapshot {
   trips: PickupTrip[];
   requests: PickupRequest[];
   guestPasses: GuestPass[];
+  events: PickupEvent[];
   updatedAt: string;
 }
 

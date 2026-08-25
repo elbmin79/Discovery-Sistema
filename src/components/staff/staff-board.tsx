@@ -235,6 +235,12 @@ export function StaffBoard({
           >
             Entregados hoy
           </button>
+          <Link
+            href="/bitacora"
+            className="hidden rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest md:inline-flex"
+          >
+            Bitácora
+          </Link>
           <div className="relative">
             <button
               type="button"
@@ -358,16 +364,21 @@ export function StaffBoard({
       ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper p-3 md:hidden">
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setShowDelivered(true);
-          }}
-          className="w-full rounded-full border border-line py-3 text-base font-semibold text-forest"
-        >
-          Entregados hoy · {delivered.length}
-        </button>
+        <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+          <Link
+            href="/bitacora"
+            className="flex-1 rounded-full border border-line py-3 text-center text-base font-semibold text-forest"
+          >
+            Bitácora
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowDelivered(true)}
+            className="flex-1 rounded-full border border-line py-3 text-base font-semibold text-forest"
+          >
+            Entregados hoy · {delivered.length}
+          </button>
+        </div>
       </div>
 
       {showDelivered ? (

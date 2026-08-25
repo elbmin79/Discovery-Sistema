@@ -1,5 +1,5 @@
-import { SCHOOL } from "../school";
-import type { Snapshot } from "../types";
+import { LEVEL_LABELS, SCHOOL } from "../school";
+import type { PickupEvent, Snapshot } from "../types";
 
 function minutesAgo(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
@@ -10,7 +10,7 @@ export const BENJAMIN_GUARDIAN_ID = "g-benjamin";
 export const STAFF_ID = "st-gabriela";
 
 export function createSeedSnapshot(): Snapshot {
-  return {
+  const snapshot: Snapshot = {
     school: {
       name: SCHOOL.name,
       city: SCHOOL.city,
@@ -420,6 +420,7 @@ export function createSeedSnapshot(): Snapshot {
       },
     ],
     guestPasses: [],
+    events: [],
     trips: [
       {
         id: "t-lopez",
@@ -552,6 +553,94 @@ export function createSeedSnapshot(): Snapshot {
     ],
     updatedAt: new Date().toISOString(),
   };
+  snapshot.events = buildSeedEvents(snapshot);
+  return snapshot;
+}
+
+function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
+  const events: PickupEvent[] = [];
+  let index = 0;
+  const push = (event: Omit<PickupEvent, "id">) => {
+    index += 1;
+    events.push({ ...event, id: `ev-seed-${index}` });
+  };
+
+  const guardianName = (tripId: string) => {
+    const trip = snapshot.trips.find((item) => item.id === tripId);
+    const guardian = trip && snapshot.guardians.find((item) => item.id === trip.guardianId);
+    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+  };
+
+  const stageStaff = (studentId?: string) => {
+    const student = snapshot.students.find((item) => item.id === studentId);
+    if (!student) return "Personal de Discovery";
+    return LEVEL_LABELS[student.level].stage === "preschool"
+      ? "Mtra. Alejandra Ríos"
+      : "Mtro. Luis Ortega";
+  };
+
+  for (const trip of snapshot.trips) {
+    push({
+      at: trip.createdAt,
+      type: "trip_created",
+      tripId: trip.id,
+      actorRole: "parent",
+      actorName: guardianName(trip.id),
+    });
+    if (trip.arrivedAt) {
+      push({
+        at: trip.arrivedAt,
+        type: "arrived",
+        tripId: trip.id,
+        actorRole: "kiosk",
+        actorName: trip.pickerName,
+      });
+    }
+  }
+
+  for (const request of snapshot.requests) {
+    if (request.preparingAt) {
+      push({
+        at: request.preparingAt,
+        type: "status_changed",
+        tripId: request.tripId,
+        requestId: request.id,
+        studentId: request.studentId,
+        actorRole: "staff",
+        actorName: stageStaff(request.studentId),
+        fromStatus: "arrived",
+        toStatus: "preparing",
+      });
+    }
+    if (request.readyAt) {
+      push({
+        at: request.readyAt,
+        type: "status_changed",
+        tripId: request.tripId,
+        requestId: request.id,
+        studentId: request.studentId,
+        actorRole: "staff",
+        actorName: stageStaff(request.studentId),
+        fromStatus: "preparing",
+        toStatus: "ready",
+      });
+    }
+    if (request.deliveredAt) {
+      push({
+        at: request.deliveredAt,
+        type: "delivered",
+        tripId: request.tripId,
+        requestId: request.id,
+        studentId: request.studentId,
+        actorRole: "staff",
+        actorName: request.deliveredByStaffName ?? stageStaff(request.studentId),
+        fromStatus: "ready",
+        toStatus: "delivered",
+      });
+    }
+  }
+
+  return events.sort((a, b) => b.at.localeCompare(a.at));
 }
 
 export function fallbackArrivalPhoto(label: string) {
