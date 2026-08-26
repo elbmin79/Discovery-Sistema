@@ -24,6 +24,10 @@ export function canCancel(status: PickupStatus) {
   return status === "on_the_way";
 }
 
+export function canComplete(status: PickupStatus) {
+  return status === "preparing" || status === "ready";
+}
+
 export function nextStatus(status: PickupStatus) {
   return FORWARD[status];
 }

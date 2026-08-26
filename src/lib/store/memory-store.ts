@@ -1,4 +1,12 @@
-import { applyStatusTimestamp, canAdvance, canCancel, canUndo, nextStatus, previousStatus } from "../pickup-machine";
+import {
+  applyStatusTimestamp,
+  canAdvance,
+  canCancel,
+  canComplete,
+  canUndo,
+  nextStatus,
+  previousStatus,
+} from "../pickup-machine";
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
 import type {
   ArriveTripInput,
@@ -185,11 +193,36 @@ export class MemoryPickupStore {
     return this.snapshot();
   }
 
-  setRequestStatus(requestId: string, action: "advance" | "undo" | "cancel", staffName?: string) {
+  setRequestStatus(requestId: string, action: "advance" | "undo" | "cancel" | "complete", staffName?: string) {
     const request = this.data.requests.find((item) => item.id === requestId);
     if (!request) throw new Error("No encontramos esa solicitud.");
 
     const now = new Date().toISOString();
+
+    if (action === "complete") {
+      if (!canComplete(request.status)) {
+        throw new Error("Ese cambio de estado no está permitido.");
+      }
+      const fromStatus = request.status;
+      request.status = "delivered";
+      request.deliveredAt = now;
+      request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      this.logEvent(
+        {
+          type: "delivered",
+          tripId: request.tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "staff",
+          actorName: request.deliveredByStaffName,
+          fromStatus,
+          toStatus: "delivered",
+        },
+        now,
+      );
+      this.emit();
+      return this.snapshot();
+    }
 
     if (action === "cancel") {
       if (!canCancel(request.status)) {

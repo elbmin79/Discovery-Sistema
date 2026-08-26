@@ -434,6 +434,8 @@ export function createSeedSnapshot(): Snapshot {
         vehicleId: "v-crv",
         qrToken: "pass-lopez",
         createdAt: minutesAgo(8),
+        arrivedAt: minutesAgo(3),
+        arrivalPhoto: fallbackArrivalPhoto("Honda CR-V blanca"),
       },
       {
         id: "t-soto",
@@ -499,8 +501,9 @@ export function createSeedSnapshot(): Snapshot {
         id: "r-mateo",
         tripId: "t-lopez",
         studentId: "s-mateo",
-        status: "on_the_way",
+        status: "arrived",
         requestedAt: minutesAgo(8),
+        arrivedAt: minutesAgo(3),
       },
       {
         id: "r-regina",
@@ -523,11 +526,10 @@ export function createSeedSnapshot(): Snapshot {
         id: "r-camila",
         tripId: "t-navarro",
         studentId: "s-camila",
-        status: "ready",
+        status: "preparing",
         requestedAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
-        preparingAt: minutesAgo(11),
-        readyAt: minutesAgo(3),
+        preparingAt: minutesAgo(3),
       },
       {
         id: "r-iker",
