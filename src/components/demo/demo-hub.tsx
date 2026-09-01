@@ -23,9 +23,9 @@ const EXPERIENCES = [
   },
   {
     href: "/personal",
-    title: "Personal",
-    person: "Coordinación de salida",
-    detail: "Ve quién llegó y despacha a cada alumno.",
+    title: "Tablero de salida",
+    person: "Maestro de turno",
+    detail: "Ve quién llegó y despacha a cada alumno con un toque.",
     icon: MonitorSmartphone,
   },
   {

@@ -1,5 +1,5 @@
-import { StaffApp } from "@/components/staff/staff-app";
+import { DismissalApp } from "@/components/staff/dismissal-app";
 
 export default function PersonalPage() {
-  return <StaffApp />;
+  return <DismissalApp />;
 }

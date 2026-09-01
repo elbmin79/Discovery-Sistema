@@ -1,6 +1,15 @@
-import { applyStatusTimestamp, canAdvance, canCancel, canUndo, nextStatus, previousStatus } from "../pickup-machine";
+import {
+  applyStatusTimestamp,
+  canAdvance,
+  canCancel,
+  canComplete,
+  canUndo,
+  nextStatus,
+  previousStatus,
+} from "../pickup-machine";
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
 import type {
+  ArrivalMethod,
   ArriveTripInput,
   AuthorizedPerson,
   CreateTripInput,
@@ -151,6 +160,63 @@ export class MemoryPickupStore {
     return this.snapshot();
   }
 
+  addRandomArrivals(count: number) {
+    const usedCodes = new Set(this.data.trips.map((trip) => trip.code));
+    const active = new Set(
+      this.data.requests
+        .filter((request) => request.status !== "delivered" && request.status !== "cancelled")
+        .map((request) => request.studentId),
+    );
+    const pool = this.data.students.filter((student) => !active.has(student.id));
+    const randomOf = <T,>(items: T[]): T | undefined => items[Math.floor(Math.random() * items.length)];
+
+    for (let i = 0; i < count; i += 1) {
+      const index = Math.floor(Math.random() * pool.length);
+      const student = pool.splice(index, 1)[0];
+      if (!student) break;
+
+      const guardian = randomOf(this.data.guardians);
+      if (!guardian) break;
+      const method: ArrivalMethod = "car";
+      const vehicle = randomOf(this.data.vehicles.filter((v) => v.ownerGuardianId === guardian.id));
+      const arrivedAt = new Date(Date.now() - Math.floor(Math.random() * 15) * 60_000).toISOString();
+      const tripId = createId("t");
+      const code = createCode(usedCodes);
+      usedCodes.add(code);
+      const pickerName = `${guardian.firstName} ${guardian.lastName}`;
+
+      this.data.trips.unshift({
+        id: tripId,
+        code,
+        guardianId: guardian.id,
+        pickerName,
+        pickerRelationEs: guardian.relationEs,
+        pickerRelationEn: guardian.relationEn,
+        pickerKind: "self",
+        method,
+        vehicleId: vehicle?.id,
+        qrToken: createToken(),
+        createdAt: arrivedAt,
+        arrivedAt,
+        arrivalPhoto: fallbackArrivalPhoto(vehicle?.label ?? "Auto", vehicle?.color),
+      });
+
+      this.data.requests.unshift({
+        id: createId("r"),
+        tripId,
+        studentId: student.id,
+        status: "arrived",
+        requestedAt: arrivedAt,
+        arrivedAt,
+      });
+
+      this.logEvent({ type: "arrived", tripId, actorRole: "kiosk", actorName: pickerName }, arrivedAt);
+    }
+
+    this.emit();
+    return this.snapshot();
+  }
+
   arriveByCode(codeOrToken: string, input: ArriveTripInput = {}) {
     const value = codeOrToken.trim();
     const trip = this.data.trips.find(
@@ -160,7 +226,8 @@ export class MemoryPickupStore {
 
     const now = new Date().toISOString();
     trip.arrivedAt = now;
-    trip.arrivalPhoto = input.photo || fallbackArrivalPhoto(trip.pickerName);
+    const vehicle = this.data.vehicles.find((item) => item.id === trip.vehicleId);
+    trip.arrivalPhoto = input.photo || fallbackArrivalPhoto(vehicle?.label ?? trip.pickerName, vehicle?.color);
 
     for (const request of this.data.requests) {
       if (request.tripId !== trip.id) continue;
@@ -185,11 +252,36 @@ export class MemoryPickupStore {
     return this.snapshot();
   }
 
-  setRequestStatus(requestId: string, action: "advance" | "undo" | "cancel", staffName?: string) {
+  setRequestStatus(requestId: string, action: "advance" | "undo" | "cancel" | "complete", staffName?: string) {
     const request = this.data.requests.find((item) => item.id === requestId);
     if (!request) throw new Error("No encontramos esa solicitud.");
 
     const now = new Date().toISOString();
+
+    if (action === "complete") {
+      if (!canComplete(request.status)) {
+        throw new Error("Ese cambio de estado no está permitido.");
+      }
+      const fromStatus = request.status;
+      request.status = "delivered";
+      request.deliveredAt = now;
+      request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      this.logEvent(
+        {
+          type: "delivered",
+          tripId: request.tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "staff",
+          actorName: request.deliveredByStaffName,
+          fromStatus,
+          toStatus: "delivered",
+        },
+        now,
+      );
+      this.emit();
+      return this.snapshot();
+    }
 
     if (action === "cancel") {
       if (!canCancel(request.status)) {

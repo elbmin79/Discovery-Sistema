@@ -4,7 +4,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const { id } = await context.params;
     const body = (await request.json()) as {
-      action: "advance" | "undo" | "cancel";
+      action: "advance" | "undo" | "cancel" | "complete";
       staffName?: string;
     };
     return Response.json(
