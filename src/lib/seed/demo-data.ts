@@ -356,6 +356,7 @@ export function createSeedSnapshot(): Snapshot {
         color: "Gris",
         plate: "MKZ-4821",
         ownerGuardianId: HERO_GUARDIAN_ID,
+        photoUrl: "/cars/v-prius.jpg",
       },
       {
         id: "v-crv",
@@ -363,6 +364,7 @@ export function createSeedSnapshot(): Snapshot {
         color: "Blanca",
         plate: "BCS-1190",
         ownerGuardianId: "g-laura",
+        photoUrl: "/cars/v-crv.jpg",
       },
       {
         id: "v-tiguan",
@@ -370,6 +372,7 @@ export function createSeedSnapshot(): Snapshot {
         color: "Azul",
         plate: "MXL-7742",
         ownerGuardianId: "g-pedro",
+        photoUrl: "/cars/v-tiguan.jpg",
       },
       {
         id: "v-trax",
@@ -377,6 +380,7 @@ export function createSeedSnapshot(): Snapshot {
         color: "Negra",
         plate: "SOL-3058",
         ownerGuardianId: "g-carmen",
+        photoUrl: "/cars/v-trax.jpg",
       },
       {
         id: "v-corolla",
@@ -384,6 +388,7 @@ export function createSeedSnapshot(): Snapshot {
         color: "Plata",
         plate: "RIV-2264",
         ownerGuardianId: "g-elena",
+        photoUrl: "/cars/v-corolla.jpg",
       },
       {
         id: "v-kicks",
@@ -391,6 +396,23 @@ export function createSeedSnapshot(): Snapshot {
         color: "Gris",
         plate: "MXL-2068",
         ownerGuardianId: "g-benjamin",
+        photoUrl: "/cars/v-kicks.jpg",
+      },
+      {
+        id: "v-sentra",
+        label: "Nissan Sentra rojo",
+        color: "Rojo",
+        plate: "MXL-5583",
+        ownerGuardianId: "g-ana",
+        photoUrl: "/cars/v-sentra.jpg",
+      },
+      {
+        id: "v-explorer",
+        label: "Ford Explorer gris",
+        color: "Gris",
+        plate: "SOL-6612",
+        ownerGuardianId: "g-miguel",
+        photoUrl: "/cars/v-explorer.jpg",
       },
     ],
     staff: [
@@ -435,7 +457,7 @@ export function createSeedSnapshot(): Snapshot {
         qrToken: "pass-lopez",
         createdAt: minutesAgo(8),
         arrivedAt: minutesAgo(3),
-        arrivalPhoto: fallbackArrivalPhoto("Honda CR-V blanca"),
+        arrivalPhoto: fallbackArrivalPhoto("Honda CR-V blanca", "Blanca"),
       },
       {
         id: "t-soto",
@@ -450,7 +472,7 @@ export function createSeedSnapshot(): Snapshot {
         qrToken: "pass-soto",
         createdAt: minutesAgo(12),
         arrivedAt: minutesAgo(4),
-        arrivalPhoto: fallbackArrivalPhoto("Volkswagen Tiguan azul"),
+        arrivalPhoto: fallbackArrivalPhoto("Volkswagen Tiguan azul", "Azul"),
       },
       {
         id: "t-ruiz",
@@ -460,11 +482,12 @@ export function createSeedSnapshot(): Snapshot {
         pickerRelationEs: "Mamá",
         pickerRelationEn: "Mom",
         pickerKind: "self",
-        method: "walk",
+        method: "car",
+        vehicleId: "v-sentra",
         qrToken: "pass-ruiz",
         createdAt: minutesAgo(18),
         arrivedAt: minutesAgo(9),
-        arrivalPhoto: fallbackArrivalPhoto("Llegada a pie"),
+        arrivalPhoto: fallbackArrivalPhoto("Nissan Sentra rojo", "Rojo"),
       },
       {
         id: "t-navarro",
@@ -479,7 +502,7 @@ export function createSeedSnapshot(): Snapshot {
         qrToken: "pass-navarro",
         createdAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
-        arrivalPhoto: fallbackArrivalPhoto("Toyota Corolla plata"),
+        arrivalPhoto: fallbackArrivalPhoto("Toyota Corolla plata", "Plata"),
       },
       {
         id: "t-garcia",
@@ -489,11 +512,12 @@ export function createSeedSnapshot(): Snapshot {
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         pickerKind: "self",
-        method: "walk",
+        method: "car",
+        vehicleId: "v-explorer",
         qrToken: "pass-garcia",
         createdAt: minutesAgo(40),
         arrivedAt: minutesAgo(28),
-        arrivalPhoto: fallbackArrivalPhoto("Llegada a pie"),
+        arrivalPhoto: fallbackArrivalPhoto("Ford Explorer gris", "Gris"),
       },
     ],
     requests: [
@@ -645,19 +669,82 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
   return events.sort((a, b) => b.at.localeCompare(a.at));
 }
 
-export function fallbackArrivalPhoto(label: string) {
-  const time = new Date().toLocaleTimeString("es-MX", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
-      <rect width="640" height="400" fill="#1B4D3E"/>
-      <rect x="36" y="36" width="568" height="328" rx="18" fill="#12382D"/>
-      <text x="320" y="168" text-anchor="middle" fill="#F6F1E8" font-family="Georgia, serif" font-size="28">Llegada registrada</text>
-      <text x="320" y="214" text-anchor="middle" fill="#C4A15A" font-family="Arial, sans-serif" font-size="20">${label}</text>
-      <text x="320" y="258" text-anchor="middle" fill="#EDE6D8" font-family="Arial, sans-serif" font-size="16">${time} · Discovery</text>
+const CAR_TINTS: Record<string, string> = {
+  Gris: "#8a919a",
+  Blanca: "#e6e9ec",
+  Blanco: "#e6e9ec",
+  Azul: "#3f6f9e",
+  Negra: "#23272e",
+  Negro: "#23272e",
+  Plata: "#b9bec4",
+  Rojo: "#b3402f",
+  Roja: "#b3402f",
+};
+
+const SUV_KEYWORDS = ["cr-v", "tiguan", "trax", "kicks", "explorer", "suv", "rav4", "sportage", "runner"];
+
+export function fallbackArrivalPhoto(label: string, color?: string) {
+  const tint = (color && CAR_TINTS[color]) || "#1B4D3E";
+  const isSuv = SUV_KEYWORDS.some((key) => label.toLowerCase().includes(key));
+  const svg = isSuv ? suvSvg(tint, label) : sedanSvg(tint, label);
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function sedanSvg(tint: string, label: string) {
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+      <rect width="640" height="360" fill="#eef2ee"/>
+      <rect x="0" y="300" width="640" height="60" fill="#dfe7e0"/>
+      <ellipse cx="320" cy="302" rx="225" ry="13" fill="#0f1712" opacity="0.08"/>
+
+      <circle cx="202" cy="274" r="33" fill="#1c2220"/>
+      <circle cx="202" cy="274" r="15" fill="#c4cbc7"/>
+      <circle cx="202" cy="274" r="6" fill="#828a86"/>
+      <circle cx="436" cy="274" r="33" fill="#1c2220"/>
+      <circle cx="436" cy="274" r="15" fill="#c4cbc7"/>
+      <circle cx="436" cy="274" r="6" fill="#828a86"/>
+
+      <rect x="118" y="206" width="366" height="60" rx="26" fill="${tint}"/>
+      <path d="M200 206 L240 148 Q246 140 258 140 L304 140 Q316 140 322 148 L372 206 Z" fill="${tint}"/>
+
+      <path d="M216 204 L250 156 Q254 152 258 152 L298 152 Q304 152 308 156 L354 204 Z" fill="#cfe0da"/>
+      <line x1="282" y1="148" x2="292" y2="204" stroke="${tint}" stroke-width="5"/>
+
+      <rect x="320" y="192" width="22" height="5" rx="2.5" fill="#00000020"/>
+      <path d="M122 234 L132 222 L146 222 L140 234 Z" fill="#eef2ee"/>
+      <rect x="474" y="222" width="12" height="10" rx="3" fill="#e8bd86"/>
+      <text x="320" y="342" text-anchor="middle" fill="#1b4d3e" font-family="Georgia, serif" font-size="22">${label}</text>
     </svg>
   `.trim();
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function suvSvg(tint: string, label: string) {
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+      <rect width="640" height="360" fill="#eef2ee"/>
+      <rect x="0" y="300" width="640" height="60" fill="#dfe7e0"/>
+      <ellipse cx="320" cy="302" rx="235" ry="14" fill="#0f1712" opacity="0.08"/>
+
+      <circle cx="198" cy="278" r="36" fill="#1c2220"/>
+      <circle cx="198" cy="278" r="16" fill="#c4cbc7"/>
+      <circle cx="198" cy="278" r="6" fill="#828a86"/>
+      <circle cx="440" cy="278" r="36" fill="#1c2220"/>
+      <circle cx="440" cy="278" r="16" fill="#c4cbc7"/>
+      <circle cx="440" cy="278" r="6" fill="#828a86"/>
+
+      <rect x="116" y="194" width="374" height="66" rx="24" fill="${tint}"/>
+      <path d="M184 194 L244 132 Q250 124 264 124 L320 124 Q334 124 340 132 L400 194 Z" fill="${tint}"/>
+
+      <path d="M200 192 L252 140 Q256 136 264 136 L314 136 Q322 136 326 140 L382 192 Z" fill="#cfe0da"/>
+      <line x1="294" y1="132" x2="304" y2="192" stroke="${tint}" stroke-width="5"/>
+
+      <line x1="270" y1="116" x2="318" y2="116" stroke="#00000025" stroke-width="4" stroke-linecap="round"/>
+      <line x1="352" y1="116" x2="400" y2="116" stroke="#00000025" stroke-width="4" stroke-linecap="round"/>
+
+      <rect x="346" y="178" width="22" height="5" rx="2.5" fill="#00000020"/>
+      <path d="M120 220 L130 208 L144 208 L138 220 Z" fill="#eef2ee"/>
+      <rect x="478" y="208" width="12" height="10" rx="3" fill="#e8bd86"/>
+      <text x="320" y="342" text-anchor="middle" fill="#1b4d3e" font-family="Georgia, serif" font-size="22">${label}</text>
+    </svg>
+  `.trim();
 }

@@ -74,6 +74,7 @@ export interface Vehicle {
   color: string;
   plate?: string;
   ownerGuardianId: string;
+  photoUrl?: string;
 }
 
 export interface StaffMember {

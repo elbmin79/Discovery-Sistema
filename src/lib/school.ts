@@ -1,4 +1,4 @@
-import type { Level, Locale, PickupStatus, Snapshot, Student } from "./types";
+import type { Level, Locale, PickupStatus, Snapshot, Student, Vehicle } from "./types";
 
 export const SCHOOL = {
   name: "Discovery American Preschool & Academy",
@@ -91,4 +91,9 @@ export function initials(name: string) {
 
 export function studentPhoto(student: Student) {
   return student.photoUrl ?? `/students/${student.id}.png`;
+}
+
+export function vehiclePhoto(vehicle?: Vehicle) {
+  if (!vehicle) return undefined;
+  return vehicle.photoUrl ?? `/cars/${vehicle.id}.png`;
 }

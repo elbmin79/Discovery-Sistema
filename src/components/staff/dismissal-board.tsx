@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ClipboardList, Undo2 } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
-import { findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
+import { findStudent, findVehicle, formatTime, studentGrade, studentName, vehiclePhoto } from "@/lib/school";
 import type { DemoSession, PickupRequest, PickupStatus, Student } from "@/lib/types";
 
 type Column = "waiting" | "called";
@@ -14,9 +15,25 @@ type Column = "waiting" | "called";
 interface BoardItem {
   request: PickupRequest;
   student: Student;
-  pickerLine: string;
   vehicleLabel: string;
+  vehiclePhoto?: string;
+  arrivalPhoto?: string;
 }
+
+const TONES = {
+  waiting: {
+    panel: "border-gold/40 bg-gold/10",
+    dot: "bg-gold-deep",
+    count: "bg-gold/20 text-gold-deep",
+    button: "bg-gold-deep text-paper",
+  },
+  called: {
+    panel: "border-forest/30 bg-forest/10",
+    dot: "bg-forest",
+    count: "bg-forest/15 text-forest",
+    button: "bg-forest text-paper",
+  },
+} as const;
 
 export function DismissalBoard({
   session,
@@ -26,9 +43,9 @@ export function DismissalBoard({
   onLogout: () => void;
 }) {
   const { snapshot } = useSnapshot();
-  const [activeColumn, setActiveColumn] = useState<Column>("waiting");
   const [showDelivered, setShowDelivered] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState(false);
 
   const staff = snapshot?.staff.find((member) => member.id === session.staffId) ?? snapshot?.staff[0];
 
@@ -46,8 +63,9 @@ export function DismissalBoard({
       return {
         request,
         student,
-        pickerLine: `${trip.pickerRelationEs} · ${trip.pickerName}`,
-        vehicleLabel: trip.method === "walk" ? "Caminando" : (vehicle?.label ?? "Auto"),
+        vehicleLabel: vehicle?.label ?? "Auto",
+        vehiclePhoto: vehiclePhoto(vehicle),
+        arrivalPhoto: trip.arrivalPhoto,
       };
     };
     const byArrival = (a: BoardItem, b: BoardItem) =>
@@ -76,6 +94,15 @@ export function DismissalBoard({
     }
   }
 
+  async function addRandomArrivals() {
+    setSimulating(true);
+    try {
+      await postJson("/api/demo/populate");
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   if (!snapshot) {
     return <p className="p-8 text-muted">Cargando tablero…</p>;
   }
@@ -96,6 +123,14 @@ export function DismissalBoard({
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
+          <button
+            type="button"
+            onClick={addRandomArrivals}
+            disabled={simulating}
+            className="rounded-full border border-dashed border-gold-deep px-4 py-2 text-sm font-semibold text-gold-deep disabled:opacity-60"
+          >
+            {simulating ? "…" : "＋ Simular llegadas"}
+          </button>
           <Link
             href="/bitacora"
             className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest"
@@ -117,31 +152,18 @@ export function DismissalBoard({
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 md:px-6">
-        <div className="flex rounded-full border border-line bg-paper p-1 md:hidden">
-          <SegTab active={activeColumn === "waiting"} onClick={() => setActiveColumn("waiting")}>
-            Esperando · {waiting.length}
-          </SegTab>
-          <SegTab active={activeColumn === "called"} onClick={() => setActiveColumn("called")}>
-            Llamado · {called.length}
-          </SegTab>
-        </div>
-
-        <div className="grid flex-1 gap-4 md:grid-cols-2">
-          <Column
+        <div className="grid gap-4 md:grid-cols-2">
+          <Section
             id="waiting"
             title="Esperando"
-            hint="Papá ya escaneó en la entrada."
             items={waiting}
-            visible={activeColumn === "waiting"}
             busyKey={busyKey}
             onTap={(id) => act(id, "advance")}
           />
-          <Column
+          <Section
             id="called"
-            title="Llamado"
-            hint="Toca de nuevo cuando lo entregues."
+            title="Notificados"
             items={called}
-            visible={activeColumn === "called"}
             busyKey={busyKey}
             onTap={(id) => act(id, "complete")}
             onUndo={(id) => act(id, "undo")}
@@ -149,51 +171,44 @@ export function DismissalBoard({
         </div>
       </main>
 
-      {showDelivered ? (
-        <DeliveredSheet
-          items={delivered}
-          onClose={() => setShowDelivered(false)}
-        />
-      ) : null}
+      {showDelivered ? <DeliveredSheet items={delivered} onClose={() => setShowDelivered(false)} /> : null}
     </div>
   );
 }
 
-function Column({
+function Section({
   id,
   title,
-  hint,
   items,
-  visible,
   busyKey,
   onTap,
   onUndo,
 }: {
   id: Column;
   title: string;
-  hint: string;
   items: BoardItem[];
-  visible: boolean;
   busyKey: string | null;
   onTap: (id: string) => void;
   onUndo?: (id: string) => void;
 }) {
+  const tone = TONES[id];
+
   return (
-    <section className={`min-w-0 ${visible ? "block" : "hidden"} md:block`}>
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-2xl text-forest md:text-3xl">{title}</h2>
-          <p className="mt-1 text-sm text-muted">{hint}</p>
+    <section className={`min-w-0 rounded-2xl border p-3 ${tone.panel}`}>
+      <header className="mb-3 flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
+          <h2 className="font-serif text-xl text-forest">{title}</h2>
         </div>
-        <span className={`text-2xl font-semibold ${id === "waiting" ? "text-gold-deep" : "text-forest"}`}>
+        <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold tabular-nums ${tone.count}`}>
           {items.length}
         </span>
-      </div>
+      </header>
 
-      <div className="space-y-3">
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
         {items.length === 0 ? (
-          <p className="rounded-3xl bg-paper/70 px-4 py-10 text-center text-muted">
-            {id === "waiting" ? "Nadie en espera." : "Aún no has llamado a nadie."}
+          <p className="col-span-full rounded-xl bg-paper/70 px-4 py-8 text-center text-sm text-muted">
+            {id === "waiting" ? "Nadie en espera." : "Sin notificados."}
           </p>
         ) : (
           items.map((item, index) => (
@@ -228,57 +243,72 @@ function KidCard({
   onTap: () => void;
   onUndo?: () => void;
 }) {
-  const isWaiting = column === "waiting";
-  const undoable = !isWaiting && item.request.status === "preparing";
+  const waiting = column === "waiting";
+  const undoable = !waiting && item.request.status === "preparing";
+  const tone = TONES[column];
 
   return (
-    <article
-      className={`relative rounded-3xl border bg-paper p-4 ${
-        isWaiting ? "pulse-gold border-gold" : "border-forest"
-      }`}
-    >
+    <article className="relative">
       <button
         type="button"
         disabled={busy}
         onClick={onTap}
-        className="w-full text-left disabled:opacity-60"
+        className="flex w-full flex-col rounded-xl border border-line bg-paper p-3 text-left transition active:scale-[0.98] disabled:opacity-60"
       >
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <StudentAvatar student={item.student} size="xl" />
-            {position !== undefined ? (
-              <span className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-forest text-sm font-bold text-paper">
-                {position}
-              </span>
-            ) : null}
-          </div>
+        <div className="flex items-center gap-3">
+          <StudentAvatar student={item.student} size="md" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-serif text-2xl leading-tight text-forest">
-              {studentName(item.student)}
-            </p>
-            <p className="text-sm text-muted">{studentGrade(item.student, "es")}</p>
-            <p className="mt-1 truncate text-sm font-medium text-forest/80">{item.pickerLine}</p>
-            <p className="text-xs text-muted">
-              {item.vehicleLabel} · {formatTime(item.request.arrivedAt)}
+            <p className="truncate font-serif text-base leading-tight text-forest">{studentName(item.student)}</p>
+            <p className="mt-0.5 truncate text-xs text-muted">
+              {studentGrade(item.student, "es")} · {item.vehicleLabel}
             </p>
           </div>
-          <span className="shrink-0 text-2xl text-gold-deep" aria-hidden>
-            →
-          </span>
+          {position !== undefined ? (
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-deep text-xs font-bold text-paper">
+              {position}
+            </span>
+          ) : null}
         </div>
+
+        <CarImage photo={item.vehiclePhoto} fallback={item.arrivalPhoto} alt={`Auto: ${item.vehicleLabel}`} />
+
+        <span
+          className={`mt-2.5 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold ${tone.button}`}
+        >
+          {waiting ? "Notificar" : "Entregar"}
+        </span>
       </button>
 
       {undoable && onUndo ? (
         <button
           type="button"
           onClick={onUndo}
-          className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-cream text-muted"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-muted transition hover:text-ink"
           aria-label="Deshacer"
         >
-          <Undo2 className="h-5 w-5" />
+          <Undo2 className="h-4 w-4" />
         </button>
       ) : null}
     </article>
+  );
+}
+
+function CarImage({ photo, fallback, alt }: { photo?: string; fallback?: string; alt: string }) {
+  const [broken, setBroken] = useState(false);
+  const src = broken || !photo ? fallback : photo;
+  if (!src) return null;
+  return (
+    <div className="mt-2.5 overflow-hidden rounded-lg">
+      <Image
+        src={src}
+        alt={alt}
+        width={640}
+        height={360}
+        unoptimized
+        onError={() => setBroken(true)}
+        className="h-16 w-full object-cover"
+      />
+    </div>
   );
 }
 
@@ -309,7 +339,7 @@ function DeliveredSheet({ items, onClose }: { items: BoardItem[]; onClose: () =>
                   <div>
                     <p className="font-medium">{studentName(item.student)}</p>
                     <p className="text-xs text-muted">
-                      {item.pickerLine} · {item.request.deliveredByStaffName}
+                      {item.vehicleLabel} · {item.request.deliveredByStaffName}
                     </p>
                   </div>
                 </div>
@@ -323,33 +353,12 @@ function DeliveredSheet({ items, onClose }: { items: BoardItem[]; onClose: () =>
   );
 }
 
-function SegTab({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 rounded-full px-4 py-3 text-base font-semibold ${
-        active ? "bg-forest text-paper" : "text-muted"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Clock() {
-  const [now, setNow] = useState(() => new Date());
+  const [time, setTime] = useState<string | null>(null);
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
+    const format = () => new Date().toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit" });
+    const id = window.setInterval(() => setTime(format()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  return <>{now.toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit" })}</>;
+  return <>{time ?? "--:--"}</>;
 }
