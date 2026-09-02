@@ -443,6 +443,22 @@ export function createSeedSnapshot(): Snapshot {
     ],
     guestPasses: [],
     events: [],
+    latePickups: [
+      {
+        id: "lp-madrid",
+        guardianId: "g-roberto",
+        studentIds: ["s-sofia", "s-lucas"],
+        pickerKind: "authorized",
+        pickerName: "Rosa Madrid",
+        pickerRelationEs: "Abuela",
+        pickerRelationEn: "Grandmother",
+        etaAt: minutesAgo(-20),
+        note: "Sale tarde del trabajo.",
+        createdAt: minutesAgo(6),
+        updatedAt: minutesAgo(6),
+        status: "announced",
+      },
+    ],
     trips: [
       {
         id: "t-lopez",
@@ -662,6 +678,19 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
         actorName: request.deliveredByStaffName ?? stageStaff(request.studentId),
         fromStatus: "ready",
         toStatus: "delivered",
+      });
+    }
+  }
+
+  for (const late of snapshot.latePickups) {
+    if (late.status === "announced") {
+      const guardian = snapshot.guardians.find((item) => item.id === late.guardianId);
+      push({
+        at: late.createdAt,
+        type: "late_announced",
+        lateId: late.id,
+        actorRole: "parent",
+        actorName: guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined,
       });
     }
   }

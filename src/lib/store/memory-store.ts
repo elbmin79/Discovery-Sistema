@@ -12,6 +12,7 @@ import type {
   ArrivalMethod,
   ArriveTripInput,
   AuthorizedPerson,
+  CreateLatePickupInput,
   CreateTripInput,
   PickupEvent,
   PickupStatus,
@@ -51,6 +52,9 @@ export class MemoryPickupStore {
     this.data = seed;
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
+    }
+    if (!Array.isArray(this.data.latePickups)) {
+      this.data.latePickups = [];
     }
   }
 
@@ -248,8 +252,51 @@ export class MemoryPickupStore {
       now,
     );
 
+    this.linkLatesOnArrival(trip, now);
+
     this.emit();
     return this.snapshot();
+  }
+
+  private linkLatesOnArrival(trip: { id: string; guardianId: string; pickerName: string }, now: string) {
+    const tripStudents = new Set(
+      this.data.requests.filter((request) => request.tripId === trip.id).map((request) => request.studentId),
+    );
+    for (const late of this.data.latePickups) {
+      if (late.status !== "announced" || late.guardianId !== trip.guardianId) continue;
+      if (!late.studentIds.some((studentId) => tripStudents.has(studentId))) continue;
+      late.status = "arrived";
+      late.linkedTripId = trip.id;
+      late.updatedAt = now;
+      this.logEvent(
+        { type: "late_arrived", lateId: late.id, tripId: trip.id, actorRole: "kiosk", actorName: trip.pickerName },
+        now,
+      );
+    }
+  }
+
+  private autoResolveLates(staffName: string | undefined, now: string) {
+    for (const late of this.data.latePickups) {
+      if (late.status !== "announced" && late.status !== "arrived") continue;
+      const allDelivered = late.studentIds.every((studentId) => {
+        const latest = this.data.requests.find((request) => request.studentId === studentId);
+        return latest?.status === "delivered";
+      });
+      if (!allDelivered) continue;
+      late.status = "resolved";
+      late.resolvedAt = now;
+      late.updatedAt = now;
+      this.logEvent(
+        {
+          type: "late_resolved",
+          lateId: late.id,
+          tripId: late.linkedTripId,
+          actorRole: "staff",
+          actorName: staffName ?? "Personal de Discovery",
+        },
+        now,
+      );
+    }
   }
 
   setRequestStatus(requestId: string, action: "advance" | "undo" | "cancel" | "complete", staffName?: string) {
@@ -279,6 +326,7 @@ export class MemoryPickupStore {
         },
         now,
       );
+      this.autoResolveLates(staffName, now);
       this.emit();
       return this.snapshot();
     }
@@ -339,6 +387,9 @@ export class MemoryPickupStore {
       },
       now,
     );
+    if (next === "delivered") {
+      this.autoResolveLates(staffName, now);
+    }
 
     this.emit();
     return this.snapshot();
@@ -404,6 +455,8 @@ export class MemoryPickupStore {
       );
     }
 
+    this.autoResolveLates(staffName, now);
+
     this.emit();
     return this.snapshot();
   }
@@ -412,6 +465,141 @@ export class MemoryPickupStore {
     const trip = this.data.trips.find((item) => item.id === tripId);
     const guardian = trip && this.data.guardians.find((item) => item.id === trip.guardianId);
     return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+  }
+
+  private guardianNameById(guardianId: string) {
+    const guardian = this.data.guardians.find((item) => item.id === guardianId);
+    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+  }
+
+  private findActiveLate(id: string) {
+    const late = this.data.latePickups.find((item) => item.id === id);
+    if (!late) throw new Error("No encontramos ese aviso de retraso.");
+    if (late.status !== "announced") throw new Error("Ese aviso ya no está activo.");
+    return late;
+  }
+
+  createLatePickup(input: CreateLatePickupInput) {
+    if (input.studentIds.length === 0) {
+      throw new Error("Selecciona al menos un alumno.");
+    }
+    const guardian = this.data.guardians.find((item) => item.id === input.guardianId);
+    if (!guardian) throw new Error("No encontramos la cuenta del padre.");
+    const eta = Date.parse(input.etaAt);
+    if (Number.isNaN(eta)) throw new Error("La hora estimada no es válida.");
+
+    const inTrip = this.data.requests.some(
+      (request) =>
+        input.studentIds.includes(request.studentId) &&
+        request.status !== "delivered" &&
+        request.status !== "cancelled",
+    );
+    if (inTrip) throw new Error("Esos alumnos ya tienen una recogida en curso.");
+
+    const duplicated = this.data.latePickups.some(
+      (late) =>
+        late.status === "announced" &&
+        late.guardianId === guardian.id &&
+        late.studentIds.some((studentId) => input.studentIds.includes(studentId)),
+    );
+    if (duplicated) throw new Error("Ya hay un aviso de retraso activo para estos alumnos.");
+
+    const now = new Date().toISOString();
+    const id = createId("lp");
+    this.data.latePickups.unshift({
+      id,
+      guardianId: guardian.id,
+      studentIds: [...input.studentIds],
+      pickerKind: input.pickerKind,
+      pickerName: input.pickerName.trim(),
+      pickerRelationEs: input.pickerRelationEs,
+      pickerRelationEn: input.pickerRelationEn,
+      guestPhone: input.guestPhone?.trim() || undefined,
+      etaAt: new Date(eta).toISOString(),
+      note: input.note?.trim() || undefined,
+      createdAt: now,
+      updatedAt: now,
+      status: "announced",
+    });
+
+    this.logEvent(
+      { type: "late_announced", lateId: id, actorRole: "parent", actorName: `${guardian.firstName} ${guardian.lastName}` },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
+  }
+
+  updateLateEta(id: string, etaAt: string) {
+    const late = this.findActiveLate(id);
+    const eta = Date.parse(etaAt);
+    if (Number.isNaN(eta)) throw new Error("La hora estimada no es válida.");
+    const now = new Date().toISOString();
+    late.etaAt = new Date(eta).toISOString();
+    late.updatedAt = now;
+    this.logEvent(
+      { type: "late_eta_changed", lateId: id, actorRole: "parent", actorName: this.guardianNameById(late.guardianId) },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
+  }
+
+  cancelLate(id: string) {
+    const late = this.findActiveLate(id);
+    const now = new Date().toISOString();
+    late.status = "cancelled";
+    late.updatedAt = now;
+    this.logEvent(
+      { type: "late_cancelled", lateId: id, actorRole: "parent", actorName: this.guardianNameById(late.guardianId) },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
+  }
+
+  markLateArrived(id: string, staffName?: string, linkedTripId?: string) {
+    const late = this.findActiveLate(id);
+    const now = new Date().toISOString();
+    late.status = "arrived";
+    late.updatedAt = now;
+    if (linkedTripId) late.linkedTripId = linkedTripId;
+    this.logEvent(
+      {
+        type: "late_arrived",
+        lateId: id,
+        tripId: late.linkedTripId,
+        actorRole: staffName ? "staff" : "kiosk",
+        actorName: staffName ?? late.pickerName,
+      },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
+  }
+
+  resolveLate(id: string, staffName?: string) {
+    const late = this.data.latePickups.find((item) => item.id === id);
+    if (!late) throw new Error("No encontramos ese aviso de retraso.");
+    if (late.status !== "announced" && late.status !== "arrived") {
+      throw new Error("Ese aviso ya está cerrado.");
+    }
+    const now = new Date().toISOString();
+    late.status = "resolved";
+    late.resolvedAt = now;
+    late.updatedAt = now;
+    this.logEvent(
+      {
+        type: "late_resolved",
+        lateId: id,
+        tripId: late.linkedTripId,
+        actorRole: "staff",
+        actorName: staffName ?? "Personal de Discovery",
+      },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
   }
 
   updateStudentPhoto(studentId: string, photoUrl: string) {

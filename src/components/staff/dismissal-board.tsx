@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ClipboardList, Undo2 } from "lucide-react";
+import { AlarmClock, ClipboardList, Undo2 } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
+import { lateCountdownLabel, lateIsOverdue } from "@/lib/bitacora";
 import { findStudent, findVehicle, formatTime, studentGrade, studentName, vehiclePhoto } from "@/lib/school";
-import type { DemoSession, PickupRequest, PickupStatus, Student } from "@/lib/types";
+import type { DemoSession, LatePickup, PickupRequest, PickupStatus, Snapshot, Student } from "@/lib/types";
 
 type Column = "waiting" | "called";
 
@@ -44,8 +45,15 @@ export function DismissalBoard({
 }) {
   const { snapshot } = useSnapshot();
   const [showDelivered, setShowDelivered] = useState(false);
+  const [showLates, setShowLates] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [simulating, setSimulating] = useState(false);
+  const [nowMs, setNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const staff = snapshot?.staff.find((member) => member.id === session.staffId) ?? snapshot?.staff[0];
 
@@ -84,6 +92,15 @@ export function DismissalBoard({
       delivered: build((status) => status === "delivered"),
     };
   }, [snapshot]);
+
+  const activeLates = useMemo(
+    () =>
+      (snapshot?.latePickups ?? [])
+        .filter((late) => late.status === "announced" || late.status === "arrived")
+        .sort((a, b) => a.etaAt.localeCompare(b.etaAt)),
+    [snapshot],
+  );
+  const overdueCount = activeLates.filter((late) => lateIsOverdue(late, nowMs)).length;
 
   async function act(requestId: string, action: "advance" | "undo" | "complete") {
     setBusyKey(requestId);
@@ -138,6 +155,20 @@ export function DismissalBoard({
             <ClipboardList className="h-4 w-4" />
             <span className="hidden sm:inline">Bitácora</span>
           </Link>
+          {activeLates.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowLates(true)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tabular-nums ${
+                overdueCount > 0
+                  ? "border-danger/40 bg-danger/10 text-danger"
+                  : "border-gold/50 bg-gold/15 text-gold-deep"
+              }`}
+            >
+              <AlarmClock className="h-4 w-4" />
+              Tardes · {activeLates.length}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setShowDelivered(true)}
@@ -172,6 +203,9 @@ export function DismissalBoard({
       </main>
 
       {showDelivered ? <DeliveredSheet items={delivered} onClose={() => setShowDelivered(false)} /> : null}
+      {showLates ? (
+        <LateSheet lates={activeLates} snapshot={snapshot} nowMs={nowMs} onClose={() => setShowLates(false)} />
+      ) : null}
     </div>
   );
 }
@@ -347,6 +381,97 @@ function DeliveredSheet({ items, onClose }: { items: BoardItem[]; onClose: () =>
               </div>
             ))
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LateSheet({
+  lates,
+  snapshot,
+  nowMs,
+  onClose,
+}: {
+  lates: LatePickup[];
+  snapshot: Snapshot;
+  nowMs: number | null;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 p-4 md:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-paper p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-2xl text-forest">Tardes de hoy</h2>
+            <p className="text-xs text-muted">Gestiona en la oficina. Solo informativo.</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-sm text-muted">
+            Cerrar
+          </button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {lates.length === 0 ? (
+            <p className="text-muted">Ningún alumno en retraso.</p>
+          ) : null}
+          {lates.map((late) => {
+            const students = snapshot.students.filter((student) => late.studentIds.includes(student.id));
+            const overdue = lateIsOverdue(late, nowMs);
+            const countdown = lateCountdownLabel(late, nowMs);
+            return (
+              <div
+                key={late.id}
+                className={`rounded-2xl border p-4 ${
+                  late.status === "arrived"
+                    ? "border-forest/40 bg-forest/5"
+                    : overdue
+                      ? "border-danger/40 bg-danger/5"
+                      : "border-gold/50 bg-gold/10"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex shrink-0 -space-x-2">
+                    {students.map((student) => (
+                      <StudentAvatar key={student.id} student={student} size="sm" />
+                    ))}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate font-serif text-lg text-forest">
+                        {students.map((student) => student.firstName).join(", ") || "Alumnos"}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold tabular-nums ${
+                          late.status === "arrived"
+                            ? "border-forest/30 bg-forest/10 text-forest"
+                            : overdue
+                              ? "border-danger/40 bg-danger/10 text-danger"
+                              : "border-gold/50 bg-gold/15 text-gold-deep"
+                        }`}
+                      >
+                        {countdown ?? `ETA ${formatTime(late.etaAt, "es")}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Lo trae: {late.pickerRelationEs} · {late.pickerName}
+                    </p>
+                    <p className="text-xs text-muted tabular-nums">
+                      Hora estimada {formatTime(late.etaAt, "es")}
+                    </p>
+                    {late.note ? (
+                      <p className="mt-1 text-sm italic text-muted">&ldquo;{late.note}&rdquo;</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
