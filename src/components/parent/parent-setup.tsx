@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { studentName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { ArrivalMethod, CreateTripInput, Guardian, Locale, Snapshot } from "@/lib/types";
+import type { CreateTripInput, Guardian, Locale, Snapshot } from "@/lib/types";
 
 export function ParentSetup({
   snapshot,
@@ -34,8 +34,7 @@ export function ParentSetup({
   const vehicles = snapshot.vehicles.filter((vehicle) => vehicle.ownerGuardianId === guardian.id);
 
   const [pickerId, setPickerId] = useState(`self:${guardian.id}`);
-  const [method, setMethod] = useState<ArrivalMethod>(guardian.defaultVehicleId ? "car" : "walk");
-  const [vehicleId, setVehicleId] = useState(guardian.defaultVehicleId);
+  const [vehicleId, setVehicleId] = useState(guardian.defaultVehicleId ?? vehicles[0]?.id);
   const [guestName, setGuestName] = useState("");
   const [guestRelation, setGuestRelation] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
@@ -125,15 +124,7 @@ export function ParentSetup({
         </section>
       ) : null}
 
-      <section>
-        <h2 className="text-sm font-semibold text-ink">{t.howArrive}</h2>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Choice active={method === "car"} title={t.byCar} onClick={() => setMethod("car")} />
-          <Choice active={method === "walk"} title={t.walking} onClick={() => setMethod("walk")} />
-        </div>
-      </section>
-
-      {method === "car" && vehicles.length > 0 ? (
+      {vehicles.length > 0 ? (
         <section>
           <h2 className="text-sm font-semibold text-ink">{t.vehicle}</h2>
           <div className="mt-3 space-y-2">
@@ -158,8 +149,8 @@ export function ParentSetup({
         onClick={() =>
           onSubmit({
             ...picker,
-            method,
-            vehicleId: method === "car" ? vehicleId : undefined,
+            method: "car",
+            vehicleId,
             guestPhone: pickerId === "guest" ? guestPhone : undefined,
           })
         }

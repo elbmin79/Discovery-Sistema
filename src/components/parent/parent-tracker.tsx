@@ -11,7 +11,7 @@ import { pickupPayload } from "@/lib/qr";
 import { findStudent, findVehicle, findZone, studentGrade, studentName } from "@/lib/school";
 import type { Locale, PickupStatus, PickupTrip, Snapshot, Student } from "@/lib/types";
 
-const STEPS: PickupStatus[] = ["on_the_way", "arrived", "preparing", "ready", "delivered"];
+const STEPS: PickupStatus[] = ["arrived", "preparing", "ready", "delivered"];
 
 export function ParentTracker({
   snapshot,
