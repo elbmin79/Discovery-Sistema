@@ -155,16 +155,16 @@ export function TvBoard() {
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col gap-5 px-8 pb-6 xl:px-12">
-        <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.85fr)_minmax(320px,1.15fr)]">
           {current ? (
             <Spotlight key={current.trip.id + safeIndex} family={current} position={safeIndex + 1} total={total} />
           ) : (
             <Idle />
           )}
 
-          <aside className="hidden min-h-0 flex-col rounded-[1.75rem] bg-forest/60 p-6 lg:flex">
-            <h2 className="text-sm tracking-[0.24em] uppercase text-gold">Siguientes</h2>
-            <p className="mt-1 text-paper/60">
+          <aside className="hidden min-h-0 flex-col rounded-[1.75rem] bg-forest/60 p-6 xl:p-8 lg:flex">
+            <h2 className="text-base tracking-[0.24em] uppercase text-gold xl:text-lg">Siguientes</h2>
+            <p className="mt-1 text-base text-paper/70 xl:text-lg">
               {total === 0
                 ? "Nadie en la fila."
                 : `${total} ${total === 1 ? "familia" : "familias"} · ${families.reduce(
@@ -172,55 +172,57 @@ export function TvBoard() {
                     0,
                   )} alumnos`}
             </p>
-            <ul className="mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-              {upNext.slice(0, 7).map((family) => (
-                <li key={family.trip.id} className="flex items-center gap-3 rounded-2xl bg-paper/5 px-3 py-2.5">
-                  <div className="flex -space-x-3">
+            <ul className="mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+              {upNext.slice(0, 5).map((family) => (
+                <li key={family.trip.id} className="flex items-center gap-4 rounded-2xl bg-paper/8 px-4 py-3.5">
+                  <div className="flex -space-x-4">
                     {family.kids.slice(0, 3).map((kid) => (
-                      <div key={kid.request.id} className="rounded-full ring-2 ring-forest">
-                        <StudentAvatar student={kid.student} size="sm" />
+                      <div key={kid.request.id} className="rounded-full ring-[3px] ring-forest-deep">
+                        <StudentAvatar student={kid.student} size="lg" />
                       </div>
                     ))}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-serif text-lg leading-tight">
+                    <p className="truncate font-serif text-2xl leading-tight xl:text-3xl">
                       {family.kids.map((kid) => kid.student.firstName).join(" y ")}
                     </p>
-                    <p className="truncate text-xs text-paper/55">
+                    <p className="mt-0.5 truncate text-base text-paper/60">
                       {family.trip.pickerName} · {formatTime(family.arrivedAt)}
                     </p>
                   </div>
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STAGE_COPY[family.stage].dot}`} />
+                  <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${STAGE_COPY[family.stage].dot}`} />
                 </li>
               ))}
-              {upNext.length > 7 ? (
-                <li className="px-3 text-sm text-paper/50">+{upNext.length - 7} familias más</li>
+              {upNext.length > 5 ? (
+                <li className="px-3 text-base text-paper/55">+{upNext.length - 5} familias más</li>
               ) : null}
               {total === 1 ? (
-                <li className="px-3 text-sm text-paper/50">Solo una familia en la fila.</li>
+                <li className="px-3 text-base text-paper/55">Solo una familia en la fila.</li>
               ) : null}
             </ul>
           </aside>
         </div>
 
-        <section className="rounded-[1.75rem] bg-forest/60 px-6 py-4">
+        <section className="rounded-[1.75rem] bg-forest/60 px-6 py-5 xl:px-8 xl:py-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm tracking-[0.24em] uppercase text-gold">Entregados</h2>
-            <span className="text-sm text-paper/50">
+            <h2 className="text-base tracking-[0.24em] uppercase text-gold xl:text-lg">Entregados</h2>
+            <span className="text-base text-paper/55">
               {recent.length === 0 ? "" : `Última: ${formatTime(recent[0]?.request.deliveredAt)}`}
             </span>
           </div>
           {recent.length === 0 ? (
-            <p className="mt-3 text-paper/55">Aún no hay entregas confirmadas.</p>
+            <p className="mt-4 text-lg text-paper/60">Aún no hay entregas confirmadas.</p>
           ) : (
-            <ul className="mt-3 flex gap-5 overflow-hidden">
+            <ul className="mt-4 flex gap-6 overflow-hidden xl:gap-8">
               {recent.map((kid) => (
-                <li key={kid.request.id} className="flex w-24 shrink-0 flex-col items-center text-center xl:w-28">
-                  <div className="rounded-full ring-2 ring-emerald-400/70">
-                    <StudentAvatar student={kid.student} size="lg" />
+                <li key={kid.request.id} className="flex w-32 shrink-0 flex-col items-center text-center xl:w-40">
+                  <div className="rounded-full ring-[3px] ring-emerald-400/80">
+                    <StudentAvatar student={kid.student} size="xl" />
                   </div>
-                  <p className="mt-2 w-full truncate font-serif text-base leading-tight">{kid.student.firstName}</p>
-                  <p className="text-xs text-paper/50">{formatTime(kid.request.deliveredAt)}</p>
+                  <p className="mt-3 w-full truncate font-serif text-xl leading-tight xl:text-2xl">
+                    {kid.student.firstName}
+                  </p>
+                  <p className="text-sm text-paper/55 xl:text-base">{formatTime(kid.request.deliveredAt)}</p>
                 </li>
               ))}
             </ul>
@@ -291,13 +293,19 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
         </dl>
       </div>
 
-      <div className="relative hidden w-[38%] shrink-0 bg-cream md:block">
+      <div className="relative hidden min-h-0 w-[42%] shrink-0 bg-ink/5 md:block">
         {photo ? (
-          <Image src={photo} alt="" fill unoptimized className="object-cover" />
+          <Image
+            src={photo}
+            alt={family.vehicle?.label ?? "Auto en la entrada"}
+            fill
+            unoptimized
+            className="object-contain object-center p-3"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-muted">Sin foto del auto</div>
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/70 to-transparent px-5 pb-5 pt-12">
+        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/75 via-forest-deep/35 to-transparent px-5 pb-5 pt-16">
           <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gold">
             {picture.captured ? (
               <>
@@ -308,7 +316,9 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
               "En la puerta"
             )}
           </p>
-          <p className="font-serif text-2xl text-paper">{family.vehicle?.label ?? "Llegó a pie"}</p>
+          <p className="font-serif text-2xl text-paper xl:text-3xl">
+            {family.vehicle?.label ?? "Llegó a pie"}
+          </p>
         </div>
       </div>
 
