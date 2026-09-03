@@ -27,7 +27,7 @@ import { findStudent, formatTime, studentGrade, studentName } from "@/lib/school
 import type { LatePickup, PickupStatus, Snapshot } from "@/lib/types";
 
 type StatusFilter = "all" | "delivered" | "active" | "cancelled";
-type Tab = "rows" | "events" | "lates";
+type Tab = "rows" | "events";
 
 const STATUS_TONES: Record<PickupStatus, string> = {
   on_the_way: "border-line bg-paper text-muted",
@@ -83,10 +83,6 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
     return (snapshot?.latePickups ?? [])
       .filter((late) => late.status === "announced")
       .sort((a, b) => a.etaAt.localeCompare(b.etaAt));
-  }, [snapshot]);
-
-  const closedLates = useMemo(() => {
-    return (snapshot?.latePickups ?? []).filter((late) => late.status === "cancelled");
   }, [snapshot]);
 
   const overdueCount = activeLates.filter((late) => lateIsOverdue(late, nowMs)).length;
@@ -153,23 +149,17 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
-        {activeLates.length > 0 ? (
+        {overdueCount > 0 ? (
           <button
             type="button"
-            onClick={() => setTab("lates")}
-            className={`mb-4 flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99] ${
-              overdueCount > 0 ? "border-danger/40 bg-danger/10" : "border-gold/50 bg-gold/15"
-            }`}
+            onClick={() => document.getElementById("retrasos")?.scrollIntoView({ behavior: "smooth" })}
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-left transition active:scale-[0.99]"
           >
-            <AlarmClock className={`h-5 w-5 shrink-0 ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`} />
-            <p className={`min-w-0 flex-1 text-sm font-semibold ${overdueCount > 0 ? "text-danger" : "text-forest-deep"}`}>
-              {overdueCount > 0
-                ? `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""} · ${overdueCount} fuera de horario`
-                : `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""}`}
+            <AlarmClock className="h-5 w-5 shrink-0 text-danger" />
+            <p className="min-w-0 flex-1 text-sm font-semibold text-danger">
+              {overdueCount} retraso{overdueCount > 1 ? "s" : ""} fuera de horario
             </p>
-            <span className={`shrink-0 text-xs font-semibold ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`}>
-              Ver →
-            </span>
+            <span className="shrink-0 text-xs font-semibold text-danger">Ver ↓</span>
           </button>
         ) : null}
 
@@ -183,13 +173,36 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
           />
         </div>
 
+        {activeLates.length > 0 ? (
+          <section id="retrasos" className="mt-4 scroll-mt-24 rounded-3xl border border-gold/50 bg-gold/10 p-4">
+            <header className="flex items-center justify-between gap-3 px-1">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-gold-deep" />
+                <h2 className="font-serif text-2xl text-forest">Retrasos</h2>
+              </div>
+              <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-sm font-bold tabular-nums text-gold-deep">
+                {activeLates.length}
+              </span>
+            </header>
+            <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+              {activeLates.map((late) => (
+                <LateCard
+                  key={late.id}
+                  late={late}
+                  snapshot={snapshot}
+                  nowMs={nowMs}
+                  busy={busyLate === late.id}
+                  onCancel={() => actLate(late.id, "cancel")}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex rounded-full border border-line bg-paper p-1">
             <TabButton active={tab === "rows"} onClick={() => setTab("rows")}>
               Recogidas · {filtered.length}
-            </TabButton>
-            <TabButton active={tab === "lates"} onClick={() => setTab("lates")}>
-              Retrasos · {activeLates.length}
             </TabButton>
             <TabButton active={tab === "events"} onClick={() => setTab("events")}>
               Movimientos · {events.length}
@@ -302,45 +315,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
               </ol>
             )}
           </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {activeLates.length === 0 && closedLates.length === 0 ? (
-              <p className="rounded-3xl bg-paper/70 px-4 py-10 text-center text-muted">
-                Sin retrasos hoy. Buen día.
-              </p>
-            ) : null}
-
-            {activeLates.map((late) => (
-              <LateCard
-                key={late.id}
-                late={late}
-                snapshot={snapshot}
-                nowMs={nowMs}
-                busy={busyLate === late.id}
-                onCancel={() => actLate(late.id, "cancel")}
-              />
-            ))}
-
-            {closedLates.length > 0 ? (
-              <div className="pt-2">
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  Cancelados hoy
-                </p>
-                <div className="space-y-2">
-                  {closedLates.map((late) => (
-                    <LateCard
-                      key={late.id}
-                      late={late}
-                      snapshot={snapshot}
-                      nowMs={nowMs}
-                      busy={false}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
