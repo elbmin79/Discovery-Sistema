@@ -11,7 +11,7 @@ import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import {
   actorLabel,
   ARRIVAL_LABELS,
-  buildBitacoraRows,
+  buildAdminRows,
   buildSummary,
   DEPARTURE_LABELS,
   downloadCsv,
@@ -21,13 +21,13 @@ import {
   lateIsOverdue,
   STATUS_LABELS,
   toCsv,
-  type BitacoraRow,
-} from "@/lib/bitacora";
+  type AdminRow,
+} from "@/lib/admin-dashboard";
 import { findStudent, formatTime, studentGrade, studentName } from "@/lib/school";
 import type { LatePickup, PickupStatus, Snapshot } from "@/lib/types";
 
 type StatusFilter = "all" | "delivered" | "active" | "cancelled";
-type Tab = "rows" | "events" | "lates";
+type Tab = "rows" | "events";
 
 const STATUS_TONES: Record<PickupStatus, string> = {
   on_the_way: "border-line bg-paper text-muted",
@@ -48,21 +48,19 @@ const EVENT_DOT: Record<string, string> = {
   late_announced: "bg-gold-deep",
   late_eta_changed: "bg-gold",
   late_cancelled: "bg-danger",
-  late_arrived: "bg-forest-soft",
-  late_resolved: "bg-forest",
 };
 
-export function BitacoraApp() {
+export function AdminDashboardApp() {
   const { session, setSession } = useSession("staff");
 
   if (!session) {
     return <StaffLogin onSignedIn={setSession} />;
   }
 
-  return <BitacoraBoard staffName={session.name} />;
+  return <AdminDashboard staffName={session.name} />;
 }
 
-function BitacoraBoard({ staffName }: { staffName: string }) {
+function AdminDashboard({ staffName }: { staffName: string }) {
   const { snapshot } = useSnapshot();
   const [tab, setTab] = useState<Tab>("rows");
   const [zoneId, setZoneId] = useState<string | null>(null);
@@ -76,17 +74,13 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
     return () => window.clearInterval(id);
   }, []);
 
-  const rows = useMemo(() => (snapshot ? buildBitacoraRows(snapshot) : []), [snapshot]);
+  const rows = useMemo(() => (snapshot ? buildAdminRows(snapshot) : []), [snapshot]);
   const summary = useMemo(() => buildSummary(rows), [rows]);
 
   const activeLates = useMemo(() => {
     return (snapshot?.latePickups ?? [])
-      .filter((late) => late.status === "announced" || late.status === "arrived")
+      .filter((late) => late.status === "announced")
       .sort((a, b) => a.etaAt.localeCompare(b.etaAt));
-  }, [snapshot]);
-
-  const closedLates = useMemo(() => {
-    return (snapshot?.latePickups ?? []).filter((late) => late.status === "resolved" || late.status === "cancelled");
   }, [snapshot]);
 
   const overdueCount = activeLates.filter((late) => lateIsOverdue(late, nowMs)).length;
@@ -108,7 +102,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
     return [...(snapshot.events ?? [])].sort((a, b) => b.at.localeCompare(a.at));
   }, [snapshot]);
 
-  async function actLate(id: string, action: "arrive" | "cancel" | "resolve") {
+  async function actLate(id: string, action: "cancel") {
     setBusyLate(id);
     try {
       await postJson(`/api/late/${id}`, { action, staffName });
@@ -118,7 +112,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
   }
 
   if (!snapshot) {
-    return <p className="p-8 text-muted">Cargando bitácora…</p>;
+    return <p className="p-8 text-muted">Cargando panel…</p>;
   }
 
   return (
@@ -130,7 +124,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
           </Link>
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-gold-deep" />
-            <h1 className="font-serif text-2xl text-forest">Bitácora del día</h1>
+            <h1 className="font-serif text-2xl text-forest">Admin Dashboard</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -153,23 +147,17 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
-        {activeLates.length > 0 ? (
+        {overdueCount > 0 ? (
           <button
             type="button"
-            onClick={() => setTab("lates")}
-            className={`mb-4 flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99] ${
-              overdueCount > 0 ? "border-danger/40 bg-danger/10" : "border-gold/50 bg-gold/15"
-            }`}
+            onClick={() => document.getElementById("retrasos")?.scrollIntoView({ behavior: "smooth" })}
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-left transition active:scale-[0.99]"
           >
-            <AlarmClock className={`h-5 w-5 shrink-0 ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`} />
-            <p className={`min-w-0 flex-1 text-sm font-semibold ${overdueCount > 0 ? "text-danger" : "text-forest-deep"}`}>
-              {overdueCount > 0
-                ? `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""} · ${overdueCount} fuera de horario`
-                : `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""}`}
+            <AlarmClock className="h-5 w-5 shrink-0 text-danger" />
+            <p className="min-w-0 flex-1 text-sm font-semibold text-danger">
+              {overdueCount} retraso{overdueCount > 1 ? "s" : ""} fuera de horario
             </p>
-            <span className={`shrink-0 text-xs font-semibold ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`}>
-              Ver →
-            </span>
+            <span className="shrink-0 text-xs font-semibold text-danger">Ver ↓</span>
           </button>
         ) : null}
 
@@ -183,13 +171,36 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
           />
         </div>
 
+        {activeLates.length > 0 ? (
+          <section id="retrasos" className="mt-4 scroll-mt-24 rounded-3xl border border-gold/50 bg-gold/10 p-4">
+            <header className="flex items-center justify-between gap-3 px-1">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-gold-deep" />
+                <h2 className="font-serif text-2xl text-forest">Retrasos</h2>
+              </div>
+              <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-sm font-bold tabular-nums text-gold-deep">
+                {activeLates.length}
+              </span>
+            </header>
+            <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+              {activeLates.map((late) => (
+                <LateCard
+                  key={late.id}
+                  late={late}
+                  snapshot={snapshot}
+                  nowMs={nowMs}
+                  busy={busyLate === late.id}
+                  onCancel={() => actLate(late.id, "cancel")}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex rounded-full border border-line bg-paper p-1">
             <TabButton active={tab === "rows"} onClick={() => setTab("rows")}>
               Recogidas · {filtered.length}
-            </TabButton>
-            <TabButton active={tab === "lates"} onClick={() => setTab("lates")}>
-              Retrasos · {activeLates.length}
             </TabButton>
             <TabButton active={tab === "events"} onClick={() => setTab("events")}>
               Movimientos · {events.length}
@@ -302,47 +313,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
               </ol>
             )}
           </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {activeLates.length === 0 && closedLates.length === 0 ? (
-              <p className="rounded-3xl bg-paper/70 px-4 py-10 text-center text-muted">
-                Sin retrasos hoy. Buen día.
-              </p>
-            ) : null}
-
-            {activeLates.map((late) => (
-              <LateCard
-                key={late.id}
-                late={late}
-                snapshot={snapshot}
-                nowMs={nowMs}
-                busy={busyLate === late.id}
-                onArrive={() => actLate(late.id, "arrive")}
-                onCancel={() => actLate(late.id, "cancel")}
-                onResolve={() => actLate(late.id, "resolve")}
-              />
-            ))}
-
-            {closedLates.length > 0 ? (
-              <div className="pt-2">
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  Cerrados hoy
-                </p>
-                <div className="space-y-2">
-                  {closedLates.map((late) => (
-                    <LateCard
-                      key={late.id}
-                      late={late}
-                      snapshot={snapshot}
-                      nowMs={nowMs}
-                      busy={false}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
@@ -353,40 +324,30 @@ function LateCard({
   snapshot,
   nowMs,
   busy,
-  onArrive,
   onCancel,
-  onResolve,
 }: {
   late: LatePickup;
   snapshot: Snapshot;
   nowMs: number | null;
   busy: boolean;
-  onArrive?: () => void;
   onCancel?: () => void;
-  onResolve?: () => void;
 }) {
   const students = snapshot.students.filter((student) => late.studentIds.includes(student.id));
   const overdue = lateIsOverdue(late, nowMs);
-  const active = late.status === "announced" || late.status === "arrived";
+  const active = late.status === "announced";
   const countdown = lateCountdownLabel(late, nowMs);
 
-  const chipTone =
-    late.status === "arrived"
-      ? "border-forest/30 bg-forest/10 text-forest"
-      : overdue
-        ? "border-danger/40 bg-danger/10 text-danger"
-        : late.status === "announced"
-          ? "border-gold/50 bg-gold/15 text-gold-deep"
-          : "border-line bg-paper text-muted";
+  const chipTone = overdue
+    ? "border-danger/40 bg-danger/10 text-danger"
+    : active
+      ? "border-gold/50 bg-gold/15 text-gold-deep"
+      : "border-line bg-paper text-muted";
 
-  const cardTone =
-    late.status === "arrived"
-      ? "border-forest/40 bg-paper"
-      : overdue
-        ? "border-danger/40 bg-paper"
-        : active
-          ? "border-gold/50 bg-paper"
-          : "border-line bg-paper/60";
+  const cardTone = overdue
+    ? "border-danger/40 bg-paper"
+    : active
+      ? "border-gold/50 bg-paper"
+      : "border-line bg-paper/60";
 
   return (
     <article className={`rounded-3xl border p-4 ${cardTone}`}>
@@ -416,37 +377,16 @@ function LateCard({
         </div>
       </div>
 
-      {active && onArrive && onResolve ? (
-        <div className="mt-3 flex gap-2">
-          {late.status === "announced" ? (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onArrive}
-                className="min-h-11 flex-1 rounded-full bg-forest text-sm font-semibold text-paper disabled:opacity-60"
-              >
-                Marcar llegó
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onCancel}
-                className="min-h-11 rounded-full border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onResolve}
-              className="min-h-11 flex-1 rounded-full bg-forest-soft text-sm font-semibold text-paper disabled:opacity-60"
-            >
-              Cerrar retraso
-            </button>
-          )}
+      {active && onCancel ? (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="min-h-11 rounded-full border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
+          >
+            Cancelar aviso
+          </button>
         </div>
       ) : null}
     </article>
@@ -459,7 +399,7 @@ function RowDesktop({
   expanded,
   onToggle,
 }: {
-  row: BitacoraRow;
+  row: AdminRow;
   snapshot: Snapshot;
   expanded: boolean;
   onToggle: () => void;
@@ -517,7 +457,7 @@ function RowMobile({
   expanded,
   onToggle,
 }: {
-  row: BitacoraRow;
+  row: AdminRow;
   snapshot: Snapshot;
   expanded: boolean;
   onToggle: () => void;
@@ -549,7 +489,7 @@ function RowMobile({
   );
 }
 
-function Timeline({ snapshot, row }: { snapshot: Snapshot; row: BitacoraRow }) {
+function Timeline({ snapshot, row }: { snapshot: Snapshot; row: AdminRow }) {
   const request = snapshot.requests.find((item) => item.id === row.requestId);
   if (!request) return null;
   const events = eventsForRequest(snapshot, request);

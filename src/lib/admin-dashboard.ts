@@ -10,7 +10,7 @@ import type {
   Student,
 } from "./types";
 
-export interface BitacoraRow {
+export interface AdminRow {
   requestId: string;
   tripId: string;
   student: Student;
@@ -52,8 +52,8 @@ export const STATUS_LABELS: Record<PickupStatus, string> = {
   cancelled: "Cancelado",
 };
 
-export function buildBitacoraRows(snapshot: Snapshot): BitacoraRow[] {
-  const rows: BitacoraRow[] = [];
+export function buildAdminRows(snapshot: Snapshot): AdminRow[] {
+  const rows: AdminRow[] = [];
   for (const request of snapshot.requests) {
     const student = findStudent(snapshot, request.studentId);
     if (!student) continue;
@@ -95,7 +95,7 @@ export function buildBitacoraRows(snapshot: Snapshot): BitacoraRow[] {
   });
 }
 
-export interface BitacoraSummary {
+export interface AdminSummary {
   total: number;
   delivered: number;
   cancelled: number;
@@ -103,7 +103,7 @@ export interface BitacoraSummary {
   averageWait?: number;
 }
 
-export function buildSummary(rows: BitacoraRow[]): BitacoraSummary {
+export function buildSummary(rows: AdminRow[]): AdminSummary {
   const delivered = rows.filter((row) => row.status === "delivered").length;
   const cancelled = rows.filter((row) => row.status === "cancelled").length;
   const waits = rows.map((row) => row.waitMinutes).filter((value): value is number => value !== undefined);
@@ -141,8 +141,6 @@ export function eventLabel(event: PickupEvent): string {
   if (event.type === "late_announced") return "Aviso de retraso enviado";
   if (event.type === "late_eta_changed") return "Hora estimada actualizada";
   if (event.type === "late_cancelled") return "Retraso cancelado";
-  if (event.type === "late_arrived") return "Familia con retraso llegó";
-  if (event.type === "late_resolved") return "Retraso cerrado";
   if (event.fromStatus && event.toStatus) {
     return `${STATUS_LABELS[event.fromStatus]} → ${STATUS_LABELS[event.toStatus]}`;
   }
@@ -179,7 +177,7 @@ const CSV_HEADERS = [
   "Retraso",
 ];
 
-export function toCsv(rows: BitacoraRow[], lates: LatePickup[] = []): string {
+export function toCsv(rows: AdminRow[], lates: LatePickup[] = []): string {
   const lines = [CSV_HEADERS.join(",")];
   for (const row of rows) {
     const late = lates.find((item) => item.studentIds.includes(row.student.id));
@@ -214,8 +212,6 @@ export function toCsv(rows: BitacoraRow[], lates: LatePickup[] = []): string {
 
 const LATE_STATUS_LABELS: Record<LatePickup["status"], string> = {
   announced: "en espera",
-  arrived: "llegó",
-  resolved: "cerrado",
   cancelled: "cancelado",
 };
 
@@ -244,7 +240,7 @@ export function downloadCsv(csv: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `bitacora-discovery-${date}.csv`;
+  link.download = `admin-dashboard-${date}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -258,8 +254,6 @@ export function lateIsOverdue(late: LatePickup, nowMs?: number | null) {
 }
 
 export function lateCountdownLabel(late: LatePickup, nowMs?: number | null) {
-  if (late.status === "arrived") return "En el kiosco";
-  if (late.status === "resolved") return "Cerrado";
   if (late.status === "cancelled") return "Cancelado";
   if (nowMs == null) return null;
   const diffMin = Math.round((Date.parse(late.etaAt) - nowMs) / 60_000);

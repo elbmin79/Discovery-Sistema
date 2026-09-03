@@ -1,5 +1,8 @@
 # Fase 1 — Bitácora (registro diario + auditoría)
 
+> **Nota:** esta feature se renombró a **Admin Dashboard** (ruta `/admin`).
+> Este documento queda como registro histórico con los nombres originales.
+
 Objetivo: llenar el vacío de **historial/reportes** y **auditoría** del sistema de salida.
 Hoy el único rastro es el modal "Entregados hoy" (solo sesión actual) y `deliveredByStaffName`.
 El contexto de voyporti (`docs/context.md` §5 y preguntas de discovery) pide: registro de

@@ -4,10 +4,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const { id } = await context.params;
     const body = (await request.json().catch(() => ({}))) as {
-      action: "eta" | "cancel" | "arrive" | "resolve";
+      action: "eta" | "cancel";
       etaAt?: string;
       staffName?: string;
-      linkedTripId?: string;
     };
     return Response.json(
       await mutateStore((store) => {
@@ -17,10 +16,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             return store.updateLateEta(id, body.etaAt);
           case "cancel":
             return store.cancelLate(id);
-          case "arrive":
-            return store.markLateArrived(id, body.staffName, body.linkedTripId);
-          case "resolve":
-            return store.resolveLate(id, body.staffName);
           default:
             throw new Error("Acción no reconocida.");
         }

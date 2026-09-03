@@ -7,7 +7,7 @@ import { AlarmClock, Car, ClipboardList, Info, Undo2, Users, X } from "lucide-re
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
-import { lateCountdownLabel, lateIsOverdue } from "@/lib/bitacora";
+import { lateCountdownLabel, lateIsOverdue } from "@/lib/admin-dashboard";
 import { DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
 import type {
@@ -153,7 +153,7 @@ export function DismissalBoard({
   const activeLates = useMemo(
     () =>
       (snapshot?.latePickups ?? [])
-        .filter((late) => late.status === "announced" || late.status === "arrived")
+        .filter((late) => late.status === "announced")
         .sort((a, b) => a.etaAt.localeCompare(b.etaAt)),
     [snapshot],
   );
@@ -216,11 +216,11 @@ export function DismissalBoard({
 
         <div className="flex items-center gap-2 md:gap-3">
           <Link
-            href="/bitacora"
+            href="/admin"
             className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest"
           >
             <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Bitácora</span>
+            <span className="hidden sm:inline">Admin</span>
           </Link>
           {activeLates.length > 0 ? (
             <button
@@ -813,13 +813,7 @@ function LateSheet({
             return (
               <div
                 key={late.id}
-                className={`rounded-2xl border p-4 ${
-                  late.status === "arrived"
-                    ? "border-forest/40 bg-forest/5"
-                    : overdue
-                      ? "border-danger/40 bg-danger/5"
-                      : "border-gold/50 bg-gold/10"
-                }`}
+                className={`rounded-2xl border p-4 ${overdue ? "border-danger/40 bg-danger/5" : "border-gold/50 bg-gold/10"}`}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex shrink-0 -space-x-2">
@@ -834,11 +828,7 @@ function LateSheet({
                       </p>
                       <span
                         className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold tabular-nums ${
-                          late.status === "arrived"
-                            ? "border-forest/30 bg-forest/10 text-forest"
-                            : overdue
-                              ? "border-danger/40 bg-danger/10 text-danger"
-                              : "border-gold/50 bg-gold/15 text-gold-deep"
+                          overdue ? "border-danger/40 bg-danger/10 text-danger" : "border-gold/50 bg-gold/15 text-gold-deep"
                         }`}
                       >
                         {countdown ?? `ETA ${formatTime(late.etaAt, "es")}`}

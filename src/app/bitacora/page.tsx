@@ -1,5 +1,5 @@
-import { BitacoraApp } from "@/components/staff/bitacora-app";
+import { redirect } from "next/navigation";
 
-export default function BitacoraPage() {
-  return <BitacoraApp />;
+export default function LegacyBitacoraPage() {
+  redirect("/admin");
 }

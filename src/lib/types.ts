@@ -148,7 +148,7 @@ export interface PickupRequest {
   authorization?: RequestAuthorization;
 }
 
-export type LatePickupStatus = "announced" | "arrived" | "resolved" | "cancelled";
+export type LatePickupStatus = "announced" | "cancelled";
 
 export interface LatePickup {
   id: string;
@@ -164,8 +164,6 @@ export interface LatePickup {
   createdAt: string;
   updatedAt: string;
   status: LatePickupStatus;
-  linkedTripId?: string;
-  resolvedAt?: string;
 }
 
 export interface CreateLatePickupInput {
@@ -193,9 +191,7 @@ export type PickupEventType =
   | "departed"
   | "late_announced"
   | "late_eta_changed"
-  | "late_cancelled"
-  | "late_arrived"
-  | "late_resolved";
+  | "late_cancelled";
 
 export interface PickupEvent {
   id: string;

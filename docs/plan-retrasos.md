@@ -1,5 +1,11 @@
 # Plan — Recogida con retraso ("Llegaré tarde")
 
+> **Simplificación (v2):** el aviso es solo un mensaje — hora + quién + alumnos.
+> Sin máquina de estados: `announced | cancelled`. El kiosco NO enlaza el aviso, no
+> hay "En el kiosco", "Marcar llegó", "Cerrar retraso" ni auto-resolución.
+> La ETA vencida se deriva en la UI (ámbar→rojo) y ya. Esto reemplaza el §2/§3
+> de fases (A–F) de abajo, que se documenta como histórico.
+
 > Canal de **excepción**: el padre avisa que no llegará a la hora habitual, con
 > **ETA** (hora estimada) y **quién** recogerá. El colegio gestiona la espera.
 
@@ -18,7 +24,7 @@ salida del grupo)? → Plan: sin ventana (demo), simple.
 Flujo completo:
 
 ```
-Padre (/familia)                Oficina (/bitacora)              Kiosco / tablet
+Padre (/familia)                Oficina (/admin)              Kiosco / tablet
 ────────────────                ───────────────────              ──────────────
 "Llegaré tarde"     ──────►     Alerta viva con cuenta           Al escanear al
 + quién recoge                  regresiva (ETA) · color          llegar: el retraso
@@ -101,7 +107,7 @@ teléfono de visita):
 Tracker existente: si hay retraso activo, banner dorado "Aviso de retraso enviado ·
 llegas ~3:45" bajo el pase QR (coherencia en tiempo real vía snapshot polling).
 
-## 5. Fase B — Bitácora como consola de alertas
+## 5. Fase B — Admin Dashboard como consola de alertas
 
 - **Banner global** (encima de todo, persistente en ambas pestañas):
   `⏱ 2 retrasos activos · Diego Ruiz llega ~3:45` — click abre la pestaña nueva.
@@ -149,7 +155,7 @@ Fase C (chip docente) después, exactamente por ese orden de criticidad.
 - Cuentas regresivas/etiquetas con `tabular-nums`; refresh natural del poll de 2s.
 - Iconos lucide: `AlarmClock`/`Timer` (retraso), `CheckCircle2` (resuelto).
 - La hoja docente reutiliza `CarImage`/avatar y radios del tablero; la pestaña
-  Bitácora reutiliza `SummaryCard`, `FilterPill`, `DeliveredSheet` existentes.
+  Admin Dashboard reutiliza `SummaryCard`, `FilterPill`, `DeliveredSheet` existentes.
 
 ## 8. Orden de fases (build)
 
@@ -157,7 +163,7 @@ Fase C (chip docente) después, exactamente por ese orden de criticidad.
 |---|---|---|---|
 | A | Modelo + store + API + eventos + seed | `types.ts`, `memory-store.ts`, `store/index.ts`, seed, `api/late*` | ✅ |
 | B | Padre "Llegaré tarde" completo + banner tracker | `/familia` | ✅ |
-| C | Bitácora: banner + pestaña Retrasos + acciones oficina | `/bitacora` | ✅ |
+| C | Admin Dashboard: banner + sección Retrasos + cancelación oficina | `/admin` | ✅ |
 | D | Kiosco→retraso auto-enlace + resolución al entregar | `arriveByCode`, `deliverTrip`, `complete` | ✅ |
 | E | Chip + hoja "Tardes" en tablet docente | `/personal` | ✅ |
 | F | Pulido: overdue escalado en banner, CSV con retrasos, seed demo | todas | ✅ |
