@@ -36,8 +36,8 @@ const EXPERIENCES = [
     icon: Tv,
   },
   {
-    href: "/bitacora",
-    title: "Bitácora",
+    href: "/admin",
+    title: "Admin Dashboard",
     person: "Registro y auditoría",
     detail: "Historial del día: entregas, tiempos y quién hizo qué.",
     icon: ClipboardList,

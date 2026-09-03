@@ -11,7 +11,7 @@ import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import {
   actorLabel,
   ARRIVAL_LABELS,
-  buildBitacoraRows,
+  buildAdminRows,
   buildSummary,
   DEPARTURE_LABELS,
   downloadCsv,
@@ -21,8 +21,8 @@ import {
   lateIsOverdue,
   STATUS_LABELS,
   toCsv,
-  type BitacoraRow,
-} from "@/lib/bitacora";
+  type AdminRow,
+} from "@/lib/admin-dashboard";
 import { findStudent, formatTime, studentGrade, studentName } from "@/lib/school";
 import type { LatePickup, PickupStatus, Snapshot } from "@/lib/types";
 
@@ -52,17 +52,17 @@ const EVENT_DOT: Record<string, string> = {
   late_cancelled: "bg-danger",
 };
 
-export function BitacoraApp() {
+export function AdminDashboardApp() {
   const { session, setSession } = useSession("staff");
 
   if (!session) {
     return <StaffLogin onSignedIn={setSession} />;
   }
 
-  return <BitacoraBoard staffName={session.name} />;
+  return <AdminDashboard staffName={session.name} />;
 }
 
-function BitacoraBoard({ staffName }: { staffName: string }) {
+function AdminDashboard({ staffName }: { staffName: string }) {
   const { snapshot } = useSnapshot();
   const [tab, setTab] = useState<Tab>("rows");
   const [zoneId, setZoneId] = useState<string | null>(null);
@@ -76,7 +76,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
     return () => window.clearInterval(id);
   }, []);
 
-  const rows = useMemo(() => (snapshot ? buildBitacoraRows(snapshot) : []), [snapshot]);
+  const rows = useMemo(() => (snapshot ? buildAdminRows(snapshot) : []), [snapshot]);
   const summary = useMemo(() => buildSummary(rows), [rows]);
 
   const activeLates = useMemo(() => {
@@ -114,7 +114,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
   }
 
   if (!snapshot) {
-    return <p className="p-8 text-muted">Cargando bitácora…</p>;
+    return <p className="p-8 text-muted">Cargando panel…</p>;
   }
 
   return (
@@ -126,7 +126,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
           </Link>
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-gold-deep" />
-            <h1 className="font-serif text-2xl text-forest">Bitácora del día</h1>
+            <h1 className="font-serif text-2xl text-forest">Admin Dashboard</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -401,7 +401,7 @@ function RowDesktop({
   expanded,
   onToggle,
 }: {
-  row: BitacoraRow;
+  row: AdminRow;
   snapshot: Snapshot;
   expanded: boolean;
   onToggle: () => void;
@@ -459,7 +459,7 @@ function RowMobile({
   expanded,
   onToggle,
 }: {
-  row: BitacoraRow;
+  row: AdminRow;
   snapshot: Snapshot;
   expanded: boolean;
   onToggle: () => void;
@@ -491,7 +491,7 @@ function RowMobile({
   );
 }
 
-function Timeline({ snapshot, row }: { snapshot: Snapshot; row: BitacoraRow }) {
+function Timeline({ snapshot, row }: { snapshot: Snapshot; row: AdminRow }) {
   const request = snapshot.requests.find((item) => item.id === row.requestId);
   if (!request) return null;
   const events = eventsForRequest(snapshot, request);

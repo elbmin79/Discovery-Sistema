@@ -7,7 +7,7 @@ import { AlarmClock, ClipboardList, Info, Undo2, Users, X } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
-import { lateCountdownLabel, lateIsOverdue } from "@/lib/bitacora";
+import { lateCountdownLabel, lateIsOverdue } from "@/lib/admin-dashboard";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
 import type {
   DemoSession,
@@ -205,11 +205,11 @@ export function DismissalBoard({
 
         <div className="flex items-center gap-2 md:gap-3">
           <Link
-            href="/bitacora"
+            href="/admin"
             className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest"
           >
             <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Bitácora</span>
+            <span className="hidden sm:inline">Admin</span>
           </Link>
           {activeLates.length > 0 ? (
             <button

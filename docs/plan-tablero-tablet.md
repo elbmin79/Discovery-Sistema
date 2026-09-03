@@ -96,7 +96,7 @@ vamos mucho más grandes). Toda la tarjeta es el botón.
 - Marca compacta + título "Salida — {zona/turno actual}" (por ahora "Salida").
 - Reloj en vivo (contexto para el maestro).
 - Contadores: "Esperando N · Llamado N · Entregado N".
-- Botón "Bitácora" (enlace a `/bitacora`, ya existe) y "Nueva jornada" si aplica.
+- Botón "Admin" (enlace a `/admin`, ya existe) y "Nueva jornada" si aplica.
 
 ## 7. Diseño / buenas prácticas aplicadas
 
@@ -126,7 +126,7 @@ vamos mucho más grandes). Toda la tarjeta es el botón.
 | `src/components/demo/demo-hub.tsx` | actualizar tarjeta "Personal" → "Tablero de salida" |
 
 Se **retira** `staff-board.tsx` / `staff-app.tsx` (sus funciones quedan cubiertas: el
-"Entregados hoy" ahora es la columna Entregado + `/bitacora`).
+"Entregados hoy" ahora es la columna Entregado + `/admin`).
 
 ## 9. Casos borde
 
@@ -142,7 +142,7 @@ Se **retira** `staff-board.tsx` / `staff-app.tsx` (sus funciones quedan cubierta
 
 1. `npm run lint` + `npm run build`.
 2. Flujo manual/API: `arrive` (kiosco) → aparece en Esperando → `advance` → Llamado →
-   `complete` → Entregado; verificar eventos en `/api/state` y `/bitacora`.
+   `complete` → Entregado; verificar eventos en `/api/state` y `/admin`.
 3. Responsivo: probar en 1280px (landscape), 820px (iPad portrait), 390px (teléfono).
 4. (Opcional) Playwright para el recorrido completo kiosco → tablero → entrega.
 
