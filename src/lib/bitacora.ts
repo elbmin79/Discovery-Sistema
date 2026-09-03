@@ -2,6 +2,7 @@ import { findStudent, findVehicle, findZone, LEVEL_LABELS } from "./school";
 import type {
   ArrivalVia,
   DepartureVia,
+  LatePickup,
   PickupEvent,
   PickupRequest,
   PickupStatus,
@@ -142,6 +143,11 @@ export function eventLabel(event: PickupEvent): string {
   if (event.type === "authorization_requested") return event.note ?? "Se pidió confirmación a la familia";
   if (event.type === "authorization_changed") return event.note ?? "La familia respondió";
   if (event.type === "departed") return event.note ? `Ciclo cerrado · ${event.note}` : "Ciclo cerrado";
+  if (event.type === "late_announced") return "Aviso de retraso enviado";
+  if (event.type === "late_eta_changed") return "Hora estimada actualizada";
+  if (event.type === "late_cancelled") return "Retraso cancelado";
+  if (event.type === "late_arrived") return "Familia con retraso llegó";
+  if (event.type === "late_resolved") return "Retraso cerrado";
   if (event.fromStatus && event.toStatus) {
     return `${STATUS_LABELS[event.fromStatus]} → ${STATUS_LABELS[event.toStatus]}`;
   }
@@ -177,11 +183,16 @@ const CSV_HEADERS = [
   "Estado",
   "Entregó",
   "Espera (min)",
+  "Retraso",
 ];
 
-export function toCsv(rows: BitacoraRow[]): string {
+export function toCsv(rows: BitacoraRow[], lates: LatePickup[] = []): string {
   const lines = [CSV_HEADERS.join(",")];
   for (const row of rows) {
+    const late = lates.find((item) => item.studentIds.includes(row.student.id));
+    const lateCell = late
+      ? `Aviso ${csvDateTime(late.createdAt)} · ETA ${csvDateTime(late.etaAt)} · ${LATE_STATUS_LABELS[late.status]}`
+      : "";
     lines.push(
       [
         `${row.student.firstName} ${row.student.lastName}`,
@@ -201,6 +212,7 @@ export function toCsv(rows: BitacoraRow[]): string {
         STATUS_LABELS[row.status],
         row.deliveredBy ?? "",
         row.waitMinutes !== undefined ? String(row.waitMinutes) : "",
+        lateCell,
       ]
         .map(csvEscape)
         .join(","),
@@ -208,6 +220,13 @@ export function toCsv(rows: BitacoraRow[]): string {
   }
   return `${lines.join("\r\n")}\r\n`;
 }
+
+const LATE_STATUS_LABELS: Record<LatePickup["status"], string> = {
+  announced: "en espera",
+  arrived: "llegó",
+  resolved: "cerrado",
+  cancelled: "cancelado",
+};
 
 function csvEscape(value: string) {
   if (/["\n,]/.test(value)) {
@@ -239,4 +258,21 @@ export function downloadCsv(csv: string) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+export const LATE_TOLERANCE_MS = 15 * 60_000;
+
+export function lateIsOverdue(late: LatePickup, nowMs?: number | null) {
+  return late.status === "announced" && nowMs != null && Date.parse(late.etaAt) + LATE_TOLERANCE_MS < nowMs;
+}
+
+export function lateCountdownLabel(late: LatePickup, nowMs?: number | null) {
+  if (late.status === "arrived") return "En el kiosco";
+  if (late.status === "resolved") return "Cerrado";
+  if (late.status === "cancelled") return "Cancelado";
+  if (nowMs == null) return null;
+  const diffMin = Math.round((Date.parse(late.etaAt) - nowMs) / 60_000);
+  if (diffMin < 0) return `${-diffMin} min sobre la hora`;
+  if (diffMin === 0) return "Llegando";
+  return `Llega en ~${diffMin} min`;
 }

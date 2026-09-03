@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Globe, House, UserRound } from "lucide-react";
+import { AlarmClock, Globe, House, UserRound } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { PhoneShell } from "@/components/parent/phone-shell";
+import { type LateCreatePayload, ParentLate } from "@/components/parent/parent-late";
 import { ParentHome } from "@/components/parent/parent-home";
 import { ParentLogin } from "@/components/parent/parent-login";
 import { ParentSettings } from "@/components/parent/parent-settings";
@@ -14,7 +15,7 @@ import { AuthorizationInbox } from "@/components/parent/authorization-inbox";
 import { useLocale } from "@/hooks/use-locale";
 import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
-import { friendKids } from "@/lib/school";
+import { formatTime, friendKids } from "@/lib/school";
 import type { CreateTripInput, Snapshot } from "@/lib/types";
 
 function activeTripForGuardian(snapshot: Snapshot, guardianId: string) {
@@ -46,7 +47,8 @@ export function ParentApp() {
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
   const [tab, setTab] = useState<"home" | "settings">("home");
-  const [step, setStep] = useState<"home" | "setup">("home");
+  const [step, setStep] = useState<"home" | "setup" | "late">("home");
+  const [lateMode, setLateMode] = useState<"create" | "edit">("create");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,13 @@ export function ParentApp() {
   const activeTrip = snapshot && guardian ? activeTripForGuardian(snapshot, guardian.id) : undefined;
   const doneTrip = snapshot && guardian ? completedTripForGuardian(snapshot, guardian.id) : undefined;
   const trip = activeTrip ?? (doneTrip && doneTrip.id !== dismissedTripId ? doneTrip : undefined);
-  const showNav = Boolean(session && guardian && !trip && step !== "setup");
+  const activeLate =
+    (snapshot && guardian
+      ? (snapshot.latePickups ?? []).find(
+          (late) => late.guardianId === guardian.id && late.status === "announced",
+        )
+      : null) ?? null;
+  const showNav = Boolean(session && guardian && !trip && step === "home");
 
   async function createTrip(input: Omit<CreateTripInput, "guardianId" | "studentIds">) {
     if (!guardian) return;
@@ -94,6 +102,49 @@ export function ParentApp() {
     }
   }
 
+  async function submitLate(payload: LateCreatePayload) {
+    if (!guardian) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson("/api/late", { ...payload, guardianId: guardian.id });
+      setStep("home");
+      setTab("home");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.noActive);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateLateEta(etaAt: string) {
+    if (!activeLate) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson(`/api/late/${activeLate.id}`, { action: "eta", etaAt });
+      setStep("home");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.noActive);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelLateNotice() {
+    if (!activeLate) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson(`/api/late/${activeLate.id}`, { action: "cancel" });
+      setStep("home");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.noActive);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <PhoneShell>
       <header className="flex items-center justify-between px-5 pt-6 pb-3">
@@ -114,6 +165,32 @@ export function ParentApp() {
         {session && snapshot && guardian && tab !== "settings" ? (
           <AuthorizationInbox snapshot={snapshot} guardian={guardian} locale={locale} t={t} />
         ) : null}
+        {session && activeLate && step !== "late" ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setLateMode("edit");
+              setStep("late");
+            }}
+            className="mt-2 mb-4 flex w-full items-center gap-3 rounded-2xl border border-gold/50 bg-gold/15 px-4 py-3 text-left"
+          >
+            <AlarmClock className="h-5 w-5 shrink-0 text-gold-deep" />
+            <p className="min-w-0 flex-1 text-sm font-medium text-forest-deep">
+              {t.lateActiveBanner
+                .replace(
+                  "{names}",
+                  (snapshot?.students ?? [])
+                    .filter((student) => activeLate.studentIds.includes(student.id))
+                    .map((student) => student.firstName)
+                    .join(", "),
+                )
+                .replace("{time}", formatTime(activeLate.etaAt, locale))}
+            </p>
+            <span className="shrink-0 text-xs font-semibold text-gold-deep">{t.lateUpdate} →</span>
+          </button>
+        ) : null}
+
         {!session ? (
           <ParentLogin t={t} onSignedIn={setSession} />
         ) : !snapshot || !guardian ? (
@@ -139,6 +216,20 @@ export function ParentApp() {
             locale={locale}
             t={t}
             onLogout={clearSession}
+          />
+        ) : step === "late" ? (
+          <ParentLate
+            snapshot={snapshot}
+            guardian={guardian}
+            locale={locale}
+            t={t}
+            busy={busy}
+            error={error}
+            existing={lateMode === "edit" ? activeLate : null}
+            onBack={() => setStep("home")}
+            onSubmit={submitLate}
+            onEtaUpdate={updateLateEta}
+            onCancelNotice={cancelLateNotice}
           />
         ) : step === "setup" ? (
           <ParentSetup
@@ -167,6 +258,12 @@ export function ParentApp() {
               setError(null);
               setStep("setup");
             }}
+            onLate={() => {
+              setError(null);
+              setLateMode(activeLate ? "edit" : "create");
+              setStep("late");
+            }}
+            lateLabel={activeLate ? t.lateUpdate : t.lateCta}
             locale={locale}
             t={t}
           />

@@ -16,6 +16,8 @@ export function ParentHome({
   selected,
   onToggle,
   onContinue,
+  onLate,
+  lateLabel,
   locale,
   t,
 }: {
@@ -25,6 +27,8 @@ export function ParentHome({
   selected: string[];
   onToggle: (id: string) => void;
   onContinue: () => void;
+  onLate?: () => void;
+  lateLabel?: string;
   locale: Locale;
   t: Dictionary;
 }) {
@@ -106,6 +110,16 @@ export function ParentHome({
       >
         {label}
       </button>
+
+      {onLate ? (
+        <button
+          type="button"
+          onClick={onLate}
+          className="mt-3 w-full rounded-full border border-dashed border-gold-deep/60 py-3 text-sm font-semibold text-gold-deep"
+        >
+          {lateLabel ?? t.lateCta}
+        </button>
+      ) : null}
 
       {picking ? (
         <FriendPicker
