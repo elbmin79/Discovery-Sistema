@@ -21,13 +21,7 @@ export const LEVEL_LABELS: Record<Level, { es: string; en: string; stage: "presc
   "grade-6": { es: "6° Primaria", en: "6th Grade", stage: "elementary" },
 };
 
-export const STATUS_ORDER: PickupStatus[] = [
-  "on_the_way",
-  "arrived",
-  "preparing",
-  "ready",
-  "delivered",
-];
+export const STATUS_ORDER: PickupStatus[] = ["on_the_way", "arrived", "delivered"];
 
 export function studentName(student: Student) {
   return `${student.firstName} ${student.lastName}`;

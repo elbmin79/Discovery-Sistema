@@ -99,6 +99,10 @@ export class MemoryPickupStore {
       const base = seed.vehicles.find((item) => item.id === vehicle.id);
       if (base?.tagId) vehicle.tagId = base.tagId;
     }
+    // Estados intermedios de versiones anteriores ("preparing"/"ready") vuelven a la fila.
+    for (const request of this.data.requests) {
+      if (!isPickupStatus(request.status)) request.status = "arrived";
+    }
   }
 
   private guardianLabel(guardian: Guardian) {
@@ -512,9 +516,14 @@ export class MemoryPickupStore {
   }
 
   setTripStatus(tripId: string, action: "advance" | "undo" | "complete", staffName?: string) {
-    const requests = this.data.requests.filter(
-      (item) => item.tripId === tripId && item.status !== "cancelled" && item.status !== "delivered",
-    );
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (action === "undo" && trip?.departedAt) {
+      throw new Error("Esta familia ya salió del plantel; el ciclo está cerrado.");
+    }
+    const requests = this.data.requests.filter((item) => {
+      if (item.tripId !== tripId || item.status === "cancelled") return false;
+      return action === "undo" ? item.status === "delivered" : item.status !== "delivered";
+    });
     if (requests.length === 0) {
       throw new Error("No hay alumnos activos en esta familia.");
     }
@@ -662,8 +671,8 @@ export class MemoryPickupStore {
     if (requests.length === 0) {
       throw new Error("No hay alumnos por entregar en esta familia.");
     }
-    if (!requests.every((item) => item.status === "ready")) {
-      throw new Error("Aún faltan alumnos en la puerta.");
+    if (!requests.every((item) => item.status === "arrived")) {
+      throw new Error("La familia aún no ha llegado.");
     }
 
     const now = new Date().toISOString();
@@ -679,7 +688,7 @@ export class MemoryPickupStore {
           studentId: request.studentId,
           actorRole: "staff",
           actorName: request.deliveredByStaffName,
-          fromStatus: "ready",
+          fromStatus: "arrived",
           toStatus: "delivered",
         },
         now,
@@ -707,7 +716,7 @@ export class MemoryPickupStore {
       .at(-1);
   }
 
-  closeTrip(tripId: string, via: DepartureVia, at?: string) {
+  closeTrip(tripId: string, via: DepartureVia, at?: string, staffName?: string) {
     const trip = this.data.trips.find((item) => item.id === tripId);
     if (!trip) throw new Error("No encontramos esa solicitud.");
     if (trip.departedAt) return this.snapshot();
@@ -724,13 +733,15 @@ export class MemoryPickupStore {
         type: "departed",
         tripId,
         actorRole: via === "tag" ? "kiosk" : via === "parent" ? "parent" : "staff",
-        actorName: via === "parent" ? trip.pickerName : undefined,
+        actorName: via === "parent" ? trip.pickerName : via === "staff" ? staffName : undefined,
         note:
           via === "tag"
             ? `Salida detectada por el lector · Tag ${vehicle?.tagId ?? ""}`.trim()
             : via === "parent"
               ? "La familia confirmó la recogida en la app"
-              : "Cierre automático (30 min sin confirmación)",
+              : via === "staff"
+                ? "El personal cerró el ciclo desde el tablero"
+                : "Cierre automático (30 min sin confirmación)",
       },
       now,
     );
@@ -912,5 +923,5 @@ export class MemoryPickupStore {
 }
 
 export function isPickupStatus(value: string): value is PickupStatus {
-  return ["on_the_way", "arrived", "preparing", "ready", "delivered", "cancelled"].includes(value);
+  return ["on_the_way", "arrived", "delivered", "cancelled"].includes(value);
 }

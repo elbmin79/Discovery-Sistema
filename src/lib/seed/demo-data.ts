@@ -559,7 +559,10 @@ export function createSeedSnapshot(): Snapshot {
         qrToken: "pass-garcia",
         createdAt: minutesAgo(40),
         arrivedAt: minutesAgo(28),
+        arrivalVia: "tag",
         arrivalPhoto: fallbackArrivalPhoto("Ford Explorer gris", "Gris"),
+        departedAt: minutesAgo(13),
+        departedVia: "tag",
       },
     ],
     requests: [
@@ -583,28 +586,31 @@ export function createSeedSnapshot(): Snapshot {
         id: "r-diego",
         tripId: "t-ruiz",
         studentId: "s-diego",
-        status: "preparing",
+        status: "delivered",
         requestedAt: minutesAgo(18),
         arrivedAt: minutesAgo(9),
-        preparingAt: minutesAgo(6),
+        deliveredAt: minutesAgo(2),
+        deliveredByStaffName: "Mtra. Alejandra Ríos",
       },
       {
         id: "r-camila",
         tripId: "t-navarro",
         studentId: "s-camila",
-        status: "preparing",
+        status: "delivered",
         requestedAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
-        preparingAt: minutesAgo(3),
+        deliveredAt: minutesAgo(1),
+        deliveredByStaffName: "Mtro. Luis Ortega",
       },
       {
         id: "r-iker",
         tripId: "t-navarro",
         studentId: "s-iker",
-        status: "preparing",
+        status: "delivered",
         requestedAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
-        preparingAt: minutesAgo(8),
+        deliveredAt: minutesAgo(1),
+        deliveredByStaffName: "Mtro. Luis Ortega",
       },
       {
         id: "r-valentina",
@@ -613,8 +619,6 @@ export function createSeedSnapshot(): Snapshot {
         status: "delivered",
         requestedAt: minutesAgo(40),
         arrivedAt: minutesAgo(28),
-        preparingAt: minutesAgo(24),
-        readyAt: minutesAgo(20),
         deliveredAt: minutesAgo(16),
         deliveredByStaffName: "Mtra. Gabriela Núñez",
       },
@@ -667,32 +671,6 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
   }
 
   for (const request of snapshot.requests) {
-    if (request.preparingAt) {
-      push({
-        at: request.preparingAt,
-        type: "status_changed",
-        tripId: request.tripId,
-        requestId: request.id,
-        studentId: request.studentId,
-        actorRole: "staff",
-        actorName: stageStaff(request.studentId),
-        fromStatus: "arrived",
-        toStatus: "preparing",
-      });
-    }
-    if (request.readyAt) {
-      push({
-        at: request.readyAt,
-        type: "status_changed",
-        tripId: request.tripId,
-        requestId: request.id,
-        studentId: request.studentId,
-        actorRole: "staff",
-        actorName: stageStaff(request.studentId),
-        fromStatus: "preparing",
-        toStatus: "ready",
-      });
-    }
     if (request.deliveredAt) {
       push({
         at: request.deliveredAt,
@@ -702,10 +680,22 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
         studentId: request.studentId,
         actorRole: "staff",
         actorName: request.deliveredByStaffName ?? stageStaff(request.studentId),
-        fromStatus: "ready",
+        fromStatus: "arrived",
         toStatus: "delivered",
       });
     }
+  }
+
+  for (const trip of snapshot.trips) {
+    if (!trip.departedAt) continue;
+    const vehicle = snapshot.vehicles.find((item) => item.id === trip.vehicleId);
+    push({
+      at: trip.departedAt,
+      type: "departed",
+      tripId: trip.id,
+      actorRole: "kiosk",
+      note: `Salida detectada por el lector · Tag ${vehicle?.tagId ?? ""}`.trim(),
+    });
   }
 
   for (const late of snapshot.latePickups) {

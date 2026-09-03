@@ -32,8 +32,6 @@ type Tab = "rows" | "events";
 const STATUS_TONES: Record<PickupStatus, string> = {
   on_the_way: "border-line bg-paper text-muted",
   arrived: "border-gold/50 bg-gold/15",
-  preparing: "border-gold-deep/40 bg-cream-deep",
-  ready: "border-forest/25 bg-forest/10",
   delivered: "border-forest/30 bg-forest/15",
   cancelled: "border-danger/30 bg-danger/10",
 };

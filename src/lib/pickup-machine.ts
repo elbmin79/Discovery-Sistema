@@ -1,15 +1,18 @@
 import type { PickupStatus } from "./types";
 
+/**
+ * Ciclo de una recogida: en camino → en la fila (llegó) → entregado.
+ * El cierre (salida del plantel) vive en el viaje, no en el alumno.
+ */
+/** Tiempo que un alumno entregado sigue visible en "Notificados" (tablero) y "Entregados" (TV). */
+export const DELIVERED_VISIBLE_MS = 5 * 60 * 1000;
+
 const FORWARD: Partial<Record<PickupStatus, PickupStatus>> = {
-  arrived: "preparing",
-  preparing: "ready",
-  ready: "delivered",
+  arrived: "delivered",
 };
 
 const BACK: Partial<Record<PickupStatus, PickupStatus>> = {
-  preparing: "arrived",
-  ready: "preparing",
-  delivered: "ready",
+  delivered: "arrived",
 };
 
 export function canAdvance(status: PickupStatus) {
@@ -25,7 +28,7 @@ export function canCancel(status: PickupStatus) {
 }
 
 export function canComplete(status: PickupStatus) {
-  return status === "preparing" || status === "ready";
+  return status === "arrived";
 }
 
 export function nextStatus(status: PickupStatus) {
@@ -39,15 +42,8 @@ export function previousStatus(status: PickupStatus) {
 export function applyStatusTimestamp(
   status: PickupStatus,
   now: string,
-): Partial<{
-  arrivedAt: string;
-  preparingAt: string;
-  readyAt: string;
-  deliveredAt: string;
-}> {
+): Partial<{ arrivedAt: string; deliveredAt: string }> {
   if (status === "arrived") return { arrivedAt: now };
-  if (status === "preparing") return { preparingAt: now };
-  if (status === "ready") return { readyAt: now };
   if (status === "delivered") return { deliveredAt: now };
   return {};
 }
