@@ -147,7 +147,7 @@ export function DismissalBoard({
   const activeLates = useMemo(
     () =>
       (snapshot?.latePickups ?? [])
-        .filter((late) => late.status === "announced" || late.status === "arrived")
+        .filter((late) => late.status === "announced")
         .sort((a, b) => a.etaAt.localeCompare(b.etaAt)),
     [snapshot],
   );
@@ -720,13 +720,7 @@ function LateSheet({
             return (
               <div
                 key={late.id}
-                className={`rounded-2xl border p-4 ${
-                  late.status === "arrived"
-                    ? "border-forest/40 bg-forest/5"
-                    : overdue
-                      ? "border-danger/40 bg-danger/5"
-                      : "border-gold/50 bg-gold/10"
-                }`}
+                className={`rounded-2xl border p-4 ${overdue ? "border-danger/40 bg-danger/5" : "border-gold/50 bg-gold/10"}`}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex shrink-0 -space-x-2">
@@ -741,11 +735,7 @@ function LateSheet({
                       </p>
                       <span
                         className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold tabular-nums ${
-                          late.status === "arrived"
-                            ? "border-forest/30 bg-forest/10 text-forest"
-                            : overdue
-                              ? "border-danger/40 bg-danger/10 text-danger"
-                              : "border-gold/50 bg-gold/15 text-gold-deep"
+                          overdue ? "border-danger/40 bg-danger/10 text-danger" : "border-gold/50 bg-gold/15 text-gold-deep"
                         }`}
                       >
                         {countdown ?? `ETA ${formatTime(late.etaAt, "es")}`}

@@ -50,8 +50,6 @@ const EVENT_DOT: Record<string, string> = {
   late_announced: "bg-gold-deep",
   late_eta_changed: "bg-gold",
   late_cancelled: "bg-danger",
-  late_arrived: "bg-forest-soft",
-  late_resolved: "bg-forest",
 };
 
 export function BitacoraApp() {
@@ -83,12 +81,12 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
 
   const activeLates = useMemo(() => {
     return (snapshot?.latePickups ?? [])
-      .filter((late) => late.status === "announced" || late.status === "arrived")
+      .filter((late) => late.status === "announced")
       .sort((a, b) => a.etaAt.localeCompare(b.etaAt));
   }, [snapshot]);
 
   const closedLates = useMemo(() => {
-    return (snapshot?.latePickups ?? []).filter((late) => late.status === "resolved" || late.status === "cancelled");
+    return (snapshot?.latePickups ?? []).filter((late) => late.status === "cancelled");
   }, [snapshot]);
 
   const overdueCount = activeLates.filter((late) => lateIsOverdue(late, nowMs)).length;
@@ -110,7 +108,7 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
     return [...(snapshot.events ?? [])].sort((a, b) => b.at.localeCompare(a.at));
   }, [snapshot]);
 
-  async function actLate(id: string, action: "arrive" | "cancel" | "resolve") {
+  async function actLate(id: string, action: "cancel") {
     setBusyLate(id);
     try {
       await postJson(`/api/late/${id}`, { action, staffName });
@@ -319,16 +317,14 @@ function BitacoraBoard({ staffName }: { staffName: string }) {
                 snapshot={snapshot}
                 nowMs={nowMs}
                 busy={busyLate === late.id}
-                onArrive={() => actLate(late.id, "arrive")}
                 onCancel={() => actLate(late.id, "cancel")}
-                onResolve={() => actLate(late.id, "resolve")}
               />
             ))}
 
             {closedLates.length > 0 ? (
               <div className="pt-2">
                 <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  Cerrados hoy
+                  Cancelados hoy
                 </p>
                 <div className="space-y-2">
                   {closedLates.map((late) => (
@@ -355,40 +351,30 @@ function LateCard({
   snapshot,
   nowMs,
   busy,
-  onArrive,
   onCancel,
-  onResolve,
 }: {
   late: LatePickup;
   snapshot: Snapshot;
   nowMs: number | null;
   busy: boolean;
-  onArrive?: () => void;
   onCancel?: () => void;
-  onResolve?: () => void;
 }) {
   const students = snapshot.students.filter((student) => late.studentIds.includes(student.id));
   const overdue = lateIsOverdue(late, nowMs);
-  const active = late.status === "announced" || late.status === "arrived";
+  const active = late.status === "announced";
   const countdown = lateCountdownLabel(late, nowMs);
 
-  const chipTone =
-    late.status === "arrived"
-      ? "border-forest/30 bg-forest/10 text-forest"
-      : overdue
-        ? "border-danger/40 bg-danger/10 text-danger"
-        : late.status === "announced"
-          ? "border-gold/50 bg-gold/15 text-gold-deep"
-          : "border-line bg-paper text-muted";
+  const chipTone = overdue
+    ? "border-danger/40 bg-danger/10 text-danger"
+    : active
+      ? "border-gold/50 bg-gold/15 text-gold-deep"
+      : "border-line bg-paper text-muted";
 
-  const cardTone =
-    late.status === "arrived"
-      ? "border-forest/40 bg-paper"
-      : overdue
-        ? "border-danger/40 bg-paper"
-        : active
-          ? "border-gold/50 bg-paper"
-          : "border-line bg-paper/60";
+  const cardTone = overdue
+    ? "border-danger/40 bg-paper"
+    : active
+      ? "border-gold/50 bg-paper"
+      : "border-line bg-paper/60";
 
   return (
     <article className={`rounded-3xl border p-4 ${cardTone}`}>
@@ -418,37 +404,16 @@ function LateCard({
         </div>
       </div>
 
-      {active && onArrive && onResolve ? (
-        <div className="mt-3 flex gap-2">
-          {late.status === "announced" ? (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onArrive}
-                className="min-h-11 flex-1 rounded-full bg-forest text-sm font-semibold text-paper disabled:opacity-60"
-              >
-                Marcar llegó
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onCancel}
-                className="min-h-11 rounded-full border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onResolve}
-              className="min-h-11 flex-1 rounded-full bg-forest-soft text-sm font-semibold text-paper disabled:opacity-60"
-            >
-              Cerrar retraso
-            </button>
-          )}
+      {active && onCancel ? (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="min-h-11 rounded-full border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
+          >
+            Cancelar aviso
+          </button>
         </div>
       ) : null}
     </article>

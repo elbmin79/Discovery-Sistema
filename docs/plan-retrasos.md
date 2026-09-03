@@ -1,5 +1,11 @@
 # Plan — Recogida con retraso ("Llegaré tarde")
 
+> **Simplificación (v2):** el aviso es solo un mensaje — hora + quién + alumnos.
+> Sin máquina de estados: `announced | cancelled`. El kiosco NO enlaza el aviso, no
+> hay "En el kiosco", "Marcar llegó", "Cerrar retraso" ni auto-resolución.
+> La ETA vencida se deriva en la UI (ámbar→rojo) y ya. Esto reemplaza el §2/§3
+> de fases (A–F) de abajo, que se documenta como histórico.
+
 > Canal de **excepción**: el padre avisa que no llegará a la hora habitual, con
 > **ETA** (hora estimada) y **quién** recogerá. El colegio gestiona la espera.
 

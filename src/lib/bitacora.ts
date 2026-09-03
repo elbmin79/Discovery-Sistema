@@ -146,8 +146,6 @@ export function eventLabel(event: PickupEvent): string {
   if (event.type === "late_announced") return "Aviso de retraso enviado";
   if (event.type === "late_eta_changed") return "Hora estimada actualizada";
   if (event.type === "late_cancelled") return "Retraso cancelado";
-  if (event.type === "late_arrived") return "Familia con retraso llegó";
-  if (event.type === "late_resolved") return "Retraso cerrado";
   if (event.fromStatus && event.toStatus) {
     return `${STATUS_LABELS[event.fromStatus]} → ${STATUS_LABELS[event.toStatus]}`;
   }
@@ -223,8 +221,6 @@ export function toCsv(rows: BitacoraRow[], lates: LatePickup[] = []): string {
 
 const LATE_STATUS_LABELS: Record<LatePickup["status"], string> = {
   announced: "en espera",
-  arrived: "llegó",
-  resolved: "cerrado",
   cancelled: "cancelado",
 };
 
@@ -267,8 +263,6 @@ export function lateIsOverdue(late: LatePickup, nowMs?: number | null) {
 }
 
 export function lateCountdownLabel(late: LatePickup, nowMs?: number | null) {
-  if (late.status === "arrived") return "En el kiosco";
-  if (late.status === "resolved") return "Cerrado";
   if (late.status === "cancelled") return "Cancelado";
   if (nowMs == null) return null;
   const diffMin = Math.round((Date.parse(late.etaAt) - nowMs) / 60_000);
