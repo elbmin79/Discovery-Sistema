@@ -240,28 +240,35 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
   const siblings = family.kids.length > 1;
 
   return (
-    <section className="tv-in relative flex min-h-0 overflow-hidden rounded-[1.75rem] bg-paper text-ink">
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-6 p-8 xl:gap-8 xl:p-12">
-        <div className="flex items-center gap-3">
-          <span className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide ${copy.pill}`}>
-            {copy.label}
-          </span>
-          <span className="text-sm text-muted">{copy.hint}</span>
+    <section className="tv-in relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] bg-paper text-ink">
+      <div className="relative z-10 shrink-0 px-8 pt-7 pb-5 xl:px-10 xl:pt-8 xl:pb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide xl:text-base ${copy.pill}`}>
+              {copy.label}
+            </span>
+            <span className="text-sm text-muted xl:text-base">{copy.hint}</span>
+          </div>
+          {total > 1 ? (
+            <span className="shrink-0 rounded-full bg-forest-deep/90 px-3 py-1 text-sm font-semibold tabular-nums text-paper">
+              {position} / {total}
+            </span>
+          ) : null}
         </div>
 
-        <div className={`flex flex-wrap gap-6 ${siblings ? "xl:gap-10" : ""}`}>
+        <div className={`mt-5 flex flex-wrap gap-6 xl:mt-6 ${siblings ? "xl:gap-10" : ""}`}>
           {family.kids.map((kid) => (
             <div key={kid.request.id} className="flex items-center gap-5">
               <StudentAvatar student={kid.student} size={siblings ? "2xl" : "3xl"} />
               <div className="min-w-0">
                 <p
                   className={`font-serif leading-none text-forest ${
-                    siblings ? "text-[clamp(2rem,3.4vw,3.75rem)]" : "text-[clamp(2.5rem,4.6vw,5.5rem)]"
+                    siblings ? "text-[clamp(2rem,3.2vw,3.5rem)]" : "text-[clamp(2.4rem,4vw,4.75rem)]"
                   }`}
                 >
                   {kid.student.firstName}
                 </p>
-                <p className="mt-2 text-[clamp(1rem,1.5vw,1.5rem)] text-muted">
+                <p className="mt-2 text-[clamp(1rem,1.4vw,1.4rem)] text-muted">
                   {kid.student.lastName} · {studentGrade(kid.student, "es")}
                 </p>
               </div>
@@ -269,9 +276,11 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
           ))}
         </div>
 
-        <dl className="flex flex-wrap gap-x-10 gap-y-3 text-[clamp(1rem,1.4vw,1.35rem)]">
+        <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3 text-[clamp(1rem,1.35vw,1.3rem)] xl:mt-6">
           <div>
-            <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">Viene por {siblings ? "ellos" : "él/ella"}</dt>
+            <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">
+              Viene por {siblings ? "ellos" : "él/ella"}
+            </dt>
             <dd className="mt-1 text-forest">
               {family.trip.pickerName}
               <span className="text-muted"> · {family.trip.pickerRelationEs}</span>
@@ -293,20 +302,20 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
         </dl>
       </div>
 
-      <div className="relative hidden min-h-0 w-[42%] shrink-0 bg-ink/5 md:block">
+      <div className="relative min-h-0 flex-1 bg-ink/5">
         {photo ? (
           <Image
             src={photo}
             alt={family.vehicle?.label ?? "Auto en la entrada"}
             fill
             unoptimized
-            className="object-contain object-center p-3"
+            className="object-contain object-center p-4 xl:p-6"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted">Sin foto del auto</div>
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/75 via-forest-deep/35 to-transparent px-5 pb-5 pt-16">
-          <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gold">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/80 via-forest-deep/30 to-transparent px-6 pb-6 pt-20">
+          <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gold xl:text-sm">
             {picture.captured ? (
               <>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -322,13 +331,7 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
         </div>
       </div>
 
-      {total > 1 ? (
-        <span className="absolute right-5 top-5 rounded-full bg-forest-deep/80 px-3 py-1 text-sm font-semibold tabular-nums text-paper md:right-auto md:left-5 md:top-auto md:bottom-5">
-          {position} / {total}
-        </span>
-      ) : null}
-
-      <div className="absolute inset-x-0 bottom-0 h-1.5 bg-line">
+      <div className="absolute inset-x-0 bottom-0 z-20 h-1.5 bg-line">
         {total > 1 ? <div className="tv-progress h-full bg-gold" /> : <div className="h-full w-full bg-gold/40" />}
       </div>
     </section>
