@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Contexto del proyecto (carpool)
+
+Antes de modificar código, lee `.opencode/skills/carpool/SKILL.md`: contiene el contexto
+completo del producto (idea, restricciones reales, superficies, arquitectura, mapa de
+archivos, convenciones y buenas prácticas). Resúmelo en máximo 3 líneas y confirma la tarea.
