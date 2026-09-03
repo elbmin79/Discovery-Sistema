@@ -8,6 +8,7 @@ const SIZES = {
   lg: "h-16 w-16 text-lg",
   xl: "h-20 w-20 text-xl",
   "2xl": "h-28 w-28 text-2xl md:h-32 md:w-32",
+  "3xl": "h-36 w-36 text-4xl xl:h-44 xl:w-44",
 };
 
 export function Avatar({

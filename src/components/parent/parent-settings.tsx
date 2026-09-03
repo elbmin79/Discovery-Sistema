@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson } from "@/hooks/use-snapshot";
-import { studentName } from "@/lib/school";
+import { friendsOf, studentName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { AuthorizedPerson, Guardian, Locale, Snapshot, Vehicle } from "@/lib/types";
+import type { AuthorizedPerson, Guardian, Locale, Snapshot, Student, Vehicle } from "@/lib/types";
 
 type Editor = "none" | "vehicle" | "authorized";
 
@@ -67,6 +68,8 @@ export function ParentSettings({
         </div>
       </section>
 
+      <FriendsSection snapshot={snapshot} guardian={guardian} t={t} />
+
       <VehicleEditor
         guardian={guardian}
         vehicles={vehicles}
@@ -89,6 +92,148 @@ export function ParentSettings({
         {t.logout}
       </button>
     </div>
+  );
+}
+
+function FriendsSection({
+  snapshot,
+  guardian,
+  t,
+}: {
+  snapshot: Snapshot;
+  guardian: Guardian;
+  t: Dictionary;
+}) {
+  const [code, setCode] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const friends = friendsOf(snapshot, guardian);
+
+  async function add() {
+    if (!code.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson("/api/account/friends", { guardianId: guardian.id, code });
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo agregar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold tracking-[0.14em] uppercase text-gold-deep">{t.friends}</h2>
+      <p className="mt-1 text-sm text-muted">{t.friendsIntro}</p>
+
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-forest px-4 py-3 text-paper">
+        <div>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-gold">{t.yourCode}</p>
+          <p className="mt-0.5 font-mono text-xl font-semibold tracking-wider">{guardian.friendCode}</p>
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            await navigator.clipboard.writeText(guardian.friendCode ?? "");
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+          }}
+          className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-forest-deep"
+        >
+          {copied ? t.codeCopied : t.copyCode}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="mt-3 flex w-full items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex -space-x-2">
+            {friends.slice(0, 4).map((friend) => {
+              const kid = snapshot.students.find((student) => student.id === friend.studentIds[0]);
+              return kid ? (
+                <div key={friend.id} className="rounded-full ring-2 ring-paper">
+                  <StudentAvatar student={kid} size="sm" />
+                </div>
+              ) : null;
+            })}
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium">
+              {t.friends} · {friends.length}
+            </p>
+            <p className="truncate text-sm text-muted">
+              {friends.length === 0 ? t.noFriends : friends.map((friend) => friend.lastName).join(", ")}
+            </p>
+          </div>
+        </div>
+        <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      <div className={`mt-2 space-y-2 ${open ? "" : "hidden"}`}>
+        {friends.length === 0 ? (
+          <p className="px-1 text-sm text-muted">{t.noFriends}</p>
+        ) : (
+          friends.map((friend) => {
+            const kids = friend.studentIds
+              .map((id) => snapshot.students.find((student) => student.id === id))
+              .filter((student): student is Student => Boolean(student));
+            return (
+              <div key={friend.id} className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-paper px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex -space-x-2">
+                    {kids.slice(0, 3).map((kid) => (
+                      <div key={kid.id} className="rounded-full ring-2 ring-paper">
+                        <StudentAvatar student={kid} size="sm" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {friend.firstName} {friend.lastName}
+                    </p>
+                    <p className="truncate text-sm text-muted">{kids.map((kid) => kid.firstName).join(", ")}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 text-sm text-danger"
+                  onClick={() =>
+                    postJson("/api/account/friends", { action: "remove", guardianId: guardian.id, friendId: friend.id })
+                  }
+                >
+                  {t.remove}
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className={`mt-3 gap-2 ${open ? "flex" : "hidden"}`}>
+        <input
+          value={code}
+          onChange={(event) => setCode(event.target.value.toUpperCase())}
+          placeholder={t.friendCodePlaceholder}
+          className="min-w-0 flex-1 rounded-2xl border border-line px-3 py-2 font-mono text-sm uppercase"
+        />
+        <button
+          type="button"
+          disabled={busy || !code.trim()}
+          onClick={add}
+          className="shrink-0 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+        >
+          {t.addFriend}
+        </button>
+      </div>
+      {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
+    </section>
   );
 }
 
@@ -133,7 +278,10 @@ function VehicleEditor({
           <div key={vehicle.id} className="flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3">
             <div>
               <p className="font-medium">{vehicle.label}</p>
-              <p className="text-sm text-muted">{vehicle.plate ?? vehicle.color}</p>
+              <p className="text-sm text-muted">
+                {vehicle.plate ?? vehicle.color}
+                {vehicle.tagId ? ` · ${t.tagLabel} ${vehicle.tagId}` : ""}
+              </p>
             </div>
             <button
               type="button"

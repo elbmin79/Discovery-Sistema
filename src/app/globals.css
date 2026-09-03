@@ -71,6 +71,35 @@ a {
   animation: pulse-soft 1.8s ease-in-out infinite;
 }
 
+@keyframes tv-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tv-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.tv-in {
+  animation: tv-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tv-progress {
+  transform-origin: left center;
+  animation: tv-progress var(--tv-rotate, 7s) linear both;
+}
+
 .bandia-glow {
   color: #1558c0;
   text-shadow:

@@ -253,6 +253,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-sofia", "s-lucas"],
         defaultVehicleId: "v-prius",
         phone: "686 555 0142",
+        friendCode: "MADRID-7K2",
+        friendIds: ["g-benjamin", "g-laura"],
       },
       {
         id: "g-laura",
@@ -263,6 +265,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-mateo"],
         defaultVehicleId: "v-crv",
         phone: "686 555 0188",
+        friendCode: "LOPEZ-4QM",
+        friendIds: ["g-roberto"],
       },
       {
         id: "g-pedro",
@@ -273,6 +277,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-regina"],
         defaultVehicleId: "v-tiguan",
         phone: "686 555 0110",
+        friendCode: "SOTO-9RC",
+        friendIds: [],
       },
       {
         id: "g-ana",
@@ -281,7 +287,10 @@ export function createSeedSnapshot(): Snapshot {
         relationEs: "Mamá",
         relationEn: "Mom",
         studentIds: ["s-diego"],
+        defaultVehicleId: "v-sentra",
         phone: "686 555 0194",
+        friendCode: "RUIZ-2HT",
+        friendIds: [],
       },
       {
         id: "g-carmen",
@@ -292,6 +301,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-emilia", "s-santiago"],
         defaultVehicleId: "v-trax",
         phone: "686 555 0160",
+        friendCode: "REYES-5WN",
+        friendIds: [],
       },
       {
         id: "g-miguel",
@@ -300,7 +311,10 @@ export function createSeedSnapshot(): Snapshot {
         relationEs: "Papá",
         relationEn: "Dad",
         studentIds: ["s-valentina"],
+        defaultVehicleId: "v-explorer",
         phone: "686 555 0127",
+        friendCode: "GARCIA-8LV",
+        friendIds: [],
       },
       {
         id: "g-elena",
@@ -311,6 +325,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-camila", "s-iker"],
         defaultVehicleId: "v-corolla",
         phone: "686 555 0133",
+        friendCode: "NAVARRO-6ZD",
+        friendIds: [],
       },
       {
         id: "g-benjamin",
@@ -321,6 +337,8 @@ export function createSeedSnapshot(): Snapshot {
         studentIds: ["s-emiliano", "s-isabela", "s-paula"],
         defaultVehicleId: "v-kicks",
         phone: "686 555 0206",
+        friendCode: "MARQUEZ-3PD",
+        friendIds: ["g-roberto"],
       },
     ],
     authorizedPeople: [
@@ -357,6 +375,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "MKZ-4821",
         ownerGuardianId: HERO_GUARDIAN_ID,
         photoUrl: "/cars/v-prius.jpg",
+        tagId: "DSC-0417",
       },
       {
         id: "v-crv",
@@ -365,6 +384,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "BCS-1190",
         ownerGuardianId: "g-laura",
         photoUrl: "/cars/v-crv.jpg",
+        tagId: "DSC-0522",
       },
       {
         id: "v-tiguan",
@@ -373,6 +393,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "MXL-7742",
         ownerGuardianId: "g-pedro",
         photoUrl: "/cars/v-tiguan.jpg",
+        tagId: "DSC-0138",
       },
       {
         id: "v-trax",
@@ -381,6 +402,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "SOL-3058",
         ownerGuardianId: "g-carmen",
         photoUrl: "/cars/v-trax.jpg",
+        tagId: "DSC-0261",
       },
       {
         id: "v-corolla",
@@ -389,6 +411,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "RIV-2264",
         ownerGuardianId: "g-elena",
         photoUrl: "/cars/v-corolla.jpg",
+        tagId: "DSC-0349",
       },
       {
         id: "v-kicks",
@@ -397,6 +420,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "MXL-2068",
         ownerGuardianId: "g-benjamin",
         photoUrl: "/cars/v-kicks.jpg",
+        tagId: "DSC-0876",
       },
       {
         id: "v-sentra",
@@ -405,6 +429,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "MXL-5583",
         ownerGuardianId: "g-ana",
         photoUrl: "/cars/v-sentra.jpg",
+        tagId: "DSC-0603",
       },
       {
         id: "v-explorer",
@@ -413,6 +438,7 @@ export function createSeedSnapshot(): Snapshot {
         plate: "SOL-6612",
         ownerGuardianId: "g-miguel",
         photoUrl: "/cars/v-explorer.jpg",
+        tagId: "DSC-0715",
       },
     ],
     staff: [
