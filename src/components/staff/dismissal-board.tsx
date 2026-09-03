@@ -50,7 +50,7 @@ const TONES = {
     panel: "border-gold/40 bg-gold/10",
     dot: "bg-gold-deep",
     count: "bg-gold/20 text-gold-deep",
-    button: "bg-gold-deep text-paper",
+    button: "bg-forest text-paper",
   },
   notified: {
     panel: "border-forest/30 bg-forest/10",
