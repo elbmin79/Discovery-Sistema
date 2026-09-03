@@ -8,6 +8,7 @@ import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import { lateCountdownLabel, lateIsOverdue } from "@/lib/bitacora";
+import { DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
 import type {
   DemoSession,
@@ -21,7 +22,7 @@ import type {
   Vehicle,
 } from "@/lib/types";
 
-type Column = "waiting" | "called";
+type Column = "waiting" | "notified";
 
 interface Kid {
   request: PickupRequest;
@@ -38,6 +39,8 @@ interface FamilyCard {
   vehicleLabel: string;
   picture: ReturnType<typeof arrivalPicture>;
   arrivedAt?: string;
+  /** Última entrega de la familia; ordena la lista de Notificados. */
+  deliveredAt?: string;
   sortKey: string;
   denied: boolean;
 }
@@ -49,7 +52,7 @@ const TONES = {
     count: "bg-gold/20 text-gold-deep",
     button: "bg-gold-deep text-paper",
   },
-  called: {
+  notified: {
     panel: "border-forest/30 bg-forest/10",
     dot: "bg-forest",
     count: "bg-forest/15 text-forest",
@@ -88,9 +91,22 @@ function groupByFamily(snapshot: Snapshot, predicate: (status: PickupStatus) => 
     if (request.authorization?.status === "denied") card.denied = true;
     const key = request.arrivedAt ?? request.requestedAt;
     if (key < card.sortKey) card.sortKey = key;
+    if (request.deliveredAt && (!card.deliveredAt || request.deliveredAt > card.deliveredAt)) {
+      card.deliveredAt = request.deliveredAt;
+    }
   }
 
   return [...byTrip.values()].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+}
+
+/** Familias ya entregadas que siguen en "Notificados": no han salido y la entrega es reciente. */
+function notifiedFamilies(snapshot: Snapshot, nowMs: number): FamilyCard[] {
+  return groupByFamily(snapshot, (status) => status === "delivered")
+    .filter((card) => {
+      if (card.trip.departedAt || !card.deliveredAt) return false;
+      return nowMs - Date.parse(card.deliveredAt) < DELIVERED_VISIBLE_MS;
+    })
+    .sort((a, b) => (b.deliveredAt ?? "").localeCompare(a.deliveredAt ?? ""));
 }
 
 export function DismissalBoard({
@@ -101,8 +117,8 @@ export function DismissalBoard({
   onLogout: () => void;
 }) {
   const { snapshot } = useSnapshot();
-  const [showDelivered, setShowDelivered] = useState(false);
   const [infoTripId, setInfoTripId] = useState<string | null>(null);
+  const [notifiedTripId, setNotifiedTripId] = useState<string | null>(null);
   const [confirmTripId, setConfirmTripId] = useState<string | null>(null);
   const [showLates, setShowLates] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -110,39 +126,29 @@ export function DismissalBoard({
   const [nowMs, setNowMs] = useState<number | null>(null);
 
   useEffect(() => {
+    // Primer tick inmediato para que la lista de Notificados no espere 15 s en aparecer.
+    const first = window.setTimeout(() => setNowMs(Date.now()), 0);
     const id = window.setInterval(() => setNowMs(Date.now()), 15000);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
   }, []);
 
   const staff = snapshot?.staff.find((member) => member.id === session.staffId) ?? snapshot?.staff[0];
 
-  const { waiting, called, delivered } = useMemo(() => {
-    if (!snapshot) {
-      return { waiting: [], called: [], delivered: [] } as {
-        waiting: FamilyCard[];
-        called: FamilyCard[];
-        delivered: Kid[];
-      };
-    }
-    const deliveredKids: Kid[] = snapshot.requests
-      .filter((request) => request.status === "delivered")
-      .map((request) => {
-        const student = findStudent(snapshot, request.studentId);
-        return student ? { request, student } : null;
-      })
-      .filter((kid): kid is Kid => Boolean(kid))
-      .sort((a, b) => (b.request.deliveredAt ?? "").localeCompare(a.request.deliveredAt ?? ""));
+  const waiting = useMemo(
+    () => (snapshot ? groupByFamily(snapshot, (status) => status === "arrived") : []),
+    [snapshot],
+  );
+  const notified = useMemo(
+    () => (snapshot && nowMs ? notifiedFamilies(snapshot, nowMs) : []),
+    [snapshot, nowMs],
+  );
 
-    return {
-      waiting: groupByFamily(snapshot, (status) => status === "arrived"),
-      called: groupByFamily(snapshot, (status) => status === "preparing" || status === "ready"),
-      delivered: deliveredKids,
-    };
-  }, [snapshot]);
-
-  const allCards = useMemo(() => [...waiting, ...called], [waiting, called]);
-  const infoCard = allCards.find((card) => card.trip.id === infoTripId) ?? null;
-  const confirmCard = allCards.find((card) => card.trip.id === confirmTripId) ?? null;
+  const infoCard = waiting.find((card) => card.trip.id === infoTripId) ?? null;
+  const notifiedCard = notified.find((card) => card.trip.id === notifiedTripId) ?? null;
+  const confirmCard = waiting.find((card) => card.trip.id === confirmTripId) ?? null;
 
   const activeLates = useMemo(
     () =>
@@ -170,6 +176,16 @@ export function DismissalBoard({
     void actFamily(card.trip.id, "complete");
   }
 
+  async function closeFamily(tripId: string) {
+    setBusyKey(tripId);
+    try {
+      await postJson(`/api/trips/${tripId}/depart`, { via: "staff", staffName: staff?.name });
+      setNotifiedTripId(null);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   async function addRandomArrivals() {
     setSimulating(true);
     try {
@@ -182,11 +198,6 @@ export function DismissalBoard({
   if (!snapshot) {
     return <p className="p-8 text-muted">Cargando tablero…</p>;
   }
-
-  const deliveredVehicle = (kid: Kid) => {
-    const trip = snapshot.trips.find((item) => item.id === kid.request.tripId);
-    return findVehicle(snapshot, trip?.vehicleId)?.label ?? "Auto";
-  };
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
@@ -225,13 +236,6 @@ export function DismissalBoard({
               Tardes · {activeLates.length}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={() => setShowDelivered(true)}
-            className="rounded-full border border-line bg-paper px-4 py-2 text-sm font-semibold text-muted"
-          >
-            Entregado · {delivered.length}
-          </button>
           <button type="button" onClick={onLogout} className="rounded-full px-3 py-2 text-sm text-muted">
             Salir
           </button>
@@ -239,24 +243,16 @@ export function DismissalBoard({
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 md:px-6">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Section
             id="waiting"
-            title="Esperando"
+            title="Papás en la fila"
             cards={waiting}
             busyKey={busyKey}
-            onTap={(card) => actFamily(card.trip.id, "advance")}
-            onInfo={(card) => setInfoTripId(card.trip.id)}
-          />
-          <Section
-            id="called"
-            title="Notificados"
-            cards={called}
-            busyKey={busyKey}
             onTap={requestComplete}
-            onUndo={(card) => actFamily(card.trip.id, "undo")}
             onInfo={(card) => setInfoTripId(card.trip.id)}
           />
+          <NotifiedList cards={notified} onOpen={(card) => setNotifiedTripId(card.trip.id)} />
         </div>
 
         <div className="mt-auto flex justify-end pt-2">
@@ -272,8 +268,17 @@ export function DismissalBoard({
         </div>
       </main>
 
-      {showDelivered ? (
-        <DeliveredSheet items={delivered} vehicleOf={deliveredVehicle} onClose={() => setShowDelivered(false)} />
+      {notifiedCard ? (
+        <NotifiedSheet
+          card={notifiedCard}
+          busy={busyKey === notifiedCard.trip.id}
+          onClose={() => setNotifiedTripId(null)}
+          onFinish={() => closeFamily(notifiedCard.trip.id)}
+          onUndo={async () => {
+            await actFamily(notifiedCard.trip.id, "undo");
+            setNotifiedTripId(null);
+          }}
+        />
       ) : null}
       {showLates ? (
         <LateSheet lates={activeLates} snapshot={snapshot} nowMs={nowMs} onClose={() => setShowLates(false)} />
@@ -300,7 +305,6 @@ function Section({
   cards,
   busyKey,
   onTap,
-  onUndo,
   onInfo,
 }: {
   id: Column;
@@ -308,7 +312,6 @@ function Section({
   cards: FamilyCard[];
   busyKey: string | null;
   onTap: (card: FamilyCard) => void;
-  onUndo?: (card: FamilyCard) => void;
   onInfo: (card: FamilyCard) => void;
 }) {
   const tone = TONES[id];
@@ -330,24 +333,81 @@ function Section({
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
           {cards.length === 0 ? (
             <p className="col-span-full rounded-xl bg-paper/70 px-4 py-8 text-center text-sm text-muted">
-              {id === "waiting" ? "Nadie en espera." : "Sin notificados."}
+              Nadie en la fila.
             </p>
           ) : (
             cards.map((card, index) => (
               <FamilyCardView
                 key={card.trip.id}
                 card={card}
-                column={id}
-                position={id === "waiting" ? index + 1 : undefined}
+                position={index + 1}
                 busy={busyKey === card.trip.id}
                 onTap={() => onTap(card)}
-                onUndo={onUndo ? () => onUndo(card) : undefined}
                 onInfo={() => onInfo(card)}
               />
             ))
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Familias ya entregadas, en lista compacta. Desaparecen al cerrarse el ciclo
+ * (lector de salida, app, personal) o pasados unos minutos.
+ */
+function NotifiedList({ cards, onOpen }: { cards: FamilyCard[]; onOpen: (card: FamilyCard) => void }) {
+  const tone = TONES.notified;
+  const kidCount = cards.reduce((sum, card) => sum + card.kids.length, 0);
+
+  return (
+    <section className={`min-w-0 rounded-2xl border p-3 ${tone.panel}`}>
+      <header className="mb-3 flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
+          <h2 className="font-serif text-xl text-forest">Notificados</h2>
+        </div>
+        <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold tabular-nums ${tone.count}`}>
+          {kidCount}
+        </span>
+      </header>
+
+      {cards.length === 0 ? (
+        <p className="rounded-xl bg-paper/70 px-4 py-8 text-center text-sm text-muted">
+          Sin entregas en los últimos minutos.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {cards.map((card) => (
+            <li key={card.trip.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2.5">
+              <div className="flex -space-x-2">
+                {card.kids.slice(0, 3).map((kid) => (
+                  <div key={kid.request.id} className="rounded-full ring-2 ring-paper">
+                    <StudentAvatar student={kid.student} size="sm" />
+                  </div>
+                ))}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-serif text-base leading-tight text-forest">
+                  {card.kids.map((kid) => kid.student.firstName).join(" y ")}
+                </p>
+                <p className="truncate text-xs text-muted">
+                  {card.trip.pickerName} · {formatTime(card.deliveredAt)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpen(card)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:text-forest"
+                aria-label="Detalles y cerrar"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -361,27 +421,20 @@ function ownerLabel(kid: Kid) {
 
 function FamilyCardView({
   card,
-  column,
   position,
   busy,
   onTap,
-  onUndo,
   onInfo,
 }: {
   card: FamilyCard;
-  column: Column;
-  position?: number;
+  position: number;
   busy: boolean;
   onTap: () => void;
-  onUndo?: () => void;
   onInfo: () => void;
 }) {
-  const waiting = column === "waiting";
   const siblings = card.kids.length > 1;
-  const undoable = !waiting && card.kids.some((kid) => kid.request.status === "preparing");
-  const tone = TONES[column];
-  const verb = waiting ? "Notificar" : "Entregar";
-  const label = siblings ? `${verb} a los ${card.kids.length}` : verb;
+  const tone = TONES.waiting;
+  const label = siblings ? `Entregar a los ${card.kids.length}` : "Entregar";
   const deniedKids = card.kids.filter((kid) => kid.request.authorization?.status === "denied");
   const pendingKids = card.kids.filter((kid) => kid.request.authorization?.status === "pending");
 
@@ -423,11 +476,9 @@ function FamilyCardView({
           <span className="truncate">
             {card.trip.pickerRelationEs} · {card.trip.pickerName}
           </span>
-          {position !== undefined ? (
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-deep text-xs font-bold text-paper">
-              {position}
-            </span>
-          ) : null}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-deep text-xs font-bold text-paper">
+            {position}
+          </span>
         </p>
 
         {deniedKids.length > 0 ? (
@@ -447,7 +498,7 @@ function FamilyCardView({
 
         <span
           className={`mt-3 flex h-11 w-full items-center justify-center rounded-lg text-sm font-semibold ${
-            card.denied && !waiting ? "bg-danger text-paper" : tone.button
+            card.denied ? "bg-danger text-paper" : tone.button
           }`}
         >
           {label}
@@ -455,16 +506,6 @@ function FamilyCardView({
       </button>
 
       <div className="absolute right-2 top-2 flex gap-1.5">
-        {undoable && onUndo ? (
-          <button
-            type="button"
-            onClick={onUndo}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-muted transition hover:text-ink"
-            aria-label="Deshacer"
-          >
-            <Undo2 className="h-4 w-4" />
-          </button>
-        ) : null}
         <button
           type="button"
           onClick={onInfo}
@@ -639,42 +680,80 @@ function ConfirmDeniedSheet({
   );
 }
 
-function DeliveredSheet({
-  items,
-  vehicleOf,
+function NotifiedSheet({
+  card,
+  busy,
   onClose,
+  onFinish,
+  onUndo,
 }: {
-  items: Kid[];
-  vehicleOf: (kid: Kid) => string;
+  card: FamilyCard;
+  busy: boolean;
   onClose: () => void;
+  onFinish: () => void;
+  onUndo: () => void;
 }) {
+  const staffName = card.kids[0]?.request.deliveredByStaffName;
   return (
     <Sheet onClose={onClose}>
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-2xl text-forest">Entregados hoy</h2>
-        <button type="button" onClick={onClose} className="text-sm text-muted">
-          Cerrar
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs tracking-[0.18em] uppercase text-forest">Entregado · {formatTime(card.deliveredAt)}</p>
+          <h2 className="mt-1 font-serif text-2xl text-forest">
+            {card.kids.map((kid) => kid.student.firstName).join(" y ")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {card.trip.pickerRelationEs} · {card.trip.pickerName} · {card.vehicleLabel}
+            {card.vehicle?.plate ? ` · ${card.vehicle.plate}` : ""}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted"
+          aria-label="Cerrar"
+        >
+          <X className="h-4 w-4" />
         </button>
       </div>
+
       <div className="mt-4 space-y-2">
-        {items.length === 0 ? (
-          <p className="text-muted">Aún no hay entregas confirmadas.</p>
-        ) : (
-          items.map((item) => (
-            <div key={item.request.id} className="flex items-center justify-between rounded-2xl bg-cream px-4 py-3">
-              <div className="flex items-center gap-3">
-                <StudentAvatar student={item.student} size="sm" />
-                <div>
-                  <p className="font-medium">{studentName(item.student)}</p>
-                  <p className="text-xs text-muted">
-                    {vehicleOf(item)} · {item.request.deliveredByStaffName}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-muted">{formatTime(item.request.deliveredAt)}</p>
+        {card.kids.map((kid) => (
+          <div key={kid.request.id} className="flex items-center gap-3 rounded-2xl bg-cream px-4 py-3">
+            <StudentAvatar student={kid.student} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{studentName(kid.student)}</p>
+              <p className="text-xs text-muted">{studentGrade(kid.student, "es")}</p>
             </div>
-          ))
-        )}
+            <p className="text-sm text-muted">{formatTime(kid.request.deliveredAt)}</p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-sm leading-6 text-muted">
+        {staffName ? `Entregó ${staffName}. ` : ""}
+        La familia sale de esta lista cuando el lector detecta su salida o a los{" "}
+        {Math.round(DELIVERED_VISIBLE_MS / 60000)} minutos. Si ya se fueron, puedes cerrarlo aquí.
+      </p>
+
+      <div className="mt-5 grid gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onFinish}
+          className="rounded-full bg-forest py-3.5 text-base font-semibold text-paper disabled:opacity-60"
+        >
+          Terminar · ya salieron
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onUndo}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-line py-3 text-sm font-semibold text-forest disabled:opacity-60"
+        >
+          <Undo2 className="h-4 w-4" />
+          Regresar a la fila
+        </button>
       </div>
     </Sheet>
   );

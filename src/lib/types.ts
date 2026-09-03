@@ -15,13 +15,8 @@ export type Level =
   | "grade-5"
   | "grade-6";
 
-export type PickupStatus =
-  | "on_the_way"
-  | "arrived"
-  | "preparing"
-  | "ready"
-  | "delivered"
-  | "cancelled";
+/** on_the_way = la familia avisó · arrived = en la fila · delivered = entregado */
+export type PickupStatus = "on_the_way" | "arrived" | "delivered" | "cancelled";
 
 export type ArrivalMethod = "car" | "walk";
 
@@ -117,8 +112,11 @@ export interface PickupTrip {
   cancelledAt?: string;
 }
 
-/** tag = lector de salida · parent = la familia confirmó en la app · timeout = cierre automático */
-export type DepartureVia = "tag" | "parent" | "timeout";
+/**
+ * tag = lector de salida · parent = la familia confirmó en la app ·
+ * staff = el personal lo cerró desde el tablero · timeout = cierre automático
+ */
+export type DepartureVia = "tag" | "parent" | "staff" | "timeout";
 
 export type AuthorizationStatus = "pending" | "approved" | "denied";
 
@@ -145,8 +143,6 @@ export interface PickupRequest {
   status: PickupStatus;
   requestedAt: string;
   arrivedAt?: string;
-  preparingAt?: string;
-  readyAt?: string;
   deliveredAt?: string;
   deliveredByStaffName?: string;
   authorization?: RequestAuthorization;

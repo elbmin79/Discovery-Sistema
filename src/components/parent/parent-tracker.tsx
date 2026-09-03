@@ -21,7 +21,9 @@ import type {
   Vehicle,
 } from "@/lib/types";
 
-const STEPS: PickupStatus[] = ["on_the_way", "arrived", "preparing", "delivered"];
+const STEPS: PickupStatus[] = ["on_the_way", "arrived", "delivered"];
+/** Con tag la familia no "avisa llegada": el lector la pone en la fila, así que ese paso no se muestra. */
+const TAG_STEPS: PickupStatus[] = ["arrived", "delivered"];
 
 export function ParentTracker({
   snapshot,
@@ -98,10 +100,13 @@ export function ParentTracker({
                       <p className="font-semibold text-ink">{studentName(student)}</p>
                       <p className="text-sm text-muted">{studentGrade(student, locale)}</p>
                     </div>
-                    <StatusBadge status={request.status} label={t.status[request.status]} />
+                    <StatusBadge
+                      status={request.status}
+                      label={useTag && request.status === "on_the_way" ? t.tagLabel : t.status[request.status]}
+                    />
                   </div>
                   <p className="mt-3 text-sm leading-6 text-muted">
-                    {statusCopy(student, request.status, t)}
+                    {statusCopy(student, request.status, t, useTag)}
                   </p>
                   {request.authorization ? (
                     <AuthorizationLine snapshot={snapshot} authorization={request.authorization} t={t} />
@@ -110,7 +115,7 @@ export function ParentTracker({
                     {t.zone}: {locale === "es" ? zone?.shortEs : zone?.shortEn} · {t.dismissal}:{" "}
                     {student.dismissalTime}
                   </p>
-                  <Progress status={request.status} />
+                  <Progress status={request.status} steps={useTag ? TAG_STEPS : STEPS} />
                 </div>
               </div>
             </article>
@@ -410,27 +415,20 @@ function ShareRow({
   );
 }
 
-function statusCopy(student: Student, status: PickupStatus, t: Dictionary) {
-  if (status === "on_the_way") return t.onTheWayBody;
+function statusCopy(student: Student, status: PickupStatus, t: Dictionary, useTag: boolean) {
+  if (status === "on_the_way") return useTag ? t.tagHint : t.onTheWayBody;
   if (status === "arrived") return t.arrivedBody;
-  if (status === "preparing") {
-    return `${student.firstName} ${student.gender === "f" ? t.preparingBody : t.preparingBodyM}`;
-  }
-  if (status === "ready") {
-    return `${student.firstName} ${student.gender === "f" ? t.readyBody : t.readyBodyM}`;
-  }
   if (status === "delivered") {
     return `${student.firstName} ${student.gender === "f" ? t.deliveredBodyF : t.deliveredBody}`;
   }
   return t.status[status];
 }
 
-function Progress({ status }: { status: PickupStatus }) {
-  // "ready" ya no es un paso visible; se muestra como parte de "preparing".
-  const index = STEPS.indexOf(status === "ready" ? "preparing" : status);
+function Progress({ status, steps }: { status: PickupStatus; steps: PickupStatus[] }) {
+  const index = steps.indexOf(status);
   return (
     <div className="mt-4 flex gap-1.5">
-      {STEPS.map((step, stepIndex) => (
+      {steps.map((step, stepIndex) => (
         <span
           key={step}
           className={`h-1.5 flex-1 rounded-full ${

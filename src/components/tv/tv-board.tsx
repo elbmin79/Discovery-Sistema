@@ -7,13 +7,15 @@ import { Maximize2 } from "lucide-react";
 import { BrandMark, BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { useSnapshot } from "@/hooks/use-snapshot";
+import { DELIVERED_VISIBLE_MS as PICKUP_DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
 import type { PickupRequest, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
 
 const ROTATE_MS = 7000;
 const RECENT_LIMIT = 8;
+const DELIVERED_VISIBLE_MS = PICKUP_DELIVERED_VISIBLE_MS;
 
-type Stage = "waiting" | "called";
+type Stage = "waiting";
 
 interface Kid {
   request: PickupRequest;
@@ -30,16 +32,10 @@ interface TvFamily {
 
 const STAGE_COPY: Record<Stage, { label: string; hint: string; pill: string; dot: string }> = {
   waiting: {
-    label: "Familia en la puerta",
-    hint: "Esperando a que salgan",
+    label: "Papás en la fila",
+    hint: "El personal los entrega enseguida",
     pill: "bg-gold text-forest-deep",
     dot: "bg-gold",
-  },
-  called: {
-    label: "Ya vienen saliendo",
-    hint: "El maestro los está acompañando",
-    pill: "bg-forest text-paper",
-    dot: "bg-emerald-400",
   },
 };
 
@@ -47,7 +43,7 @@ function buildFamilies(snapshot: Snapshot): TvFamily[] {
   const byTrip = new Map<string, TvFamily>();
 
   for (const request of snapshot.requests) {
-    if (request.status !== "arrived" && request.status !== "preparing" && request.status !== "ready") continue;
+    if (request.status !== "arrived") continue;
     // Una recogida que la familia del alumno rechazó no se anuncia en pantalla hasta resolverse.
     if (request.authorization?.status === "denied") continue;
     const student = findStudent(snapshot, request.studentId);
@@ -61,20 +57,25 @@ function buildFamilies(snapshot: Snapshot): TvFamily[] {
         kids: [],
         vehicle: findVehicle(snapshot, trip.vehicleId),
         arrivedAt: request.arrivedAt ?? trip.arrivedAt ?? request.requestedAt,
-        stage: "called",
+        stage: "waiting",
       };
       byTrip.set(trip.id, family);
     }
     family.kids.push({ request, student });
-    if (request.status === "arrived") family.stage = "waiting";
   }
 
   return [...byTrip.values()].sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt));
 }
 
-function buildRecent(snapshot: Snapshot): Kid[] {
+function buildRecent(snapshot: Snapshot, nowMs: number): Kid[] {
   return snapshot.requests
-    .filter((request) => request.status === "delivered")
+    .filter((request) => {
+      if (request.status !== "delivered" || !request.deliveredAt) return false;
+      const trip = snapshot.trips.find((item) => item.id === request.tripId);
+      // Igual que en el tablero: el alumno sale de pantalla al cerrarse el ciclo o pasados unos minutos.
+      if (trip?.departedAt) return false;
+      return nowMs - Date.parse(request.deliveredAt) < DELIVERED_VISIBLE_MS;
+    })
     .map((request) => {
       const student = findStudent(snapshot, request.studentId);
       return student ? { request, student } : null;
@@ -89,8 +90,14 @@ export function TvBoard() {
   const [index, setIndex] = useState(0);
   const knownTrips = useRef<Set<string>>(new Set());
 
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const families = useMemo(() => (snapshot ? buildFamilies(snapshot) : []), [snapshot]);
-  const recent = useMemo(() => (snapshot ? buildRecent(snapshot) : []), [snapshot]);
+  const recent = useMemo(() => (snapshot ? buildRecent(snapshot, nowMs) : []), [snapshot, nowMs]);
 
   const total = families.length;
   const safeIndex = total ? index % total : 0;
@@ -159,7 +166,7 @@ export function TvBoard() {
             <h2 className="text-sm tracking-[0.24em] uppercase text-gold">Siguientes</h2>
             <p className="mt-1 text-paper/60">
               {total === 0
-                ? "Nadie en la puerta."
+                ? "Nadie en la fila."
                 : `${total} ${total === 1 ? "familia" : "familias"} · ${families.reduce(
                     (sum, family) => sum + family.kids.length,
                     0,
@@ -190,7 +197,7 @@ export function TvBoard() {
                 <li className="px-3 text-sm text-paper/50">+{upNext.length - 7} familias más</li>
               ) : null}
               {total === 1 ? (
-                <li className="px-3 text-sm text-paper/50">Solo una familia en espera.</li>
+                <li className="px-3 text-sm text-paper/50">Solo una familia en la fila.</li>
               ) : null}
             </ul>
           </aside>
@@ -198,7 +205,7 @@ export function TvBoard() {
 
         <section className="rounded-[1.75rem] bg-forest/60 px-6 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm tracking-[0.24em] uppercase text-gold">Salieron hace poco</h2>
+            <h2 className="text-sm tracking-[0.24em] uppercase text-gold">Entregados</h2>
             <span className="text-sm text-paper/50">
               {recent.length === 0 ? "" : `Última: ${formatTime(recent[0]?.request.deliveredAt)}`}
             </span>

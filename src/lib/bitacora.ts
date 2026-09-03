@@ -22,8 +22,6 @@ export interface BitacoraRow {
   method: "car" | "walk";
   requestedAt: string;
   arrivedAt?: string;
-  preparingAt?: string;
-  readyAt?: string;
   deliveredAt?: string;
   departedAt?: string;
   arrivalVia?: ArrivalVia;
@@ -43,14 +41,13 @@ export const ARRIVAL_LABELS: Record<ArrivalVia, string> = {
 export const DEPARTURE_LABELS: Record<DepartureVia, string> = {
   tag: "Lector de salida",
   parent: "Confirmó la familia",
+  staff: "Cerró el personal",
   timeout: "Cierre automático",
 };
 
 export const STATUS_LABELS: Record<PickupStatus, string> = {
   on_the_way: "En camino",
-  arrived: "Llegó",
-  preparing: "Buscando",
-  ready: "En puerta",
+  arrived: "En la fila",
   delivered: "Entregado",
   cancelled: "Cancelado",
 };
@@ -77,8 +74,6 @@ export function buildBitacoraRows(snapshot: Snapshot): BitacoraRow[] {
       method: trip.method,
       requestedAt: request.requestedAt,
       arrivedAt: request.arrivedAt,
-      preparingAt: request.preparingAt,
-      readyAt: request.readyAt,
       deliveredAt: request.deliveredAt,
       departedAt: request.status === "delivered" ? trip.departedAt : undefined,
       arrivalVia: trip.arrivalVia,
@@ -175,8 +170,6 @@ const CSV_HEADERS = [
   "Solicitado",
   "Llegada",
   "Medio de llegada",
-  "Buscando",
-  "En puerta",
   "Entregado",
   "Salida",
   "Cierre",
@@ -204,8 +197,6 @@ export function toCsv(rows: BitacoraRow[], lates: LatePickup[] = []): string {
         csvDateTime(row.requestedAt),
         csvDateTime(row.arrivedAt),
         row.arrivalVia ? ARRIVAL_LABELS[row.arrivalVia] : "",
-        csvDateTime(row.preparingAt),
-        csvDateTime(row.readyAt),
         csvDateTime(row.deliveredAt),
         csvDateTime(row.departedAt),
         row.departedVia ? DEPARTURE_LABELS[row.departedVia] : "",
