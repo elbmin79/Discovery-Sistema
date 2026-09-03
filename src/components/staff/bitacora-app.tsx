@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Download } from "lucide-react";
+import { AlarmClock, ClipboardList, Download } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StaffLogin } from "@/components/staff/staff-login";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { useSession } from "@/hooks/use-session";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import {
   actorLabel,
   buildBitacoraRows,
@@ -15,15 +15,17 @@ import {
   downloadCsv,
   eventLabel,
   eventsForRequest,
+  lateCountdownLabel,
+  lateIsOverdue,
   STATUS_LABELS,
   toCsv,
   type BitacoraRow,
 } from "@/lib/bitacora";
 import { findStudent, formatTime, studentGrade, studentName } from "@/lib/school";
-import type { PickupStatus, Snapshot } from "@/lib/types";
+import type { LatePickup, PickupStatus, Snapshot } from "@/lib/types";
 
 type StatusFilter = "all" | "delivered" | "active" | "cancelled";
-type Tab = "rows" | "events";
+type Tab = "rows" | "events" | "lates";
 
 const STATUS_TONES: Record<PickupStatus, string> = {
   on_the_way: "border-line bg-paper text-muted",
@@ -40,6 +42,11 @@ const EVENT_DOT: Record<string, string> = {
   status_changed: "bg-forest-soft",
   delivered: "bg-forest",
   cancelled: "bg-danger",
+  late_announced: "bg-gold-deep",
+  late_eta_changed: "bg-gold",
+  late_cancelled: "bg-danger",
+  late_arrived: "bg-forest-soft",
+  late_resolved: "bg-forest",
 };
 
 export function BitacoraApp() {
@@ -49,18 +56,37 @@ export function BitacoraApp() {
     return <StaffLogin onSignedIn={setSession} />;
   }
 
-  return <BitacoraBoard />;
+  return <BitacoraBoard staffName={session.name} />;
 }
 
-function BitacoraBoard() {
+function BitacoraBoard({ staffName }: { staffName: string }) {
   const { snapshot } = useSnapshot();
   const [tab, setTab] = useState<Tab>("rows");
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  const [busyLate, setBusyLate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const rows = useMemo(() => (snapshot ? buildBitacoraRows(snapshot) : []), [snapshot]);
   const summary = useMemo(() => buildSummary(rows), [rows]);
+
+  const activeLates = useMemo(() => {
+    return (snapshot?.latePickups ?? [])
+      .filter((late) => late.status === "announced" || late.status === "arrived")
+      .sort((a, b) => a.etaAt.localeCompare(b.etaAt));
+  }, [snapshot]);
+
+  const closedLates = useMemo(() => {
+    return (snapshot?.latePickups ?? []).filter((late) => late.status === "resolved" || late.status === "cancelled");
+  }, [snapshot]);
+
+  const overdueCount = activeLates.filter((late) => lateIsOverdue(late, nowMs)).length;
 
   const filtered = useMemo(() => {
     return rows.filter((row) => {
@@ -78,6 +104,15 @@ function BitacoraBoard() {
     if (!snapshot) return [];
     return [...(snapshot.events ?? [])].sort((a, b) => b.at.localeCompare(a.at));
   }, [snapshot]);
+
+  async function actLate(id: string, action: "arrive" | "cancel" | "resolve") {
+    setBusyLate(id);
+    try {
+      await postJson(`/api/late/${id}`, { action, staffName });
+    } finally {
+      setBusyLate(null);
+    }
+  }
 
   if (!snapshot) {
     return <p className="p-8 text-muted">Cargando bitácora…</p>;
@@ -98,7 +133,7 @@ function BitacoraBoard() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => downloadCsv(toCsv(filtered))}
+            onClick={() => downloadCsv(toCsv(filtered, snapshot.latePickups ?? []))}
             disabled={filtered.length === 0}
             className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
           >
@@ -115,6 +150,26 @@ function BitacoraBoard() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
+        {activeLates.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setTab("lates")}
+            className={`mb-4 flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99] ${
+              overdueCount > 0 ? "border-danger/40 bg-danger/10" : "border-gold/50 bg-gold/15"
+            }`}
+          >
+            <AlarmClock className={`h-5 w-5 shrink-0 ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`} />
+            <p className={`min-w-0 flex-1 text-sm font-semibold ${overdueCount > 0 ? "text-danger" : "text-forest-deep"}`}>
+              {overdueCount > 0
+                ? `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""} · ${overdueCount} fuera de horario`
+                : `${activeLates.length} retraso${activeLates.length > 1 ? "s" : ""} activo${activeLates.length > 1 ? "s" : ""}`}
+            </p>
+            <span className={`shrink-0 text-xs font-semibold ${overdueCount > 0 ? "text-danger" : "text-gold-deep"}`}>
+              Ver →
+            </span>
+          </button>
+        ) : null}
+
         <div className="grid gap-3 md:grid-cols-4">
           <SummaryCard label="Entregados" value={String(summary.delivered)} />
           <SummaryCard label="En proceso" value={String(summary.active)} />
@@ -129,6 +184,9 @@ function BitacoraBoard() {
           <div className="flex rounded-full border border-line bg-paper p-1">
             <TabButton active={tab === "rows"} onClick={() => setTab("rows")}>
               Recogidas · {filtered.length}
+            </TabButton>
+            <TabButton active={tab === "lates"} onClick={() => setTab("lates")}>
+              Retrasos · {activeLates.length}
             </TabButton>
             <TabButton active={tab === "events"} onClick={() => setTab("events")}>
               Movimientos · {events.length}
@@ -212,7 +270,7 @@ function BitacoraBoard() {
               </div>
             </>
           )
-        ) : (
+        ) : tab === "events" ? (
           <div className="mt-4 rounded-3xl border border-line bg-paper p-4 md:p-6">
             {events.length === 0 ? (
               <p className="py-6 text-center text-muted">Aún no hay movimientos registrados.</p>
@@ -239,9 +297,154 @@ function BitacoraBoard() {
               </ol>
             )}
           </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {activeLates.length === 0 && closedLates.length === 0 ? (
+              <p className="rounded-3xl bg-paper/70 px-4 py-10 text-center text-muted">
+                Sin retrasos hoy. Buen día.
+              </p>
+            ) : null}
+
+            {activeLates.map((late) => (
+              <LateCard
+                key={late.id}
+                late={late}
+                snapshot={snapshot}
+                nowMs={nowMs}
+                busy={busyLate === late.id}
+                onArrive={() => actLate(late.id, "arrive")}
+                onCancel={() => actLate(late.id, "cancel")}
+                onResolve={() => actLate(late.id, "resolve")}
+              />
+            ))}
+
+            {closedLates.length > 0 ? (
+              <div className="pt-2">
+                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                  Cerrados hoy
+                </p>
+                <div className="space-y-2">
+                  {closedLates.map((late) => (
+                    <LateCard
+                      key={late.id}
+                      late={late}
+                      snapshot={snapshot}
+                      nowMs={nowMs}
+                      busy={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         )}
       </main>
     </div>
+  );
+}
+
+function LateCard({
+  late,
+  snapshot,
+  nowMs,
+  busy,
+  onArrive,
+  onCancel,
+  onResolve,
+}: {
+  late: LatePickup;
+  snapshot: Snapshot;
+  nowMs: number | null;
+  busy: boolean;
+  onArrive?: () => void;
+  onCancel?: () => void;
+  onResolve?: () => void;
+}) {
+  const students = snapshot.students.filter((student) => late.studentIds.includes(student.id));
+  const overdue = lateIsOverdue(late, nowMs);
+  const active = late.status === "announced" || late.status === "arrived";
+  const countdown = lateCountdownLabel(late, nowMs);
+
+  const chipTone =
+    late.status === "arrived"
+      ? "border-forest/30 bg-forest/10 text-forest"
+      : overdue
+        ? "border-danger/40 bg-danger/10 text-danger"
+        : late.status === "announced"
+          ? "border-gold/50 bg-gold/15 text-gold-deep"
+          : "border-line bg-paper text-muted";
+
+  const cardTone =
+    late.status === "arrived"
+      ? "border-forest/40 bg-paper"
+      : overdue
+        ? "border-danger/40 bg-paper"
+        : active
+          ? "border-gold/50 bg-paper"
+          : "border-line bg-paper/60";
+
+  return (
+    <article className={`rounded-3xl border p-4 ${cardTone}`}>
+      <div className="flex items-start gap-3">
+        <div className="flex shrink-0 -space-x-2">
+          {students.map((student) => (
+            <StudentAvatar key={student.id} student={student} size="sm" />
+          ))}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate font-serif text-lg text-forest">
+              {students.map((student) => student.firstName).join(", ") || "Alumnos"}
+            </p>
+            <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold tabular-nums ${chipTone}`}>
+              {countdown ?? `ETA ${formatTime(late.etaAt)}`}
+            </span>
+          </div>
+          <p className="text-xs text-muted">
+            Lo trae: {late.pickerRelationEs} · {late.pickerName}
+            {late.guestPhone ? ` · ${late.guestPhone}` : ""}
+          </p>
+          <p className="text-xs text-muted tabular-nums">
+            Avisó {formatTime(late.createdAt)} · hora estimada {formatTime(late.etaAt)}
+          </p>
+          {late.note ? <p className="mt-1 text-sm italic text-muted">&ldquo;{late.note}&rdquo;</p> : null}
+        </div>
+      </div>
+
+      {active && onArrive && onResolve ? (
+        <div className="mt-3 flex gap-2">
+          {late.status === "announced" ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onArrive}
+                className="min-h-11 flex-1 rounded-full bg-forest text-sm font-semibold text-paper disabled:opacity-60"
+              >
+                Marcar llegó
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onCancel}
+                className="min-h-11 rounded-full border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onResolve}
+              className="min-h-11 flex-1 rounded-full bg-forest-soft text-sm font-semibold text-paper disabled:opacity-60"
+            >
+              Cerrar retraso
+            </button>
+          )}
+        </div>
+      ) : null}
+    </article>
   );
 }
 

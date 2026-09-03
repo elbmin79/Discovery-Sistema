@@ -100,6 +100,9 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
   if (!Array.isArray(snapshot.events)) {
     snapshot.events = [];
   }
+  if (!Array.isArray(snapshot.latePickups)) {
+    snapshot.latePickups = [];
+  }
   return snapshot;
 }
 

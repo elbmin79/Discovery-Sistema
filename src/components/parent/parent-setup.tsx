@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
+import { Choice, Field } from "@/components/parent/picker-choice";
 import { studentName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { ArrivalMethod, CreateTripInput, Guardian, Locale, Snapshot } from "@/lib/types";
+import type { CreateTripInput, Guardian, Locale, Snapshot } from "@/lib/types";
 
 export function ParentSetup({
   snapshot,
@@ -33,8 +34,7 @@ export function ParentSetup({
   const vehicles = snapshot.vehicles.filter((vehicle) => vehicle.ownerGuardianId === guardian.id);
 
   const [pickerId, setPickerId] = useState(`self:${guardian.id}`);
-  const [method, setMethod] = useState<ArrivalMethod>(guardian.defaultVehicleId ? "car" : "walk");
-  const [vehicleId, setVehicleId] = useState(guardian.defaultVehicleId);
+  const [vehicleId, setVehicleId] = useState(guardian.defaultVehicleId ?? vehicles[0]?.id);
   const [guestName, setGuestName] = useState("");
   const [guestRelation, setGuestRelation] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
@@ -79,14 +79,14 @@ export function ParentSetup({
   return (
     <div className="flex flex-col gap-6">
       <button type="button" onClick={onBack} className="self-start text-sm font-medium text-forest">
-        ← {t.back}
+        â† {t.back}
       </button>
       <div>
         <p className="text-sm text-muted">{t.pickupOf}</p>
         <h1 className="font-serif text-3xl text-forest">
           {selected.map((child) => child.firstName).join(" y ")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{selected.map(studentName).join(" · ")}</p>
+        <p className="mt-1 text-sm text-muted">{selected.map(studentName).join(" Â· ")}</p>
       </div>
 
       <section>
@@ -94,7 +94,7 @@ export function ParentSetup({
         <div className="mt-3 space-y-2">
           <Choice
             active={pickerId === `self:${guardian.id}`}
-            title={`${t.me} · ${guardian.firstName}`}
+            title={`${t.me} Â· ${guardian.firstName}`}
             detail={locale === "es" ? guardian.relationEs : guardian.relationEn}
             onClick={() => setPickerId(`self:${guardian.id}`)}
           />
@@ -103,7 +103,7 @@ export function ParentSetup({
               key={person.id}
               active={pickerId === `auth:${person.id}`}
               title={`${person.firstName} ${person.lastName}`}
-              detail={`${t.authorized} · ${locale === "es" ? person.relationEs : person.relationEn}`}
+              detail={`${t.authorized} Â· ${locale === "es" ? person.relationEs : person.relationEn}`}
               onClick={() => setPickerId(`auth:${person.id}`)}
             />
           ))}
@@ -119,20 +119,12 @@ export function ParentSetup({
       {pickerId === "guest" ? (
         <section className="space-y-2 rounded-3xl bg-paper p-4">
           <Field label={t.guestName} value={guestName} onChange={setGuestName} />
-          <Field label={t.guestRelation} value={guestRelation} onChange={setGuestRelation} placeholder="Tío, vecina…" />
+          <Field label={t.guestRelation} value={guestRelation} onChange={setGuestRelation} placeholder="TÃ­o, vecinaâ€¦" />
           <Field label={t.guestPhone} value={guestPhone} onChange={setGuestPhone} placeholder="686 123 4567" />
         </section>
       ) : null}
 
-      <section>
-        <h2 className="text-sm font-semibold text-ink">{t.howArrive}</h2>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Choice active={method === "car"} title={t.byCar} onClick={() => setMethod("car")} />
-          <Choice active={method === "walk"} title={t.walking} onClick={() => setMethod("walk")} />
-        </div>
-      </section>
-
-      {method === "car" && vehicles.length > 0 ? (
+      {vehicles.length > 0 ? (
         <section>
           <h2 className="text-sm font-semibold text-ink">{t.vehicle}</h2>
           <div className="mt-3 space-y-2">
@@ -157,64 +149,15 @@ export function ParentSetup({
         onClick={() =>
           onSubmit({
             ...picker,
-            method,
-            vehicleId: method === "car" ? vehicleId : undefined,
+            method: "car",
+            vehicleId,
             guestPhone: pickerId === "guest" ? guestPhone : undefined,
           })
         }
         className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "…" : t.sendNotice}
+        {busy ? "â€¦" : t.sendNotice}
       </button>
     </div>
-  );
-}
-
-function Choice({
-  active,
-  title,
-  detail,
-  onClick,
-}: {
-  active: boolean;
-  title: string;
-  detail?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-2xl border px-4 py-3 text-left ${
-        active ? "border-forest bg-paper" : "border-line bg-paper/70"
-      }`}
-    >
-      <p className="font-medium text-ink">{title}</p>
-      {detail ? <p className="text-sm text-muted">{detail}</p> : null}
-    </button>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block text-sm font-medium">
-      {label}
-      <input
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full rounded-2xl border border-line px-3 py-2 font-normal"
-      />
-    </label>
   );
 }

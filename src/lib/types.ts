@@ -126,6 +126,38 @@ export interface PickupRequest {
   deliveredByStaffName?: string;
 }
 
+export type LatePickupStatus = "announced" | "arrived" | "resolved" | "cancelled";
+
+export interface LatePickup {
+  id: string;
+  guardianId: string;
+  studentIds: string[];
+  pickerKind: PickerKind;
+  pickerName: string;
+  pickerRelationEs: string;
+  pickerRelationEn: string;
+  guestPhone?: string;
+  etaAt: string;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: LatePickupStatus;
+  linkedTripId?: string;
+  resolvedAt?: string;
+}
+
+export interface CreateLatePickupInput {
+  guardianId: string;
+  studentIds: string[];
+  pickerKind: PickerKind;
+  pickerName: string;
+  pickerRelationEs: string;
+  pickerRelationEn: string;
+  guestPhone?: string;
+  etaAt: string;
+  note?: string;
+}
+
 export type EventActorRole = "parent" | "kiosk" | "staff";
 
 export type PickupEventType =
@@ -133,15 +165,21 @@ export type PickupEventType =
   | "arrived"
   | "status_changed"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "late_announced"
+  | "late_eta_changed"
+  | "late_cancelled"
+  | "late_arrived"
+  | "late_resolved";
 
 export interface PickupEvent {
   id: string;
   at: string;
   type: PickupEventType;
-  tripId: string;
+  tripId?: string;
   requestId?: string;
   studentId?: string;
+  lateId?: string;
   actorRole: EventActorRole;
   actorName?: string;
   fromStatus?: PickupStatus;
@@ -163,6 +201,7 @@ export interface Snapshot {
   trips: PickupTrip[];
   requests: PickupRequest[];
   guestPasses: GuestPass[];
+  latePickups: LatePickup[];
   events: PickupEvent[];
   updatedAt: string;
 }
