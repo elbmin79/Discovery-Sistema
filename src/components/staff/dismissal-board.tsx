@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AlarmClock, ClipboardList, Info, Undo2, Users, X } from "lucide-react";
+import { AlarmClock, Car, ClipboardList, Info, Undo2, Users, X } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
@@ -242,8 +242,8 @@ export function DismissalBoard({
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 md:px-6">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <main className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-4 px-4 py-4 md:px-6">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
           <Section
             id="waiting"
             title="Papás en la fila"
@@ -330,7 +330,7 @@ function Section({
       </header>
 
       <div className="@container">
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
           {cards.length === 0 ? (
             <p className="col-span-full rounded-xl bg-paper/70 px-4 py-8 text-center text-sm text-muted">
               Nadie en la fila.
@@ -444,13 +444,19 @@ function FamilyCardView({
       ? "border-gold/60 shadow-[inset_4px_0_0_0_var(--color-gold)]"
       : "border-line";
 
+  // Solo autos registrados (tag/familia). Visitas por QR sin vehículo no muestran modelo.
+  const registeredCar =
+    card.trip.method === "car" && card.vehicle
+      ? [card.vehicle.label, card.vehicle.color].filter(Boolean).join(" · ")
+      : null;
+
   return (
     <article className={`relative ${siblings ? "@md:col-span-2" : ""}`}>
       <button
         type="button"
         disabled={busy}
         onClick={onTap}
-        className={`flex w-full flex-col rounded-xl border bg-paper p-3 pt-4 text-left transition active:scale-[0.98] disabled:opacity-60 ${frame}`}
+        className={`flex w-full flex-col rounded-xl border bg-paper p-4 pt-5 text-left transition active:scale-[0.98] disabled:opacity-60 ${frame}`}
       >
         {siblings ? (
           <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase text-gold-deep">
@@ -459,27 +465,35 @@ function FamilyCardView({
           </p>
         ) : null}
 
-        <div className={siblings ? "grid gap-3 @md:grid-cols-2" : ""}>
+        <div className={siblings ? "grid gap-4 @md:grid-cols-2" : ""}>
           {card.kids.map((kid) => (
-            <div key={kid.request.id} className="flex items-center gap-3">
+            <div key={kid.request.id} className="flex items-center gap-3.5">
               <StudentAvatar student={kid.student} size="xl" />
               <div className="min-w-0 flex-1">
                 <p className="font-serif text-xl leading-tight text-forest">{kid.student.firstName}</p>
-                <p className="truncate text-sm text-muted">{kid.student.lastName}</p>
-                <p className="mt-0.5 truncate text-xs text-muted">{studentGrade(kid.student, "es")}</p>
+                <p className="text-sm text-muted">{kid.student.lastName}</p>
+                <p className="mt-0.5 text-xs text-muted">{studentGrade(kid.student, "es")}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <p className="mt-3 flex items-center justify-between gap-2 text-xs text-muted">
-          <span className="truncate">
-            {card.trip.pickerRelationEs} · {card.trip.pickerName}
-          </span>
+        <div className="mt-3 flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-1">
+            <p className="text-xs text-muted">
+              {card.trip.pickerRelationEs} · {card.trip.pickerName}
+            </p>
+            {registeredCar ? (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-forest">
+                <Car className="h-3.5 w-3.5 shrink-0 text-gold-deep" />
+                <span>{registeredCar}</span>
+              </p>
+            ) : null}
+          </div>
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-deep text-xs font-bold text-paper">
             {position}
           </span>
-        </p>
+        </div>
 
         {deniedKids.length > 0 ? (
           <p className="mt-2 rounded-lg bg-danger px-2.5 py-1.5 text-xs font-semibold leading-snug text-paper">
