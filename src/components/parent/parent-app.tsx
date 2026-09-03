@@ -10,9 +10,11 @@ import { ParentLogin } from "@/components/parent/parent-login";
 import { ParentSettings } from "@/components/parent/parent-settings";
 import { ParentSetup } from "@/components/parent/parent-setup";
 import { ParentTracker } from "@/components/parent/parent-tracker";
+import { AuthorizationInbox } from "@/components/parent/authorization-inbox";
 import { useLocale } from "@/hooks/use-locale";
 import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
+import { friendKids } from "@/lib/school";
 import type { CreateTripInput, Snapshot } from "@/lib/types";
 
 function activeTripForGuardian(snapshot: Snapshot, guardianId: string) {
@@ -27,9 +29,13 @@ function activeTripForGuardian(snapshot: Snapshot, guardianId: string) {
   });
 }
 
+const CLOSED_TRIP_VISIBLE_MS = 10 * 60 * 1000;
+
 function completedTripForGuardian(snapshot: Snapshot, guardianId: string) {
   return snapshot.trips.find((trip) => {
     if (trip.guardianId !== guardianId || trip.cancelledAt) return false;
+    // Un viaje ya cerrado hace rato no debe volver a saludar al abrir la app.
+    if (trip.departedAt && Date.now() - Date.parse(trip.departedAt) > CLOSED_TRIP_VISIBLE_MS) return false;
     const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
     return requests.length > 0 && requests.every((request) => request.status === "delivered");
   });
@@ -49,6 +55,10 @@ export function ParentApp() {
   const guardian = snapshot?.guardians.find((item) => item.id === session?.guardianId);
   const children = useMemo(
     () => snapshot?.students.filter((student) => guardian?.studentIds.includes(student.id)) ?? [],
+    [snapshot, guardian],
+  );
+  const friendsChildren = useMemo(
+    () => (snapshot && guardian ? friendKids(snapshot, guardian) : []),
     [snapshot, guardian],
   );
   const activeTrip = snapshot && guardian ? activeTripForGuardian(snapshot, guardian.id) : undefined;
@@ -101,6 +111,9 @@ export function ParentApp() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-8">
+        {session && snapshot && guardian && tab !== "settings" ? (
+          <AuthorizationInbox snapshot={snapshot} guardian={guardian} locale={locale} t={t} />
+        ) : null}
         {!session ? (
           <ParentLogin t={t} onSignedIn={setSession} />
         ) : !snapshot || !guardian ? (
@@ -143,6 +156,7 @@ export function ParentApp() {
           <ParentHome
             guardian={guardian}
             childrenList={children}
+            friendsChildren={friendsChildren}
             selected={selected}
             onToggle={(id) =>
               setSelected((current) =>

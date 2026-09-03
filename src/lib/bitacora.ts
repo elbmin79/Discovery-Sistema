@@ -1,5 +1,13 @@
 import { findStudent, findVehicle, findZone, LEVEL_LABELS } from "./school";
-import type { PickupEvent, PickupRequest, PickupStatus, Snapshot, Student } from "./types";
+import type {
+  ArrivalVia,
+  DepartureVia,
+  PickupEvent,
+  PickupRequest,
+  PickupStatus,
+  Snapshot,
+  Student,
+} from "./types";
 
 export interface BitacoraRow {
   requestId: string;
@@ -16,11 +24,26 @@ export interface BitacoraRow {
   preparingAt?: string;
   readyAt?: string;
   deliveredAt?: string;
+  departedAt?: string;
+  arrivalVia?: ArrivalVia;
+  departedVia?: DepartureVia;
   cancelledAt?: string;
   status: PickupStatus;
   deliveredBy?: string;
   waitMinutes?: number;
 }
+
+export const ARRIVAL_LABELS: Record<ArrivalVia, string> = {
+  tag: "Tag",
+  qr: "QR",
+  code: "Código",
+};
+
+export const DEPARTURE_LABELS: Record<DepartureVia, string> = {
+  tag: "Lector de salida",
+  parent: "Confirmó la familia",
+  timeout: "Cierre automático",
+};
 
 export const STATUS_LABELS: Record<PickupStatus, string> = {
   on_the_way: "En camino",
@@ -56,6 +79,9 @@ export function buildBitacoraRows(snapshot: Snapshot): BitacoraRow[] {
       preparingAt: request.preparingAt,
       readyAt: request.readyAt,
       deliveredAt: request.deliveredAt,
+      departedAt: request.status === "delivered" ? trip.departedAt : undefined,
+      arrivalVia: trip.arrivalVia,
+      departedVia: request.status === "delivered" ? trip.departedVia : undefined,
       cancelledAt: request.status === "cancelled" ? trip.cancelledAt : undefined,
       status: request.status,
       deliveredBy: request.deliveredByStaffName,
@@ -98,16 +124,24 @@ export function eventsForRequest(snapshot: Snapshot, request: PickupRequest): Pi
   const events = (snapshot.events ?? []).filter(
     (event) =>
       event.requestId === request.id ||
-      ((event.type === "trip_created" || event.type === "arrived") && event.tripId === request.tripId),
+      ((event.type === "trip_created" || event.type === "arrived" || event.type === "departed") &&
+        event.tripId === request.tripId),
   );
   return events.sort((a, b) => a.at.localeCompare(b.at));
 }
 
 export function eventLabel(event: PickupEvent): string {
-  if (event.type === "trip_created") return "Recogida solicitada";
-  if (event.type === "arrived") return "Llegada confirmada en kiosco";
+  if (event.type === "trip_created") {
+    return event.note ? `Recogida solicitada · ${event.note}` : "Recogida solicitada";
+  }
+  if (event.type === "arrived") {
+    return event.note ? `Llegada confirmada · ${event.note}` : "Llegada confirmada en kiosco";
+  }
   if (event.type === "delivered") return "Entregado";
   if (event.type === "cancelled") return "Solicitud cancelada";
+  if (event.type === "authorization_requested") return event.note ?? "Se pidió confirmación a la familia";
+  if (event.type === "authorization_changed") return event.note ?? "La familia respondió";
+  if (event.type === "departed") return event.note ? `Ciclo cerrado · ${event.note}` : "Ciclo cerrado";
   if (event.fromStatus && event.toStatus) {
     return `${STATUS_LABELS[event.fromStatus]} → ${STATUS_LABELS[event.toStatus]}`;
   }
@@ -115,7 +149,7 @@ export function eventLabel(event: PickupEvent): string {
 }
 
 export function actorLabel(event: PickupEvent): string {
-  if (event.actorRole === "kiosk") return "Kiosco";
+  if (event.actorRole === "kiosk") return "Entrada";
   if (event.actorRole === "parent") return "Familia";
   return "Personal";
 }
@@ -134,9 +168,12 @@ const CSV_HEADERS = [
   "Vehículo",
   "Solicitado",
   "Llegada",
+  "Medio de llegada",
   "Buscando",
   "En puerta",
   "Entregado",
+  "Salida",
+  "Cierre",
   "Estado",
   "Entregó",
   "Espera (min)",
@@ -155,9 +192,12 @@ export function toCsv(rows: BitacoraRow[]): string {
         row.vehicleLabel,
         csvDateTime(row.requestedAt),
         csvDateTime(row.arrivedAt),
+        row.arrivalVia ? ARRIVAL_LABELS[row.arrivalVia] : "",
         csvDateTime(row.preparingAt),
         csvDateTime(row.readyAt),
         csvDateTime(row.deliveredAt),
+        csvDateTime(row.departedAt),
+        row.departedVia ? DEPARTURE_LABELS[row.departedVia] : "",
         STATUS_LABELS[row.status],
         row.deliveredBy ?? "",
         row.waitMinutes !== undefined ? String(row.waitMinutes) : "",

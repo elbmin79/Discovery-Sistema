@@ -57,6 +57,9 @@ export interface Guardian {
   studentIds: string[];
   defaultVehicleId?: string;
   phone: string;
+  /** Código que se comparte con otras familias para agregarse como amigos. */
+  friendCode?: string;
+  friendIds?: string[];
 }
 
 export interface AuthorizedPerson {
@@ -75,7 +78,11 @@ export interface Vehicle {
   plate?: string;
   ownerGuardianId: string;
   photoUrl?: string;
+  /** Tag RFID pegado al parabrisas; lo lee el sensor de la entrada. */
+  tagId?: string;
 }
+
+export type ArrivalVia = "tag" | "qr" | "code";
 
 export interface StaffMember {
   id: string;
@@ -101,7 +108,25 @@ export interface PickupTrip {
   createdAt: string;
   arrivedAt?: string;
   arrivalPhoto?: string;
+  arrivalVia?: ArrivalVia;
+  /** La familia llegó sin haber avisado desde la app; el kiosco creó la solicitud. */
+  unannounced?: boolean;
+  /** Cierre del ciclo: el auto salió del plantel (o la familia lo confirmó). */
+  departedAt?: string;
+  departedVia?: DepartureVia;
   cancelledAt?: string;
+}
+
+/** tag = lector de salida · parent = la familia confirmó en la app · timeout = cierre automático */
+export type DepartureVia = "tag" | "parent" | "timeout";
+
+export type AuthorizationStatus = "pending" | "approved" | "denied";
+
+/** Presente solo cuando el alumno no es hijo de quien hizo la solicitud. */
+export interface RequestAuthorization {
+  ownerGuardianId: string;
+  status: AuthorizationStatus;
+  respondedAt?: string;
 }
 
 export interface GuestPass {
@@ -124,6 +149,7 @@ export interface PickupRequest {
   readyAt?: string;
   deliveredAt?: string;
   deliveredByStaffName?: string;
+  authorization?: RequestAuthorization;
 }
 
 export type EventActorRole = "parent" | "kiosk" | "staff";
@@ -133,7 +159,10 @@ export type PickupEventType =
   | "arrived"
   | "status_changed"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "authorization_requested"
+  | "authorization_changed"
+  | "departed";
 
 export interface PickupEvent {
   id: string;
@@ -146,6 +175,7 @@ export interface PickupEvent {
   actorName?: string;
   fromStatus?: PickupStatus;
   toStatus?: PickupStatus;
+  note?: string;
 }
 
 export interface Snapshot {
@@ -191,4 +221,10 @@ export interface DemoSession {
 
 export interface ArriveTripInput {
   photo?: string;
+  via?: ArrivalVia;
+}
+
+export interface ArriveByTagInput extends ArriveTripInput {
+  /** Si la familia no avisó, crear la solicitud con todos sus hijos y marcarla llegada. */
+  createIfMissing?: boolean;
 }

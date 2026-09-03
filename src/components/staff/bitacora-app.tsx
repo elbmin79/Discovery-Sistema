@@ -10,8 +10,10 @@ import { useSession } from "@/hooks/use-session";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import {
   actorLabel,
+  ARRIVAL_LABELS,
   buildBitacoraRows,
   buildSummary,
+  DEPARTURE_LABELS,
   downloadCsv,
   eventLabel,
   eventsForRequest,
@@ -40,6 +42,9 @@ const EVENT_DOT: Record<string, string> = {
   status_changed: "bg-forest-soft",
   delivered: "bg-forest",
   cancelled: "bg-danger",
+  authorization_requested: "bg-gold",
+  authorization_changed: "bg-gold-deep",
+  departed: "bg-forest-deep",
 };
 
 export function BitacoraApp() {
@@ -175,8 +180,10 @@ function BitacoraBoard() {
                     <tr className="border-b border-line text-xs uppercase tracking-[0.12em] text-muted">
                       <th className="px-4 py-3 font-semibold">Alumno</th>
                       <th className="px-4 py-3 font-semibold">Familia</th>
+                      <th className="px-4 py-3 font-semibold">Aviso</th>
                       <th className="px-4 py-3 font-semibold">Llegada</th>
                       <th className="px-4 py-3 font-semibold">Entrega</th>
+                      <th className="px-4 py-3 font-semibold">Salida</th>
                       <th className="px-4 py-3 font-semibold">Estado</th>
                       <th className="px-4 py-3 font-semibold">Entregó</th>
                     </tr>
@@ -277,8 +284,16 @@ function RowDesktop({
             {row.pickerRelation} · {row.vehicleLabel}
           </p>
         </td>
-        <td className="px-4 py-3 text-muted">{formatTime(row.arrivedAt)}</td>
+        <td className="px-4 py-3 text-muted">{formatTime(row.requestedAt)}</td>
+        <td className="px-4 py-3 text-muted">
+          {formatTime(row.arrivedAt)}
+          {row.arrivalVia ? <span className="block text-[11px]">{ARRIVAL_LABELS[row.arrivalVia]}</span> : null}
+        </td>
         <td className="px-4 py-3 text-muted">{formatTime(row.deliveredAt)}</td>
+        <td className="px-4 py-3 text-muted">
+          {formatTime(row.departedAt)}
+          {row.departedVia ? <span className="block text-[11px]">{DEPARTURE_LABELS[row.departedVia]}</span> : null}
+        </td>
         <td className="px-4 py-3">
           <StatusBadge status={row.status} />
         </td>
@@ -286,7 +301,7 @@ function RowDesktop({
       </tr>
       {expanded ? (
         <tr className="border-b border-line/60 bg-cream/60">
-          <td colSpan={6} className="px-4 py-4">
+          <td colSpan={8} className="px-4 py-4">
             <Timeline snapshot={snapshot} row={row} />
           </td>
         </tr>
@@ -321,9 +336,11 @@ function RowMobile({
         </div>
         <StatusBadge status={row.status} />
       </div>
-      <div className="mt-3 flex items-center justify-between text-sm text-muted">
+      <div className="mt-3 grid grid-cols-2 gap-y-1 text-sm text-muted">
+        <span>Aviso: {formatTime(row.requestedAt)}</span>
         <span>Llegada: {formatTime(row.arrivedAt)}</span>
         <span>Entrega: {formatTime(row.deliveredAt)}</span>
+        <span>Salida: {formatTime(row.departedAt)}</span>
       </div>
       {row.deliveredBy ? <p className="mt-1 text-xs text-muted">Entregó: {row.deliveredBy}</p> : null}
       {expanded ? <Timeline snapshot={snapshot} row={row} /> : null}

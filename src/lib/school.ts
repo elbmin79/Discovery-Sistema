@@ -1,4 +1,4 @@
-import type { Level, Locale, PickupStatus, Snapshot, Student, Vehicle } from "./types";
+import type { Guardian, Level, Locale, PickupStatus, Snapshot, Student, Vehicle } from "./types";
 
 export const SCHOOL = {
   name: "Discovery American Preschool & Academy",
@@ -59,6 +59,33 @@ export function tripRequests(snapshot: Snapshot, tripId: string) {
   return snapshot.requests.filter((request) => request.tripId === tripId);
 }
 
+export function friendsOf(snapshot: Snapshot, guardian: Guardian) {
+  const ids = new Set(guardian.friendIds ?? []);
+  return snapshot.guardians.filter((item) => ids.has(item.id));
+}
+
+/** Hijos de las familias amigas, con su tutor, para poder pedirlos desde la app. */
+export function friendKids(snapshot: Snapshot, guardian: Guardian) {
+  const result: Array<{ student: Student; owner: Guardian }> = [];
+  for (const owner of friendsOf(snapshot, guardian)) {
+    for (const studentId of owner.studentIds) {
+      const student = findStudent(snapshot, studentId);
+      if (student && !guardian.studentIds.includes(student.id)) result.push({ student, owner });
+    }
+  }
+  return result;
+}
+
+/** Solicitudes de amigos sobre los hijos de este tutor que siguen abiertas. */
+export function authorizationsFor(snapshot: Snapshot, guardianId: string) {
+  return snapshot.requests.filter(
+    (request) =>
+      request.authorization?.ownerGuardianId === guardianId &&
+      request.status !== "delivered" &&
+      request.status !== "cancelled",
+  );
+}
+
 export function activeRequests(snapshot: Snapshot) {
   return snapshot.requests.filter(
     (request) => request.status !== "delivered" && request.status !== "cancelled",
@@ -96,4 +123,20 @@ export function studentPhoto(student: Student) {
 export function vehiclePhoto(vehicle?: Vehicle) {
   if (!vehicle) return undefined;
   return vehicle.photoUrl ?? `/cars/${vehicle.id}.png`;
+}
+
+/** Las fotos reales del kiosco son JPEG; los dibujos de respaldo son SVG generados. */
+export function isCapturedPhoto(src?: string) {
+  return Boolean(src) && !src!.startsWith("data:image/svg+xml");
+}
+
+/**
+ * Foto que debe ver el personal: primero la captura real de la llegada,
+ * luego la foto genérica del vehículo y al final el dibujo de respaldo.
+ */
+export function arrivalPicture(trip: { arrivalPhoto?: string }, vehicle?: Vehicle) {
+  if (isCapturedPhoto(trip.arrivalPhoto)) {
+    return { src: trip.arrivalPhoto!, captured: true, fallback: vehiclePhoto(vehicle) };
+  }
+  return { src: vehiclePhoto(vehicle), captured: false, fallback: trip.arrivalPhoto };
 }

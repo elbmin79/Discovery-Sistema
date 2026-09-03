@@ -1,13 +1,21 @@
 import { mutateStore } from "@/lib/store";
+import type { ArrivalVia } from "@/lib/types";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { code?: string; token?: string; photo?: string };
+    const body = (await request.json()) as {
+      code?: string;
+      token?: string;
+      photo?: string;
+      via?: ArrivalVia;
+    };
     const key = body.code || body.token;
     if (!key) {
       return Response.json({ error: "Ingresa el código de llegada." }, { status: 400 });
     }
-    return Response.json(await mutateStore((store) => store.arriveByCode(key, { photo: body.photo })));
+    return Response.json(
+      await mutateStore((store) => store.arriveByCode(key, { photo: body.photo, via: body.via })),
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo registrar la llegada.";
     return Response.json({ error: message }, { status: 400 });

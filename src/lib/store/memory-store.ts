@@ -10,18 +10,25 @@ import {
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
 import type {
   ArrivalMethod,
+  ArriveByTagInput,
   ArriveTripInput,
+  AuthorizationStatus,
   AuthorizedPerson,
   CreateTripInput,
+  DepartureVia,
+  Guardian,
   PickupEvent,
   PickupStatus,
+  PickupTrip,
   Snapshot,
   Vehicle,
 } from "../types";
 
 type Listener = (snapshot: Snapshot) => void;
+type PickupRequestRef = Snapshot["requests"][number];
 
 const MAX_EVENTS = 800;
+export const AUTO_CLOSE_MS = 30 * 60 * 1000;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -43,6 +50,19 @@ function createToken() {
   return `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
+function generateFriendCode(lastName: string) {
+  const base = lastName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z]/g, "")
+    .toUpperCase()
+    .slice(0, 8) || "FAMILIA";
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  for (let i = 0; i < 3; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `${base}-${suffix}`;
+}
+
 export class MemoryPickupStore {
   private data: Snapshot;
   private listeners = new Set<Listener>();
@@ -52,6 +72,44 @@ export class MemoryPickupStore {
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
     }
+    this.hydrateDefaults();
+  }
+
+  /**
+   * Los snapshots guardados antes de que existieran amigos y tags no traen esos
+   * campos; se completan desde el seed para no obligar a reiniciar la jornada.
+   */
+  private hydrateDefaults() {
+    const seed = createSeedSnapshot();
+    for (const guardian of this.data.guardians) {
+      const base = seed.guardians.find((item) => item.id === guardian.id);
+      if (!guardian.friendCode) {
+        guardian.friendCode = base?.friendCode ?? generateFriendCode(guardian.lastName);
+      }
+      if (!Array.isArray(guardian.friendIds)) {
+        guardian.friendIds = base?.friendIds ? [...base.friendIds] : [];
+      }
+    }
+    for (const vehicle of this.data.vehicles) {
+      if (vehicle.tagId) continue;
+      const base = seed.vehicles.find((item) => item.id === vehicle.id);
+      if (base?.tagId) vehicle.tagId = base.tagId;
+    }
+  }
+
+  private guardianLabel(guardian: Guardian) {
+    return `${guardian.firstName} ${guardian.lastName}`;
+  }
+
+  private ownerOf(studentId: string) {
+    return this.data.guardians.find((item) => item.studentIds.includes(studentId));
+  }
+
+  private hasOpenRequests(tripId: string) {
+    return this.data.requests.some(
+      (request) =>
+        request.tripId === tripId && request.status !== "cancelled" && request.status !== "delivered",
+    );
   }
 
   private logEvent(event: Omit<PickupEvent, "id" | "at">, at?: string) {
@@ -90,6 +148,18 @@ export class MemoryPickupStore {
     const guardian = this.data.guardians.find((item) => item.id === input.guardianId);
     if (!guardian) throw new Error("No encontramos la cuenta del padre.");
 
+    // Solo se puede pedir a los hijos propios o a los de familias amigas.
+    const owners = new Map<string, Guardian | undefined>();
+    for (const studentId of input.studentIds) {
+      if (guardian.studentIds.includes(studentId)) continue;
+      const owner = this.ownerOf(studentId);
+      const isFriend = owner && (guardian.friendIds ?? []).includes(owner.id);
+      if (!owner || !isFriend) {
+        throw new Error("Solo puedes pedir a tus hijos o a los de familias amigas.");
+      }
+      owners.set(studentId, owner);
+    }
+
     const alreadyActive = this.data.requests.some(
       (request) =>
         input.studentIds.includes(request.studentId) &&
@@ -124,14 +194,19 @@ export class MemoryPickupStore {
       createdAt: now,
     });
 
+    const authorizationEvents: Array<{ requestId: string; studentId: string; owner: Guardian }> = [];
     for (const studentId of input.studentIds) {
+      const owner = owners.get(studentId);
+      const requestId = createId("r");
       this.data.requests.unshift({
-        id: createId("r"),
+        id: requestId,
         tripId,
         studentId,
         status: "on_the_way",
         requestedAt: now,
+        authorization: owner ? { ownerGuardianId: owner.id, status: "pending" } : undefined,
       });
+      if (owner) authorizationEvents.push({ requestId, studentId, owner });
     }
 
     this.logEvent(
@@ -139,10 +214,25 @@ export class MemoryPickupStore {
         type: "trip_created",
         tripId,
         actorRole: "parent",
-        actorName: `${guardian.firstName} ${guardian.lastName}`,
+        actorName: this.guardianLabel(guardian),
       },
       now,
     );
+
+    for (const item of authorizationEvents) {
+      this.logEvent(
+        {
+          type: "authorization_requested",
+          tripId,
+          requestId: item.requestId,
+          studentId: item.studentId,
+          actorRole: "parent",
+          actorName: this.guardianLabel(guardian),
+          note: `Se pidió confirmación a ${this.guardianLabel(item.owner)}`,
+        },
+        now,
+      );
+    }
 
     if (input.pickerKind === "guest" || input.pickerKind === "authorized") {
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -224,10 +314,105 @@ export class MemoryPickupStore {
     );
     if (!trip) throw new Error("No encontramos una solicitud con ese código.");
 
+    this.markArrived(trip, input.photo, input.via ?? (trip.qrToken === value ? "qr" : "code"));
+    this.emit();
+    return this.snapshot();
+  }
+
+  /** Viaje activo (con alumnos pendientes) asociado a un vehículo con tag. */
+  activeTripForTag(tagId: string) {
+    const vehicle = this.data.vehicles.find((item) => item.tagId === tagId);
+    if (!vehicle) return { vehicle: undefined, trip: undefined };
+    const trip = this.data.trips.find(
+      (item) =>
+        !item.cancelledAt &&
+        (item.vehicleId === vehicle.id || (item.guardianId === vehicle.ownerGuardianId && !item.vehicleId)) &&
+        this.hasOpenRequests(item.id),
+    );
+    return { vehicle, trip };
+  }
+
+  arriveByTag(tagId: string, input: ArriveByTagInput = {}) {
+    const { vehicle, trip } = this.activeTripForTag(tagId.trim());
+    if (!vehicle) throw new Error("Ese tag no está registrado.");
+
+    if (trip) {
+      this.markArrived(trip, input.photo, "tag");
+      this.emit();
+      return this.snapshot();
+    }
+
+    if (!input.createIfMissing) {
+      throw new Error("Esta familia no tiene una solicitud activa.");
+    }
+
+    const owner = this.data.guardians.find((item) => item.id === vehicle.ownerGuardianId);
+    if (!owner) throw new Error("No encontramos a la familia de ese auto.");
+
+    const activeStudents = new Set(
+      this.data.requests
+        .filter((request) => request.status !== "delivered" && request.status !== "cancelled")
+        .map((request) => request.studentId),
+    );
+    const studentIds = owner.studentIds.filter((id) => !activeStudents.has(id));
+    if (studentIds.length === 0) {
+      throw new Error("Los hijos de esta familia ya tienen una recogida activa.");
+    }
+
+    const now = new Date().toISOString();
+    const usedCodes = new Set(this.data.trips.map((item) => item.code));
+    const created: PickupTrip = {
+      id: createId("t"),
+      code: createCode(usedCodes),
+      guardianId: owner.id,
+      pickerName: this.guardianLabel(owner),
+      pickerRelationEs: owner.relationEs,
+      pickerRelationEn: owner.relationEn,
+      pickerKind: "self",
+      method: "car",
+      vehicleId: vehicle.id,
+      qrToken: createToken(),
+      createdAt: now,
+      unannounced: true,
+    };
+    this.data.trips.unshift(created);
+    for (const studentId of studentIds) {
+      this.data.requests.unshift({
+        id: createId("r"),
+        tripId: created.id,
+        studentId,
+        status: "on_the_way",
+        requestedAt: now,
+      });
+    }
+    this.logEvent(
+      {
+        type: "trip_created",
+        tripId: created.id,
+        actorRole: "kiosk",
+        actorName: created.pickerName,
+        note: "Llegó sin aviso; la solicitud se creó en la entrada",
+      },
+      now,
+    );
+
+    this.markArrived(created, input.photo, "tag");
+    this.emit();
+    return this.snapshot();
+  }
+
+  private markArrived(trip: PickupTrip, photo: string | undefined, via: PickupTrip["arrivalVia"]) {
+    // Volver a leer el tag o el QR de una familia que ya está en la fila no la manda al final.
+    if (trip.arrivedAt) {
+      if (photo) trip.arrivalPhoto = photo;
+      return;
+    }
+
     const now = new Date().toISOString();
     trip.arrivedAt = now;
+    trip.arrivalVia = via;
     const vehicle = this.data.vehicles.find((item) => item.id === trip.vehicleId);
-    trip.arrivalPhoto = input.photo || fallbackArrivalPhoto(vehicle?.label ?? trip.pickerName, vehicle?.color);
+    trip.arrivalPhoto = photo || fallbackArrivalPhoto(vehicle?.label ?? trip.pickerName, vehicle?.color);
 
     for (const request of this.data.requests) {
       if (request.tripId !== trip.id) continue;
@@ -244,6 +429,66 @@ export class MemoryPickupStore {
         tripId: trip.id,
         actorRole: "kiosk",
         actorName: trip.pickerName,
+        note: via === "tag" ? `Tag ${vehicle?.tagId ?? ""}`.trim() : via === "qr" ? "QR" : "Código",
+      },
+      now,
+    );
+  }
+
+  addFriend(guardianId: string, friendCode: string) {
+    const guardian = this.data.guardians.find((item) => item.id === guardianId);
+    if (!guardian) throw new Error("No encontramos tu cuenta.");
+    const code = friendCode.trim().toUpperCase().replace(/\s+/g, "");
+    const friend = this.data.guardians.find((item) => (item.friendCode ?? "").toUpperCase() === code);
+    if (!friend) throw new Error("No encontramos una familia con ese código.");
+    if (friend.id === guardian.id) throw new Error("Ese es tu propio código.");
+
+    guardian.friendIds = Array.from(new Set([...(guardian.friendIds ?? []), friend.id]));
+    friend.friendIds = Array.from(new Set([...(friend.friendIds ?? []), guardian.id]));
+    this.emit();
+    return this.snapshot();
+  }
+
+  removeFriend(guardianId: string, friendId: string) {
+    const guardian = this.data.guardians.find((item) => item.id === guardianId);
+    const friend = this.data.guardians.find((item) => item.id === friendId);
+    if (!guardian || !friend) throw new Error("No encontramos esa familia.");
+    guardian.friendIds = (guardian.friendIds ?? []).filter((id) => id !== friend.id);
+    friend.friendIds = (friend.friendIds ?? []).filter((id) => id !== guardian.id);
+    this.emit();
+    return this.snapshot();
+  }
+
+  respondAuthorization(requestId: string, guardianId: string, decision: Exclude<AuthorizationStatus, "pending">) {
+    const request = this.data.requests.find((item) => item.id === requestId);
+    if (!request?.authorization) throw new Error("Esta solicitud no requiere confirmación.");
+    if (request.authorization.ownerGuardianId !== guardianId) {
+      throw new Error("Solo la familia del alumno puede responder.");
+    }
+    if (request.status === "delivered" || request.status === "cancelled") {
+      throw new Error("Esta solicitud ya se cerró.");
+    }
+
+    const owner = this.data.guardians.find((item) => item.id === guardianId);
+    const now = new Date().toISOString();
+    const previous = request.authorization.status;
+    request.authorization.status = decision;
+    request.authorization.respondedAt = now;
+
+    this.logEvent(
+      {
+        type: "authorization_changed",
+        tripId: request.tripId,
+        requestId: request.id,
+        studentId: request.studentId,
+        actorRole: "parent",
+        actorName: owner ? this.guardianLabel(owner) : undefined,
+        note:
+          decision === "approved"
+            ? previous === "denied"
+              ? "La familia cambió su respuesta a Sí"
+              : "La familia confirmó la recogida"
+            : "La familia dijo que NO",
       },
       now,
     );
@@ -257,10 +502,47 @@ export class MemoryPickupStore {
     if (!request) throw new Error("No encontramos esa solicitud.");
 
     const now = new Date().toISOString();
+    this.transition(request, action, staffName, now, true);
+    this.emit();
+    return this.snapshot();
+  }
+
+  setTripStatus(tripId: string, action: "advance" | "undo" | "complete", staffName?: string) {
+    const requests = this.data.requests.filter(
+      (item) => item.tripId === tripId && item.status !== "cancelled" && item.status !== "delivered",
+    );
+    if (requests.length === 0) {
+      throw new Error("No hay alumnos activos en esta familia.");
+    }
+
+    const now = new Date().toISOString();
+    let changed = 0;
+    for (const request of requests) {
+      if (this.transition(request, action, staffName, now, false)) changed += 1;
+    }
+    if (changed === 0) {
+      throw new Error("Ese cambio de estado no está permitido.");
+    }
+
+    this.emit();
+    return this.snapshot();
+  }
+
+  private transition(
+    request: PickupRequestRef,
+    action: "advance" | "undo" | "cancel" | "complete",
+    staffName: string | undefined,
+    now: string,
+    strict: boolean,
+  ): boolean {
+    const fail = (message: string) => {
+      if (strict) throw new Error(message);
+      return false;
+    };
 
     if (action === "complete") {
       if (!canComplete(request.status)) {
-        throw new Error("Ese cambio de estado no está permitido.");
+        return fail("Ese cambio de estado no está permitido.");
       }
       const fromStatus = request.status;
       request.status = "delivered";
@@ -279,13 +561,12 @@ export class MemoryPickupStore {
         },
         now,
       );
-      this.emit();
-      return this.snapshot();
+      return true;
     }
 
     if (action === "cancel") {
       if (!canCancel(request.status)) {
-        throw new Error("Esta solicitud ya no se puede cancelar.");
+        return fail("Esta solicitud ya no se puede cancelar.");
       }
       const fromStatus = request.status;
       request.status = "cancelled";
@@ -309,14 +590,13 @@ export class MemoryPickupStore {
         },
         now,
       );
-      this.emit();
-      return this.snapshot();
+      return true;
     }
 
     const next = action === "advance" ? nextStatus(request.status) : previousStatus(request.status);
     const allowed = action === "advance" ? canAdvance(request.status) : canUndo(request.status);
     if (!allowed || !next) {
-      throw new Error("Ese cambio de estado no está permitido.");
+      return fail("Ese cambio de estado no está permitido.");
     }
 
     const fromStatus = request.status;
@@ -339,9 +619,7 @@ export class MemoryPickupStore {
       },
       now,
     );
-
-    this.emit();
-    return this.snapshot();
+    return true;
   }
 
   cancelTrip(tripId: string) {
@@ -406,6 +684,75 @@ export class MemoryPickupStore {
 
     this.emit();
     return this.snapshot();
+  }
+
+  /** Viajes con todos los alumnos entregados que aún no registran salida del plantel. */
+  private openDepartures() {
+    return this.data.trips.filter((trip) => {
+      if (trip.cancelledAt || trip.departedAt) return false;
+      const requests = this.data.requests.filter((item) => item.tripId === trip.id && item.status !== "cancelled");
+      return requests.length > 0 && requests.every((item) => item.status === "delivered");
+    });
+  }
+
+  private lastDeliveryAt(tripId: string) {
+    return this.data.requests
+      .filter((item) => item.tripId === tripId && item.deliveredAt)
+      .map((item) => item.deliveredAt!)
+      .sort()
+      .at(-1);
+  }
+
+  closeTrip(tripId: string, via: DepartureVia, at?: string) {
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (!trip) throw new Error("No encontramos esa solicitud.");
+    if (trip.departedAt) return this.snapshot();
+    if (!this.openDepartures().some((item) => item.id === tripId)) {
+      throw new Error("Aún hay alumnos sin entregar en esta solicitud.");
+    }
+
+    const now = at ?? new Date().toISOString();
+    trip.departedAt = now;
+    trip.departedVia = via;
+    const vehicle = this.data.vehicles.find((item) => item.id === trip.vehicleId);
+    this.logEvent(
+      {
+        type: "departed",
+        tripId,
+        actorRole: via === "tag" ? "kiosk" : via === "parent" ? "parent" : "staff",
+        actorName: via === "parent" ? trip.pickerName : undefined,
+        note:
+          via === "tag"
+            ? `Salida detectada por el lector · Tag ${vehicle?.tagId ?? ""}`.trim()
+            : via === "parent"
+              ? "La familia confirmó la recogida en la app"
+              : "Cierre automático (30 min sin confirmación)",
+      },
+      now,
+    );
+    this.emit();
+    return this.snapshot();
+  }
+
+  /** Cierra solo los viajes entregados hace más de AUTO_CLOSE_MS sin confirmación. */
+  closeExpiredTrips(nowMs = Date.now()) {
+    let changed = 0;
+    for (const trip of this.openDepartures()) {
+      const delivered = this.lastDeliveryAt(trip.id);
+      if (!delivered) continue;
+      const deliveredMs = Date.parse(delivered);
+      if (nowMs - deliveredMs < AUTO_CLOSE_MS) continue;
+      this.closeTrip(trip.id, "timeout", new Date(deliveredMs + AUTO_CLOSE_MS).toISOString());
+      changed += 1;
+    }
+    return changed;
+  }
+
+  hasExpiredTrips(nowMs = Date.now()) {
+    return this.openDepartures().some((trip) => {
+      const delivered = this.lastDeliveryAt(trip.id);
+      return delivered ? nowMs - Date.parse(delivered) >= AUTO_CLOSE_MS : false;
+    });
   }
 
   private guardianName(tripId: string) {
