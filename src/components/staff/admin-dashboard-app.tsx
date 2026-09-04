@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlarmClock, ClipboardList, Download } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { StaffLogin } from "@/components/staff/staff-login";
+import { HistoryPanel } from "./history-panel";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
@@ -23,11 +24,11 @@ import {
   toCsv,
   type AdminRow,
 } from "@/lib/admin-dashboard";
-import { findStudent, formatTime, studentGrade, studentName } from "@/lib/school";
+import { findStudent, formatTime, jornadaOf, todayJornada, studentGrade, studentName } from "@/lib/school";
 import type { LatePickup, PickupStatus, Snapshot } from "@/lib/types";
 
 type StatusFilter = "all" | "delivered" | "active" | "cancelled";
-type Tab = "rows" | "events";
+type Tab = "rows" | "events" | "history";
 
 const STATUS_TONES: Record<PickupStatus, string> = {
   on_the_way: "border-line bg-paper text-muted",
@@ -53,16 +54,16 @@ const EVENT_DOT: Record<string, string> = {
 export function AdminDashboardApp() {
   const { session, setSession } = useSession("staff");
 
-  if (!session) {
-    return <StaffLogin onSignedIn={setSession} />;
+  if (!session?.isAdmin) {
+    return <StaffLogin onSignedIn={setSession} adminOnly />;
   }
 
   return <AdminDashboard staffName={session.name} />;
 }
 
 function AdminDashboard({ staffName }: { staffName: string }) {
-  const { snapshot } = useSnapshot();
   const [tab, setTab] = useState<Tab>("rows");
+  const { snapshot } = useSnapshot(tab !== "history");
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -99,7 +100,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
 
   const events = useMemo(() => {
     if (!snapshot) return [];
-    return [...(snapshot.events ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+    return (snapshot.events ?? []).filter((event) => jornadaOf(event.at) === todayJornada()).sort((a, b) => b.at.localeCompare(a.at));
   }, [snapshot]);
 
   async function actLate(id: string, action: "cancel") {
@@ -132,7 +133,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
             type="button"
             onClick={() => downloadCsv(toCsv(filtered, snapshot.latePickups ?? []))}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+            className={`min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50 ${tab === "history" ? "hidden" : "inline-flex"}`}
           >
             <Download className="h-4 w-4" />
             Exportar CSV
@@ -147,7 +148,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
-        {overdueCount > 0 ? (
+        {tab !== "history" && overdueCount > 0 ? (
           <button
             type="button"
             onClick={() => document.getElementById("retrasos")?.scrollIntoView({ behavior: "smooth" })}
@@ -161,7 +162,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
           </button>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className={tab === "history" ? "hidden" : "grid gap-3 md:grid-cols-4"}>
           <SummaryCard label="Entregados" value={String(summary.delivered)} />
           <SummaryCard label="En proceso" value={String(summary.active)} />
           <SummaryCard label="Cancelados" value={String(summary.cancelled)} />
@@ -171,7 +172,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
           />
         </div>
 
-        {activeLates.length > 0 ? (
+        {tab !== "history" && activeLates.length > 0 ? (
           <section id="retrasos" className="mt-4 scroll-mt-24 rounded-3xl border border-gold/50 bg-gold/10 p-4">
             <header className="flex items-center justify-between gap-3 px-1">
               <div className="flex items-center gap-2">
@@ -205,6 +206,9 @@ function AdminDashboard({ staffName }: { staffName: string }) {
             <TabButton active={tab === "events"} onClick={() => setTab("events")}>
               Movimientos · {events.length}
             </TabButton>
+            <TabButton active={tab === "history"} onClick={() => setTab("history")}>
+              Histórico
+            </TabButton>
           </div>
 
           {tab === "rows" ? (
@@ -234,7 +238,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
           ) : null}
         </div>
 
-        {tab === "rows" ? (
+        {tab === "history" ? <HistoryPanel /> : tab === "rows" ? (
           filtered.length === 0 ? (
             <p className="mt-8 rounded-3xl bg-paper/70 px-4 py-10 text-center text-muted">
               Aún no hay solicitudes registradas hoy.
@@ -526,7 +530,7 @@ function StatusBadge({ status }: { status: PickupStatus }) {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+export function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-3xl border border-line bg-paper px-5 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold-deep">{label}</p>
@@ -548,7 +552,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-semibold ${
+      className={`min-h-11 rounded-full px-4 py-2 text-sm font-semibold ${
         active ? "bg-forest text-paper" : "text-muted"
       }`}
     >
@@ -557,7 +561,7 @@ function TabButton({
   );
 }
 
-function FilterPill({
+export function FilterPill({
   active,
   onClick,
   children,
@@ -570,7 +574,7 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+      className={`min-h-11 rounded-full px-3 py-1.5 text-sm font-semibold ${
         active ? "bg-forest text-paper" : "bg-paper text-muted"
       }`}
     >

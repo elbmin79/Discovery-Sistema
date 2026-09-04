@@ -1,0 +1,41 @@
+name: discovery-history-test
+services:
+  db:
+    image: public.ecr.aws/supabase/postgres:17.6.1.165
+    environment:
+      POSTGRES_PASSWORD: history-local-test
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  rest:
+    image: public.ecr.aws/supabase/postgrest:v16.1
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["127.0.0.1:15440:3000"]
+    environment:
+      PGRST_DB_URI: postgres://postgres:history-local-test@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: history-local-integration-secret-at-least-32-characters
+  storage:
+    image: public.ecr.aws/supabase/storage-api:v1.70.3
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["127.0.0.1:15441:5000"]
+    environment:
+      ANON_KEY: ${HISTORY_TEST_ANON_KEY}
+      SERVICE_KEY: ${HISTORY_TEST_SERVICE_KEY}
+      POSTGREST_URL: http://rest:3000
+      AUTH_JWT_SECRET: history-local-integration-secret-at-least-32-characters
+      DATABASE_URL: postgres://supabase_storage_admin:history-local-test@db:5432/postgres
+      FILE_SIZE_LIMIT: 5242880
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      GLOBAL_S3_BUCKET: history-test
+      TENANT_ID: history-test
+      REGION: local
+      ENABLE_IMAGE_TRANSFORMATION: "false"

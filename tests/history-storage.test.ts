@@ -1,0 +1,124 @@
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { readFileSync, readdirSync } from "node:fs";
+import { test } from "node:test";
+import { sql, testToken } from "../scripts/test-storage-start.mjs";
+import { createSeedSnapshot } from "../src/lib/seed/demo-data";
+import { MemoryPickupStore } from "../src/lib/store/memory-store";
+import { readSnapshot, mutateStore } from "../src/lib/store";
+import { getSupabaseAdmin } from "../src/lib/supabase/admin";
+import { storeArrivalPhoto } from "../src/lib/arrival-photos";
+import { backfillHistory, maintainHistory, retentionCutoff } from "../src/lib/store/history-maintenance";
+import { queryHistory } from "../src/lib/store/history-store";
+import { sessionCookie } from "../src/lib/auth/server-session";
+import { todayJornada } from "../src/lib/school";
+import { POST as arrive } from "../src/app/api/trips/arrive/route";
+import { GET as photo } from "../src/app/api/photos/[day]/[tripId]/route";
+import { GET as history } from "../src/app/api/history/route";
+
+const quote = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'`;
+
+test("real private Storage, API permissions, backfill, daily late archive and retention", { timeout: 90000 }, async () => {
+  const proxy = createServer(async (request, response) => {
+    const storage = request.url!.startsWith("/storage/v1");
+    const path = request.url!.replace(storage ? "/storage/v1" : "/rest/v1", "");
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(request.headers)) if (value && !["host", "connection", "content-length"].includes(key)) headers.set(key, String(value));
+    try {
+      const result = await fetch(`http://127.0.0.1:${storage ? 15441 : 15440}${path}`, {
+        method: request.method, headers, body: chunks.length ? Buffer.concat(chunks) : undefined,
+      });
+      response.writeHead(result.status, { "content-type": result.headers.get("content-type") ?? "application/json" });
+      response.end(Buffer.from(await result.arrayBuffer()));
+    } catch { response.writeHead(503); response.end(); }
+  });
+  await new Promise<void>((resolve) => proxy.listen(15442, "127.0.0.1", resolve));
+  process.env.SUPABASE_URL = "http://127.0.0.1:15442";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = testToken("service_role");
+  process.env.SESSION_SECRET = "local-storage-session-test";
+  const today = todayJornada();
+  const oldDay = "2025-01-01";
+  const jpeg = readFileSync(`public/cars/${readdirSync("public/cars").find((file) => file.endsWith(".jpg"))}`);
+  const dataUrl = `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+  const adminCookie = sessionCookie({ role: "staff", name: "Oficina", username: "gabriela", isAdmin: true }, false);
+  const teacherCookie = sessionCookie({ role: "staff", name: "Maestra", username: "alejandra" }, false);
+  const request = (url: string, cookie = adminCookie) => new Request(`http://localhost${url}`, { headers: { cookie } });
+  try {
+    sql("truncate public.pickup_history, public.pickup_late_history, public.pickup_state;");
+    const seed = createSeedSnapshot();
+    seed.trips = []; seed.requests = []; seed.events = []; seed.guestPasses = []; seed.latePickups = [];
+    const store = new MemoryPickupStore(seed);
+    const guardian = seed.guardians.find((person) => person.studentIds.length)!;
+    const trip = store.createTrip({ guardianId: guardian.id, studentIds: guardian.studentIds, pickerKind: "self", pickerName: "Persona", pickerRelationEs: "Madre", pickerRelationEn: "Mother", method: "car", vehicleId: guardian.defaultVehicleId }).trips[0];
+    sql(`insert into pickup_state values ('live', ${quote(store.snapshot())}, 1, now());`);
+    assert.equal((await history(request(`/api/history?from=${today}&to=${today}`, ""))).status, 401);
+    assert.equal((await history(request(`/api/history?from=${today}&to=${today}`, teacherCookie))).status, 403);
+    assert.equal((await history(request(`/api/history?from=${today}&to=${today}&limit=0`))).status, 400);
+    const arrived = await arrive(new Request("http://localhost/api/trips/arrive", { method: "POST", body: JSON.stringify({ code: trip.code, photo: dataUrl }) }));
+    assert.equal(arrived.status, 200, await arrived.clone().text());
+    const path = (await readSnapshot()).trips[0].arrivalPhoto!;
+    assert.equal(path, `${today}/${trip.id}.jpg`);
+    assert.equal(JSON.stringify(await readSnapshot()).includes("data:image/jpeg"), false);
+    const bucket = getSupabaseAdmin().storage.from("arrival-photos");
+    assert.equal((await bucket.download(path)).error, null);
+    assert.equal(await storeArrivalPhoto(dataUrl, trip.id, new Date().toISOString()), path);
+    const context = { params: Promise.resolve({ day: today, tripId: `${trip.id}.jpg` }) };
+    assert.equal((await photo(request(`/api/photos/${path}`, ""), context)).status, 401);
+    assert.equal((await photo(request(`/api/photos/${path}`, teacherCookie), context)).status, 302);
+    const signed = await photo(request(`/api/photos/${path}`), context);
+    assert.equal(signed.status, 302);
+    assert.equal(signed.headers.get("cache-control"), "private, no-store");
+    const url = signed.headers.get("location")!;
+    const token = new URL(url).searchParams.get("token")!;
+    const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
+    assert.ok(claims.exp - Math.floor(Date.now() / 1000) <= 61);
+    assert.equal((await fetch(url)).status, 200);
+    assert.notEqual((await fetch(`http://127.0.0.1:15442/storage/v1/object/public/arrival-photos/${path}`)).status, 200);
+    await mutateStore((current) => current.deliverTrip(trip.id, "Oficina"));
+    await mutateStore((current) => current.closeTrip(trip.id, "staff"));
+    assert.equal((await readSnapshot()).trips.length, 0);
+    assert.equal((await queryHistory(today, today)).rows[0].photoPath, path);
+    assert.equal((await photo(request(`/api/photos/${path}`, teacherCookie), context)).status, 403);
+    assert.equal((await photo(request(`/api/photos/${path}`), context)).status, 302);
+    const archived = (await queryHistory(today, today)).rows[0];
+    const legacy = store.snapshot();
+    legacy.trips[0] = { ...trip, id: "legacy", arrivalPhoto: dataUrl, arrivedAt: new Date().toISOString(), departedAt: new Date().toISOString() };
+    legacy.requests = legacy.requests.map((item) => ({ ...item, tripId: "legacy", status: "delivered" }));
+    legacy.latePickups = [{ id: "past-late", guardianId: guardian.id, studentIds: guardian.studentIds, pickerKind: "self", pickerName: "Madre", pickerRelationEs: "Madre", pickerRelationEn: "Mother", etaAt: `${oldDay}T22:00:00Z`, createdAt: `${oldDay}T20:00:00Z`, updatedAt: `${oldDay}T21:00:00Z`, status: "announced", note: "Tráfico" }];
+    sql(`update pickup_state set snapshot=${quote(legacy)}, version=version+1;`);
+    assert.equal((await backfillHistory()).migratedPhotos, 1);
+    assert.equal((await backfillHistory()).migratedPhotos, 0);
+    assert.equal(sql("select count(*) from pickup_history where trip_id='legacy';"), "1");
+    assert.equal((await bucket.download(`${today}/legacy.jpg`)).error, null);
+    const before = sql("select version from pickup_state;");
+    const past = await queryHistory(oldDay, oldDay);
+    assert.equal(past.days[0].latePickups[0].notice.note, "Tráfico");
+    assert.equal(sql("select version from pickup_state;"), before);
+    assert.equal((await readSnapshot()).latePickups.length, 0);
+    assert.equal((await bucket.upload(`${oldDay}/expired.jpg`, jpeg, { contentType: "image/jpeg", upsert: true })).error, null);
+    const cutoff = retentionCutoff();
+    assert.equal((await bucket.upload(`${cutoff}/boundary.jpg`, jpeg, { contentType: "image/jpeg", upsert: true })).error, null);
+    sql(`insert into pickup_history(trip_id,jornada,code,status,record) values('expired','${oldDay}','old','delivered',${quote({ ...archived, tripId: "expired", jornada: oldDay })});`);
+    const maintained = await maintainHistory();
+    assert.equal(maintained.deletedPhotos, 1);
+    assert.ok((await bucket.download(`${oldDay}/expired.jpg`)).error);
+    assert.equal((await bucket.download(`${cutoff}/boundary.jpg`)).error, null);
+    assert.equal(sql("select count(*) from pickup_history where trip_id='expired';"), "0");
+    assert.equal(sql("select count(*) from pickup_late_history;"), "0");
+    assert.equal((await maintainHistory()).deletedPhotos, 0);
+    const noPhoto = store.snapshot();
+    noPhoto.trips[0] = { ...trip, id: "storage-failure" };
+    noPhoto.requests = noPhoto.requests.map((item) => ({ ...item, tripId: "storage-failure", status: "on_the_way" }));
+    sql(`update pickup_state set snapshot=${quote(noPhoto)}, version=version+1; update storage.buckets set file_size_limit=1 where id='arrival-photos';`);
+    const fallback = await arrive(new Request("http://localhost/api/trips/arrive", { method: "POST", body: JSON.stringify({ code: trip.code, photo: dataUrl }) }));
+    assert.equal(fallback.status, 200);
+    assert.notEqual((await readSnapshot()).trips[0].arrivalPhoto?.startsWith("data:image/jpeg"), true);
+    assert.ok((await readSnapshot()).trips[0].arrivedAt);
+  } finally {
+    sql("update storage.buckets set file_size_limit=5242880 where id='arrival-photos';");
+    proxy.closeAllConnections();
+    await new Promise<void>((resolve) => proxy.close(() => resolve()));
+  }
+});

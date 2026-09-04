@@ -7,10 +7,12 @@ export async function GET() {
   const snapshot = await readSnapshot();
   // Sin procesos en segundo plano, el cierre automático a los 30 min se aplica
   // de forma perezosa cuando algún cliente consulta el estado.
-  if (new MemoryPickupStore(snapshot).hasExpiredTrips()) {
+  const store = new MemoryPickupStore(snapshot);
+  if (store.hasExpiredTrips() || store.hasDailyArchives()) {
     return Response.json(
       await mutateStore((store) => {
         store.closeExpiredTrips();
+        store.archiveDailyLates();
         return store.snapshot();
       }),
     );
