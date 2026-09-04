@@ -1,6 +1,12 @@
 import { jornadaOf, todayJornada, vehiclePhoto } from "./school";
 import type { ArchivedLatePickup, HistoryPage, HistoryRow, HistorySummary, LatePickup, PickupTrip, Snapshot } from "./types";
 
+export type HistoryStatusFilter = "all" | "delivered" | "active" | "cancelled";
+
+export function matchesHistoryStatus(row: HistoryRow, status: HistoryStatusFilter) {
+  return status === "all" || (status === "active" ? row.status !== "delivered" && row.status !== "cancelled" : row.status === status);
+}
+
 export function buildLateHistoryRow(snapshot: Snapshot, notice: LatePickup): ArchivedLatePickup {
   return { id: notice.id, jornada: jornadaOf(notice.createdAt), notice: structuredClone(notice),
     studentNames: snapshot.students.filter((student) => notice.studentIds.includes(student.id)).map((student) => `${student.firstName} ${student.lastName}`),

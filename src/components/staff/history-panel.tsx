@@ -118,7 +118,7 @@ function InfoButton({ row, onClick }: { row: HistoryRow; onClick: () => void }) 
   return <button onClick={onClick} aria-label={`Información de ${row.code}`} className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line text-forest"><Info size={18} /></button>;
 }
 
-function HistorySheet({ row, onClose }: { row: HistoryRow; onClose: () => void }) {
+export function HistorySheet({ row, onClose }: { row: HistoryRow; onClose: () => void }) {
   const [failed, setFailed] = useState(0);
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {

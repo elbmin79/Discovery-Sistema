@@ -1,5 +1,5 @@
 import { serverSession } from "@/lib/auth/server-session";
-import { validJornada } from "@/lib/history";
+import { validJornada, type HistoryStatusFilter } from "@/lib/history";
 import { queryHistory } from "@/lib/store/history-store";
 
 export async function GET(request: Request) {
@@ -11,11 +11,13 @@ export async function GET(request: Request) {
   const to = params.get("to") ?? "";
   const limit = Number(params.get("limit") ?? 200);
   const offset = Number(params.get("offset") ?? 0);
+  const status = params.get("status") ?? "all";
+  if (!["all", "delivered", "active", "cancelled"].includes(status)) return Response.json({ error: "El estado no es válido." }, { status: 400 });
   if (!validJornada(from) || !validJornada(to) || from > to || !Number.isInteger(limit) || limit < 1 || limit > 1000 || !Number.isInteger(offset) || offset < 0) {
     return Response.json({ error: "El rango o la paginación no son válidos." }, { status: 400 });
   }
   try {
-    return Response.json(await queryHistory(from, to, limit, offset), { headers: { "Cache-Control": "private, no-store" } });
+    return Response.json(await queryHistory(from, to, limit, offset, status as HistoryStatusFilter, params.get("zone") ?? ""), { headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return Response.json({ error: "No se pudo cargar el histórico. Intenta de nuevo." }, { status: 503 });
   }

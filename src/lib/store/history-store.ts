@@ -1,11 +1,11 @@
-import { buildHistoryRow, buildLateHistoryRow, historyPage } from "../history";
+import { buildHistoryRow, buildLateHistoryRow, historyPage, matchesHistoryStatus, type HistoryStatusFilter } from "../history";
 import { todayJornada } from "../school";
 import { getSupabaseAdmin, isSupabaseConfigured } from "../supabase/admin";
 import type { ArchivedLatePickup, HistoryPage, HistoryRow } from "../types";
 import { getMemoryStore, mutateStore, readSnapshot } from "./index";
 import { MemoryPickupStore } from "./memory-store";
 
-export async function queryHistory(from: string, to: string, limit = 200, offset = 0): Promise<HistoryPage> {
+export async function queryHistory(from: string, to: string, limit = 200, offset = 0, status: HistoryStatusFilter = "all", zone = ""): Promise<HistoryPage> {
   const today = todayJornada();
   const includesToday = from <= today && to >= today;
   let liveRows: HistoryRow[] = [];
@@ -21,7 +21,7 @@ export async function queryHistory(from: string, to: string, limit = 200, offset
   }
   if (isSupabaseConfigured()) {
     const { data, error } = await getSupabaseAdmin().rpc("query_pickup_history", {
-      range_from: from, range_to: to, page_limit: limit, page_offset: offset, live_rows: liveRows, live_lates: liveLates,
+      range_from: from, range_to: to, page_limit: limit, page_offset: offset, live_rows: liveRows, live_lates: liveLates, pickup_status: status, pickup_zone: zone,
     });
     if (error) throw new Error(`No se pudo consultar el histórico: ${error.message}`);
     const page = data as HistoryPage;
@@ -31,6 +31,6 @@ export async function queryHistory(from: string, to: string, limit = 200, offset
   }
   const store = getMemoryStore();
   const archived = store.historyRows();
-  return historyPage([...archived, ...liveRows.filter((row) => !archived.some((item) => item.tripId === row.tripId))], from, to, limit, offset,
+  return historyPage([...archived, ...liveRows.filter((row) => !archived.some((item) => item.tripId === row.tripId))].filter((row) => matchesHistoryStatus(row, status) && (!zone || row.zoneName?.split(", ").includes(zone))), from, to, limit, offset,
     [...store.lateHistoryRows(), ...liveLates].filter((late) => late.jornada >= from && late.jornada <= to));
 }

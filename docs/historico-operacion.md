@@ -1,6 +1,6 @@
 # Histórico: operación y verificación
 
-La administración de oficina consulta el histórico desde `/admin`. Hoy se refresca cada dos segundos; 7 días, 30 días y el rango personalizado se consultan al seleccionarlos. Cada viaje cerrado conserva alumnos, persona, auto, tiempos, eventos y referencia de foto. Los avisos de Retrasos se archivan por su propia jornada aunque nunca exista un viaje asociado.
+La administración de oficina consulta las recogidas directamente desde `/admin`, con el diseño original y los avatares de alumnos. Puerta, estado y fecha comparten una única fila centrada, con líneas verticales finas entre grupos; no hay pestañas de Recogidas, Movimientos o Histórico. Hoy se refresca cada dos segundos y muestra un pequeño punto verde intermitente con “En vivo” en la esquina superior derecha de la tabla. Los rangos 7 días, 30 días y personalizado se consultan al seleccionarlos. Cada viaje cerrado conserva alumnos, persona, auto, tiempos, eventos y referencia de foto, accesibles con ⓘ. Los avisos de Retrasos se archivan por su propia jornada aunque nunca exista un viaje asociado.
 
 ## Decisiones confirmadas
 
@@ -14,7 +14,7 @@ La administración de oficina consulta el histórico desde `/admin`. Hoy se refr
 ## Preparación del despliegue
 
 1. Programar la migración antes de habilitar tráfico con la nueva versión. Respaldar la fila `pickup_state` existente.
-2. Aplicar, en orden, las tres migraciones de `supabase/migrations/` al proyecto correcto. No contienen datos de escuela. La primera permite iniciar una base vacía; las siguientes crean tablas privadas, bucket e interfaces SQL.
+2. Aplicar, en orden, las cuatro migraciones de `supabase/migrations/` al proyecto correcto. No contienen datos de escuela. La primera permite iniciar una base vacía; las siguientes crean tablas privadas, bucket e interfaces SQL. La cuarta filtra estado y puerta antes de paginar.
 3. Configurar `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET` aleatorio y estable, y `CRON_SECRET` en el entorno del servidor. Nunca exponer las claves en el cliente. Las sesiones firmadas vencen a las 12 horas.
 4. Con esas variables inyectadas en el proceso, ejecutar `npm run history:backfill` antes de reanudar tráfico. El comando no carga archivos `.env` por su cuenta. Convierte primero todas las fotos anteriores y después archiva viajes cerrados y Retrasos vencidos. Si falla una foto, conserva el snapshot original; se puede repetir sin duplicar filas u objetos.
 5. Habilitar la aplicación y volver a iniciar sesión con la cuenta de oficina. Verificar una llegada, entrega, salida, consulta histórica y foto.

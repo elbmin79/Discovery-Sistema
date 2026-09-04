@@ -71,10 +71,12 @@ test("office admin browses live history, ranges, lazy photos, CSV, and mobile de
     if (request.url().includes("/api/history?")) historyRequests.push(request.url());
     if (request.url().endsWith("/api/state")) stateRequests += 1;
   });
-  await page.getByRole("button", { name: "Histórico", exact: true }).click();
-  await expect(page.getByText("En vivo · se actualiza cada 2 segundos")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Histórico", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Periodo de consulta" })).toBeVisible();
+  await expect(page.locator("tbody img").first()).toBeVisible();
+  await expect(page.getByRole("status", { name: "En vivo", exact: true }).filter({ visible: true })).toBeVisible();
   expect(photoRequests).toBe(0);
-  const info = page.getByRole("button", { name: `Información de ${trip!.code}`, exact: true }).filter({ visible: true });
+  const info = page.getByRole("button", { name: `Información de ${snapshot.students.find((student) => snapshot.requests.some((request) => request.tripId === trip!.id && request.studentId === student.id))!.firstName}`, exact: true }).filter({ visible: true });
   await expect(info).toBeVisible();
   await info.click();
   const dialog = page.getByRole("dialog");
@@ -94,7 +96,7 @@ test("office admin browses live history, ranges, lazy photos, CSV, and mobile de
   expect(after.trips.some((item) => item.id === trip!.id)).toBe(false);
   for (const label of ["7 días", "30 días"]) {
     await page.getByRole("button", { name: label, exact: true }).click();
-    await expect(page.getByRole("button", { name: "Exportar histórico CSV" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeEnabled();
     const count = historyRequests.length;
     const stateCount = stateRequests;
     await page.waitForTimeout(2300);
@@ -108,11 +110,11 @@ test("office admin browses live history, ranges, lazy photos, CSV, and mobile de
   await page.getByLabel("Desde", { exact: true }).fill("2026-01-03");
   await expect(page.getByRole("alert").filter({ hasText: "rango de fechas válido" })).toBeVisible();
   await page.getByRole("button", { name: "Hoy", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Exportar histórico CSV" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeEnabled();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar histórico CSV" }).click();
+  await page.getByRole("button", { name: "Exportar CSV" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe(`historico-${todayJornada()}-${todayJornada()}.csv`);
+  expect(download.suggestedFilename()).toBe(`recogidas-${todayJornada()}-${todayJornada()}.csv`);
   const stream = await download.createReadStream();
   let csv = "";
   for await (const chunk of stream!) csv += chunk.toString();
@@ -122,7 +124,7 @@ test("office admin browses live history, ranges, lazy photos, CSV, and mobile de
   await page.screenshot({ path: testInfo.outputPath("history-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole("button", { name: `Información de ${trip!.code}`, exact: true }).filter({ visible: true }).click();
+  await page.getByRole("button", { name: `Información de ${snapshot.students.find((student) => snapshot.requests.some((request) => request.tripId === trip!.id && request.studentId === student.id))!.firstName}`, exact: true }).filter({ visible: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("history-mobile.png"), fullPage: true });
   expect(errors).toEqual([]);

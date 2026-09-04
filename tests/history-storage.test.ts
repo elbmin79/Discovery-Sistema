@@ -116,6 +116,16 @@ test("real private Storage, API permissions, backfill, daily late archive and re
     assert.equal(fallback.status, 200);
     assert.notEqual((await readSnapshot()).trips[0].arrivalPhoto?.startsWith("data:image/jpeg"), true);
     assert.ok((await readSnapshot()).trips[0].arrivedAt);
+    assert.equal((await queryHistory(today, today, 1, 0, "active")).total, 1);
+    assert.equal((await queryHistory(today, today, 1, 0, "delivered")).total, 2);
+    sql(`insert into pickup_history(trip_id,jornada,code,status,record)
+      select 'cancelled-' || n, '${today}', 'cancelled', 'cancelled',
+        jsonb_build_object('tripId','cancelled-' || n,'jornada','${today}','status','cancelled','requestedAt','${today}T20:00:00Z')
+      from generate_series(1,250) n;`);
+    const filtered = await queryHistory(today, today, 200, 200, "cancelled");
+    assert.equal(filtered.total, 250);
+    assert.equal(filtered.rows.length, 50);
+    assert.ok(filtered.rows.every((row) => row.status === "cancelled"));
   } finally {
     sql("update storage.buckets set file_size_limit=5242880 where id='arrival-photos';");
     proxy.closeAllConnections();
