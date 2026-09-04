@@ -1,4 +1,5 @@
 import { mutateStore, readSnapshot } from "@/lib/store";
+import { storeArrivalPhoto } from "@/lib/arrival-photos";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -10,7 +11,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return Response.json({ error: "No encontramos esa llegada." }, { status: 404 });
     }
     return Response.json(
-      await mutateStore((store) => store.arriveByCode(trip.code, { photo: body.photo })),
+      await mutateStore(async (store) => {
+        const arrived = store.arriveByCode(trip.code);
+        const current = arrived.trips.find((item) => item.id === trip.id)!;
+        const photo = await storeArrivalPhoto(body.photo, current.id, current.arrivedAt!);
+        return photo ? store.setArrivalPhoto(current.id, photo) : arrived;
+      }),
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo registrar la llegada.";

@@ -8,6 +8,9 @@ import {
   previousStatus,
 } from "../pickup-machine";
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
+import { buildHistoryRow, buildLateHistoryRow } from "../history";
+import type { ArchivedLatePickup, HistoryRow } from "../types";
+import { jornadaOf, todayJornada } from "../school";
 import type {
   ArrivalMethod,
   ArriveByTagInput,
@@ -67,8 +70,59 @@ function generateFriendCode(lastName: string) {
 export class MemoryPickupStore {
   private data: Snapshot;
   private listeners = new Set<Listener>();
+  private history: HistoryRow[] = [];
+  private lateHistory: ArchivedLatePickup[] = [];
 
-  constructor(seed = createSeedSnapshot()) {
+  lateHistoryRows() {
+    return clone(this.lateHistory);
+  }
+
+  pruneHistory(cutoff: string) {
+    this.history = this.history.filter((row) => row.jornada >= cutoff);
+    this.lateHistory = this.lateHistory.filter((row) => row.jornada >= cutoff);
+  }
+
+  hasDailyArchives() {
+    const today = todayJornada();
+    return this.data.latePickups.some((late) => jornadaOf(late.createdAt) < today);
+  }
+
+  archiveDailyLates(force = false) {
+    const today = todayJornada();
+    for (const notice of [...this.data.latePickups]) {
+      const jornada = jornadaOf(notice.createdAt);
+      if (!force && jornada >= today) continue;
+      const archived = buildLateHistoryRow(this.data, notice);
+      this.lateHistory = [archived, ...this.lateHistory.filter((late) => late.id !== notice.id)].slice(0, this.historyLimit);
+      this.data.latePickups = this.data.latePickups.filter((late) => late.id !== notice.id);
+      this.data.events = this.data.events.filter((event) => event.lateId !== notice.id);
+    }
+  }
+
+  historyRows() {
+    return clone(this.history);
+  }
+
+  setArrivalPhoto(tripId: string, photo: string, notify = true) {
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (!trip) throw new Error("No encontramos esa solicitud.");
+    trip.arrivalPhoto = photo;
+    if (notify) this.emit();
+    return this.snapshot();
+  }
+
+  archiveClosedTrips() {
+    for (const trip of [...this.data.trips]) {
+      if (!trip.departedAt && !trip.cancelledAt) continue;
+      this.history = [buildHistoryRow(this.data, trip), ...this.history.filter((row) => row.tripId !== trip.id)].slice(0, this.historyLimit);
+      this.data.requests = this.data.requests.filter((item) => item.tripId !== trip.id);
+      this.data.events = this.data.events.filter((item) => item.tripId !== trip.id);
+      this.data.guestPasses = this.data.guestPasses.filter((item) => item.tripId !== trip.id);
+      this.data.trips = this.data.trips.filter((item) => item.id !== trip.id);
+    }
+  }
+
+  constructor(seed = createSeedSnapshot(), private historyLimit = 5000) {
     this.data = seed;
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
@@ -126,9 +180,8 @@ export class MemoryPickupStore {
       id: createId("ev"),
       at: at ?? new Date().toISOString(),
     });
-    if (this.data.events.length > MAX_EVENTS) {
-      this.data.events = this.data.events.slice(0, MAX_EVENTS);
-    }
+    this.data.events = this.data.events.filter((item, index) => index < MAX_EVENTS ||
+      this.data.trips.some((trip) => trip.id === item.tripId) || this.data.latePickups.some((late) => late.id === item.lateId));
   }
 
   snapshot() {
@@ -143,6 +196,7 @@ export class MemoryPickupStore {
   }
 
   reset() {
+    this.archiveDailyLates(true);
     this.data = createSeedSnapshot();
     this.emit();
     return this.snapshot();
@@ -916,6 +970,8 @@ export class MemoryPickupStore {
   }
 
   private emit() {
+    this.archiveDailyLates();
+    this.archiveClosedTrips();
     this.data.updatedAt = new Date().toISOString();
     const snapshot = this.snapshot();
     for (const listener of this.listeners) listener(snapshot);

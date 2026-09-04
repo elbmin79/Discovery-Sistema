@@ -50,6 +50,7 @@ export function useSession(role?: DemoSession["role"]) {
   }, []);
 
   const clearSession = useCallback(() => {
+    void fetch("/api/auth/logout", { method: "POST" });
     window.sessionStorage.removeItem(KEY);
     cachedRaw = null;
     cachedSession = null;
