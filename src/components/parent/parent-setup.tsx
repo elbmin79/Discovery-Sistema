@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { studentName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { ArrivalMethod, CreateTripInput, Guardian, Locale, Snapshot } from "@/lib/types";
+import type { ArrivalMethod, CreateTripInput, Guardian, Locale, PickupTrip, Snapshot } from "@/lib/types";
 
 export function ParentSetup({
   snapshot,
@@ -16,6 +16,7 @@ export function ParentSetup({
   error,
   onBack,
   onSubmit,
+  initialTrip,
 }: {
   snapshot: Snapshot;
   guardian: Guardian;
@@ -26,6 +27,7 @@ export function ParentSetup({
   error: string | null;
   onBack: () => void;
   onSubmit: (payload: Omit<CreateTripInput, "guardianId" | "studentIds">) => void;
+  initialTrip?: PickupTrip;
 }) {
   const selected = snapshot.students.filter((student) => selectedIds.includes(student.id));
   const authorized = snapshot.authorizedPeople.filter((person) =>
@@ -33,14 +35,20 @@ export function ParentSetup({
   );
   const vehicles = snapshot.vehicles.filter((vehicle) => vehicle.ownerGuardianId === guardian.id);
 
-  const [pickerId, setPickerId] = useState(`self:${guardian.id}`);
-  const [method, setMethod] = useState<ArrivalMethod>(guardian.defaultVehicleId ? "car" : "walk");
-  const [vehicleId, setVehicleId] = useState(guardian.defaultVehicleId);
-  const [guestName, setGuestName] = useState("");
-  const [guestRelation, setGuestRelation] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
+  const initialAuthorized = authorized.find((person) => `${person.firstName} ${person.lastName}` === initialTrip?.pickerName);
+  const initialPickerId = initialTrip?.pickerKind === "self"
+    ? `self:${guardian.id}`
+    : initialAuthorized
+      ? `auth:${initialAuthorized.id}`
+      : initialTrip ? "guest" : `self:${guardian.id}`;
+  const [pickerId, setPickerId] = useState(initialPickerId);
+  const [method, setMethod] = useState<ArrivalMethod>(initialTrip?.method ?? (guardian.defaultVehicleId ? "car" : "walk"));
+  const [vehicleId, setVehicleId] = useState(initialTrip?.vehicleId ?? guardian.defaultVehicleId);
+  const [guestName, setGuestName] = useState(initialTrip?.pickerKind === "guest" ? initialTrip.pickerName : "");
+  const [guestRelation, setGuestRelation] = useState(initialTrip?.pickerKind === "guest" ? (locale === "es" ? initialTrip.pickerRelationEs : initialTrip.pickerRelationEn) : "");
+  const [guestPhone, setGuestPhone] = useState(initialTrip?.guestPhone ?? "");
 
-  const picker = useMemo(() => {
+  const picker = (() => {
     if (pickerId === "guest") {
       return {
         pickerKind: "guest" as const,
@@ -72,7 +80,7 @@ export function ParentSetup({
       pickerRelationEs: person.relationEs,
       pickerRelationEn: person.relationEn,
     };
-  }, [authorized, guestName, guestRelation, guardian, pickerId]);
+  })();
 
   const canSubmit =
     picker.pickerKind !== "guest" || (guestName.trim().length > 1 && guestRelation.trim().length > 0);
@@ -165,7 +173,7 @@ export function ParentSetup({
         }
         className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
       >
-        {busy ? "…" : t.sendNotice}
+        {busy ? "…" : initialTrip ? t.saveTodayPlan : t.sendNotice}
       </button>
     </div>
   );

@@ -1,4 +1,4 @@
-import { buildHistoryRow, buildLateHistoryRow, historyPage, matchesHistoryStatus, type HistoryStatusFilter } from "../history";
+import { buildLateHistoryRow, buildLiveHistoryRows, historyPage, matchesHistoryStatus, type HistoryStatusFilter } from "../history";
 import { todayJornada } from "../school";
 import { getSupabaseAdmin, isSupabaseConfigured } from "../supabase/admin";
 import type { ArchivedLatePickup, HistoryPage, HistoryRow } from "../types";
@@ -16,7 +16,7 @@ export async function queryHistory(from: string, to: string, limit = 200, offset
     if (store.hasDailyArchives() || store.hasExpiredTrips()) {
       snapshot = await mutateStore((current) => { current.closeExpiredTrips(); current.archiveDailyLates(); return current.snapshot(); });
     }
-    liveRows = snapshot.trips.map((trip) => buildHistoryRow(snapshot, trip, true)).filter((row) => row.jornada === today);
+    liveRows = buildLiveHistoryRows(snapshot, today);
     liveLates = snapshot.latePickups.map((notice) => buildLateHistoryRow(snapshot, notice)).filter((row) => row.jornada === today);
   }
   if (isSupabaseConfigured()) {

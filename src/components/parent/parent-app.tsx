@@ -8,6 +8,7 @@ import { PhoneShell } from "@/components/parent/phone-shell";
 import { type LateCreatePayload, ParentLate } from "@/components/parent/parent-late";
 import { ParentHome } from "@/components/parent/parent-home";
 import { ParentLogin } from "@/components/parent/parent-login";
+import { ParentPlanToday } from "@/components/parent/parent-plan-today";
 import { ParentSettings } from "@/components/parent/parent-settings";
 import { ParentSetup } from "@/components/parent/parent-setup";
 import { ParentTracker } from "@/components/parent/parent-tracker";
@@ -47,7 +48,7 @@ export function ParentApp() {
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
   const [tab, setTab] = useState<"home" | "settings">("home");
-  const [step, setStep] = useState<"home" | "setup" | "late">("home");
+  const [step, setStep] = useState<"home" | "select" | "setup" | "late">("home");
   const [lateMode, setLateMode] = useState<"create" | "edit">("create");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -72,18 +73,17 @@ export function ParentApp() {
           (late) => late.guardianId === guardian.id && late.status === "announced",
         )
       : null) ?? null;
-  const showNav = Boolean(session && guardian && !trip && step === "home");
+  const tripRequests = snapshot && trip ? snapshot.requests.filter((request) => request.tripId === trip.id) : [];
+  const tripArrived = Boolean(trip?.arrivedAt || tripRequests.some((request) => request.status !== "on_the_way"));
+  const showNav = Boolean(session && guardian && step === "home" && !tripArrived);
 
-  async function createTrip(input: Omit<CreateTripInput, "guardianId" | "studentIds">) {
+  async function saveTrip(input: Omit<CreateTripInput, "guardianId" | "studentIds">) {
     if (!guardian) return;
     setBusy(true);
     setError(null);
     try {
-      await postJson("/api/trips", {
-        ...input,
-        guardianId: guardian.id,
-        studentIds: selected,
-      });
+      const payload = { ...input, guardianId: guardian.id, studentIds: selected };
+      await postJson(trip && !tripArrived ? `/api/trips/${trip.id}` : "/api/trips", payload);
       setStep("home");
       setTab("home");
     } catch (err) {
@@ -195,20 +195,6 @@ export function ParentApp() {
           <ParentLogin t={t} onSignedIn={setSession} />
         ) : !snapshot || !guardian ? (
           <p className="pt-10 text-center text-muted">Cargando tu cuenta…</p>
-        ) : trip ? (
-          <ParentTracker
-            snapshot={snapshot}
-            trip={trip}
-            locale={locale}
-            t={t}
-            onCancel={() => cancelTrip(trip.id)}
-            onStartOver={() => {
-              setDismissedTripId(trip.id);
-              setSelected([]);
-              setStep("home");
-            }}
-            busy={busy}
-          />
         ) : tab === "settings" ? (
           <ParentSettings
             snapshot={snapshot}
@@ -231,6 +217,20 @@ export function ParentApp() {
             onEtaUpdate={updateLateEta}
             onCancelNotice={cancelLateNotice}
           />
+        ) : trip && tripArrived ? (
+          <ParentTracker
+            snapshot={snapshot}
+            trip={trip}
+            locale={locale}
+            t={t}
+            onCancel={() => cancelTrip(trip.id)}
+            onStartOver={() => {
+              setDismissedTripId(trip.id);
+              setSelected([]);
+              setStep("home");
+            }}
+            busy={busy}
+          />
         ) : step === "setup" ? (
           <ParentSetup
             snapshot={snapshot}
@@ -241,7 +241,29 @@ export function ParentApp() {
             busy={busy}
             error={error}
             onBack={() => setStep("home")}
-            onSubmit={createTrip}
+            onSubmit={saveTrip}
+            initialTrip={trip}
+          />
+        ) : trip && step === "home" ? (
+          <ParentPlanToday
+            snapshot={snapshot}
+            guardian={guardian}
+            trip={trip}
+            locale={locale}
+            t={t}
+            onChange={() => {
+              setSelected(tripRequests.map((request) => request.studentId));
+              setStep("select");
+            }}
+            onFriends={friendsChildren.length ? () => {
+              setSelected(tripRequests.map((request) => request.studentId));
+              setStep("select");
+            } : undefined}
+            onLate={() => {
+              setError(null);
+              setLateMode(activeLate ? "edit" : "create");
+              setStep("late");
+            }}
           />
         ) : (
           <ParentHome
@@ -258,6 +280,7 @@ export function ParentApp() {
               setError(null);
               setStep("setup");
             }}
+            onBack={trip ? () => setStep("home") : undefined}
             onLate={() => {
               setError(null);
               setLateMode(activeLate ? "edit" : "create");

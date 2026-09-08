@@ -16,7 +16,7 @@ import { HistorySheet, historyCsv } from "./history-panel";
 
 type Range = "today" | "week" | "month" | "custom";
 const STATUS_TONES: Record<PickupStatus, string> = { on_the_way: "border-line bg-paper text-muted", arrived: "border-gold/50 bg-gold/15", delivered: "border-forest/30 bg-forest/15", cancelled: "border-danger/30 bg-danger/10" };
-const EVENT_DOT: Record<string, string> = { trip_created: "bg-muted", arrived: "bg-gold-deep", status_changed: "bg-forest-soft", delivered: "bg-forest", cancelled: "bg-danger", departed: "bg-forest-deep" };
+const EVENT_DOT: Record<string, string> = { trip_created: "bg-muted", trip_changed: "bg-gold-deep", arrived: "bg-gold-deep", status_changed: "bg-forest-soft", delivered: "bg-forest", cancelled: "bg-danger", departed: "bg-forest-deep" };
 
 function daysAgo(day: string, count: number) {
   const date = new Date(day + "T12:00:00Z"); date.setUTCDate(date.getUTCDate() - count); return date.toISOString().slice(0, 10);
