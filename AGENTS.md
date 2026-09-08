@@ -10,6 +10,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Contexto del proyecto (carpool)
 
+Cuando el usuario escriba `/carpool`, lee y aplica `.opencode/skills/carpool/SKILL.md`.
+Resume el contexto en máximo 3 líneas. Si incluye una tarea después del comando,
+confirma tu interpretación y continúa; si no, pregunta qué quiere trabajar.
+Invocar el comando solo para cargar contexto no requiere modificar código ni ejecutar tests.
+
 Antes de modificar código, lee `.opencode/skills/carpool/SKILL.md`: contiene el contexto
 completo del producto (idea, restricciones reales, superficies, arquitectura, mapa de
 archivos, convenciones y buenas prácticas). Resúmelo en máximo 3 líneas y confirma la tarea.

@@ -197,14 +197,15 @@ export function KioskApp() {
   function takePhoto() {
     if (videoRef.current && videoRef.current.videoWidth > 0) {
       const source = videoRef.current;
-      const width = 640;
-      const height = Math.round((source.videoHeight / source.videoWidth) * width);
+      const scale = Math.min(1280 / source.videoWidth, 720 / source.videoHeight, 1);
+      const width = Math.round(source.videoWidth * scale);
+      const height = Math.round(source.videoHeight * scale);
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const context = canvas.getContext("2d");
       context?.drawImage(source, 0, 0, width, height);
-      return canvas.toDataURL("image/jpeg", 0.55);
+      return canvas.toDataURL("image/jpeg", 0.7);
     }
     // Sin cámara: el servidor genera el dibujo de respaldo con el color del auto.
     return undefined;

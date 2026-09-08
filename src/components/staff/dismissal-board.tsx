@@ -9,6 +9,7 @@ import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import { lateCountdownLabel, lateIsOverdue } from "@/lib/admin-dashboard";
 import { DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
+import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
 import type {
   DemoSession,
@@ -550,9 +551,10 @@ function Sheet({ children, onClose, wide }: { children: React.ReactNode; onClose
 }
 
 function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Snapshot; onClose: () => void }) {
-  const [broken, setBroken] = useState(false);
-  const src = broken || !card.picture.src ? card.picture.fallback : card.picture.src;
-  const captured = card.picture.captured && !broken;
+  const [broken, setBroken] = useState(0);
+  const svg = fallbackArrivalPhoto(card.vehicleLabel, card.vehicle?.color);
+  const src = broken >= 2 ? svg : broken === 1 ? card.picture.fallback ?? svg : card.picture.src ?? card.picture.fallback ?? svg;
+  const captured = card.picture.captured && broken === 0;
   const requester = snapshot.guardians.find((item) => item.id === card.trip.guardianId);
   const via =
     card.trip.arrivalVia === "tag"
@@ -584,7 +586,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
 
       {src ? (
         <div className="relative mt-4 overflow-hidden rounded-2xl">
-          <Image src={src} alt="Auto en la entrada" width={960} height={540} unoptimized onError={() => setBroken(true)} className="h-52 w-full object-cover md:h-64" />
+          <Image src={src} alt="Auto en la entrada" width={960} height={540} unoptimized onError={() => setBroken((value) => Math.min(value + 1, 2))} className="h-52 w-full object-cover md:h-64" />
           <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-forest-deep/80 px-2.5 py-1 text-xs font-semibold text-paper">
             <span className={`h-2 w-2 rounded-full ${captured ? "bg-emerald-400" : "bg-gold"}`} />
             {captured ? `Foto de llegada · ${formatTime(card.arrivedAt)}` : "Foto de referencia del auto"}

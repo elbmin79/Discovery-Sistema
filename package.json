@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --test tests/history.test.ts",
+    "test:db": "tsx --test tests/history-postgres.test.ts",
+    "test:storage": "node scripts/test-storage-start.mjs && tsx --test tests/history-storage.test.ts",
+    "test:e2e": "playwright test",
+    "history:backfill": "tsx scripts/history-maintenance.ts backfill",
+    "history:retention": "tsx scripts/history-maintenance.ts retention"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
@@ -17,6 +23,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -24,7 +31,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
+    "supabase": "^2.116.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

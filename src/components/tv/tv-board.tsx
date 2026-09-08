@@ -10,6 +10,7 @@ import { useSnapshot } from "@/hooks/use-snapshot";
 import { DELIVERED_VISIBLE_MS as PICKUP_DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
 import type { PickupRequest, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
+import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 
 const ROTATE_MS = 7000;
 const RECENT_LIMIT = 8;
@@ -234,9 +235,10 @@ export function TvBoard() {
 }
 
 function Spotlight({ family, position, total }: { family: TvFamily; position: number; total: number }) {
+  const [broken, setBroken] = useState(0);
   const copy = STAGE_COPY[family.stage];
   const picture = arrivalPicture(family.trip, family.vehicle);
-  const photo = picture.src ?? picture.fallback;
+  const photo = broken >= 2 ? fallbackArrivalPhoto(family.vehicle?.label ?? "Auto", family.vehicle?.color) : broken === 1 ? picture.fallback ?? fallbackArrivalPhoto("Auto") : picture.src ?? picture.fallback;
   const siblings = family.kids.length > 1;
 
   return (
@@ -309,6 +311,7 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
             alt={family.vehicle?.label ?? "Auto en la entrada"}
             fill
             unoptimized
+            onError={() => setBroken((value) => Math.min(value + 1, 2))}
             className="object-contain object-center p-4 xl:p-6"
           />
         ) : (
@@ -316,7 +319,7 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/80 via-forest-deep/30 to-transparent px-6 pb-6 pt-20">
           <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gold xl:text-sm">
-            {picture.captured ? (
+            {picture.captured && broken === 0 ? (
               <>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 Foto de llegada · {formatTime(family.arrivedAt)}

@@ -6,7 +6,7 @@ import { STAFF_ACCOUNTS } from "@/lib/auth/accounts";
 import { postJson } from "@/hooks/use-snapshot";
 import type { DemoSession } from "@/lib/types";
 
-export function StaffLogin({ onSignedIn }: { onSignedIn: (session: DemoSession) => void }) {
+export function StaffLogin({ onSignedIn, adminOnly = false }: { onSignedIn: (session: DemoSession) => void; adminOnly?: boolean }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,10 @@ export function StaffLogin({ onSignedIn }: { onSignedIn: (session: DemoSession) 
         setError("Esta cuenta es de familia, no de personal.");
         return;
       }
+      if (adminOnly && !session.isAdmin) {
+        setError("Ingresa con una cuenta de administración de oficina.");
+        return;
+      }
       onSignedIn(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo entrar.");
@@ -33,8 +37,8 @@ export function StaffLogin({ onSignedIn }: { onSignedIn: (session: DemoSession) 
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-10">
       <BrandMark size={80} />
-      <h1 className="mt-8 font-serif text-4xl text-forest">Personal de salida</h1>
-      <p className="mt-2 text-muted">Ingresa para abrir el tablero de salida.</p>
+      <h1 className="mt-8 font-serif text-4xl text-forest">{adminOnly ? "Administración" : "Personal de salida"}</h1>
+      <p className="mt-2 text-muted">{adminOnly ? "Ingresa para consultar el Admin Dashboard." : "Ingresa para abrir el tablero de salida."}</p>
 
       <form onSubmit={submit} className="mt-8 space-y-3">
         <input
@@ -61,7 +65,7 @@ export function StaffLogin({ onSignedIn }: { onSignedIn: (session: DemoSession) 
       </form>
 
       <div className="mt-8 divide-y divide-line rounded-3xl bg-paper">
-        {STAFF_ACCOUNTS.map((account) => (
+        {STAFF_ACCOUNTS.filter((account) => !adminOnly || account.isAdmin).map((account) => (
           <button
             key={account.username}
             type="button"

@@ -1,6 +1,6 @@
 import { createSeedSnapshot } from "@/lib/seed/demo-data";
 import { getSupabaseAdmin, isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/admin";
-import type { Snapshot } from "@/lib/types";
+import type { ArchivedLatePickup, HistoryRow, Snapshot } from "@/lib/types";
 import { MemoryPickupStore } from "./memory-store";
 
 const STATE_ID = "live";
@@ -45,7 +45,7 @@ export async function saveSnapshot(snapshot: Snapshot) {
   }
 }
 
-export async function mutateStore<T>(fn: (store: MemoryPickupStore) => T): Promise<T> {
+export async function mutateStore<T>(fn: (store: MemoryPickupStore) => T | Promise<T>): Promise<T> {
   if (supabaseUrl() && !isSupabaseConfigured()) {
     throw new Error("Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.");
   }
@@ -56,10 +56,10 @@ export async function mutateStore<T>(fn: (store: MemoryPickupStore) => T): Promi
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
     const row = await loadRow();
-    const store = new MemoryPickupStore(row.snapshot);
-    const result = fn(store);
+    const store = new MemoryPickupStore(row.snapshot, Infinity);
+    const result = await fn(store);
     const next = store.snapshot();
-    const saved = await saveVersioned(next, row.version);
+    const saved = await saveVersioned(next, row.version, store.historyRows(), store.lateHistoryRows());
     if (saved) return result;
     lastError = new Error("El sistema está ocupado. Intenta de nuevo.");
     await wait(40 * (attempt + 1));
@@ -106,8 +106,15 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
   return snapshot;
 }
 
-async function saveVersioned(snapshot: Snapshot, version: number) {
+async function saveVersioned(snapshot: Snapshot, version: number, archiveRows: HistoryRow[] = [], lateRows: ArchivedLatePickup[] = []) {
   const supabase = getSupabaseAdmin();
+  if (archiveRows.length || lateRows.length) {
+    const { data, error } = await supabase.rpc("commit_pickup_state", {
+      expected_version: version, next_snapshot: snapshot, archive_rows: archiveRows, late_rows: lateRows,
+    });
+    if (error) throw new Error(`No se pudo archivar la recogida: ${error.message}`);
+    return data === true;
+  }
   const { data, error } = await supabase
     .from("pickup_state")
     .update({

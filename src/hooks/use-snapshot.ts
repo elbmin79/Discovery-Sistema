@@ -25,11 +25,12 @@ export function rememberSnapshot(next: Snapshot) {
   for (const listener of listeners) listener(next);
 }
 
-export function useSnapshot() {
+export function useSnapshot(enabled = true) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(latest);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const listener: Listener = (value) => setSnapshot(value);
     listeners.add(listener);
 
@@ -59,7 +60,7 @@ export function useSnapshot() {
       listeners.delete(listener);
       window.clearInterval(poll);
     };
-  }, []);
+  }, [enabled]);
 
   return { snapshot, error };
 }

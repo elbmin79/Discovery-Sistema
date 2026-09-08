@@ -1,6 +1,7 @@
 import type { DemoSession } from "../types";
 
 export interface DemoAccount {
+  isAdmin?: boolean;
   username: string;
   password: string;
   role: "parent" | "staff";
@@ -29,6 +30,7 @@ export const FAMILY_ACCOUNTS: DemoAccount[] = [
 export const STAFF_ACCOUNTS: DemoAccount[] = [
   {
     username: "gabriela",
+    isAdmin: true,
     password: "salida",
     role: "staff",
     name: "Mtra. Gabriela Núñez",
@@ -61,6 +63,7 @@ export function authenticate(username: string, password: string): DemoSession | 
   if (!account) return null;
   return {
     role: account.role,
+    isAdmin: account.isAdmin,
     name: account.name,
     username: account.username,
     guardianId: account.guardianId,

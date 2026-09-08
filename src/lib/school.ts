@@ -7,6 +7,30 @@ export const SCHOOL = {
   address: "Calzada CETYS & Del Sol Oeste, Residencial Veredas del Sol, 21259 Mexicali, B.C.",
 } as const;
 
+export const SCHOOL_TIMEZONE = "America/Tijuana";
+
+export function jornadaOf(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: SCHOOL_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+export function todayJornada(now = new Date()) {
+  return jornadaOf(now.toISOString());
+}
+
+export function jornadaLabel(jornada: string) {
+  const [year, month, day] = jornada.split("-").map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
+  const label = date.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export const LEVEL_LABELS: Record<Level, { es: string; en: string; stage: "preschool" | "elementary" }> = {
   "toddlers-b": { es: "Toddlers B", en: "Toddlers B", stage: "preschool" },
   "toddlers-a": { es: "Toddlers A", en: "Toddlers A", stage: "preschool" },
@@ -121,7 +145,16 @@ export function vehiclePhoto(vehicle?: Vehicle) {
 
 /** Las fotos reales del kiosco son JPEG; los dibujos de respaldo son SVG generados. */
 export function isCapturedPhoto(src?: string) {
-  return Boolean(src) && !src!.startsWith("data:image/svg+xml");
+  return Boolean(src) && !src!.startsWith("data:image/svg+xml") && !src!.startsWith("/cars/");
+}
+
+/** Las rutas de Supabase Storage se sirven por el endpoint firmado /api/photos. */
+export function resolvePhotoSrc(photoPath?: string) {
+  if (!photoPath) return undefined;
+  if (photoPath.startsWith("data:") || photoPath.startsWith("/") || photoPath.startsWith("http")) {
+    return photoPath;
+  }
+  return `/api/photos/${photoPath.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /**
@@ -130,7 +163,7 @@ export function isCapturedPhoto(src?: string) {
  */
 export function arrivalPicture(trip: { arrivalPhoto?: string }, vehicle?: Vehicle) {
   if (isCapturedPhoto(trip.arrivalPhoto)) {
-    return { src: trip.arrivalPhoto!, captured: true, fallback: vehiclePhoto(vehicle) };
+    return { src: resolvePhotoSrc(trip.arrivalPhoto), captured: true, fallback: vehiclePhoto(vehicle) };
   }
-  return { src: vehiclePhoto(vehicle), captured: false, fallback: trip.arrivalPhoto };
+  return { src: vehiclePhoto(vehicle), captured: false, fallback: resolvePhotoSrc(trip.arrivalPhoto) };
 }

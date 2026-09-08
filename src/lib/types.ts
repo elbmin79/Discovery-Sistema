@@ -228,6 +228,68 @@ export interface Snapshot {
   updatedAt: string;
 }
 
+/** Registro archivado cuando el ciclo del trip se cierra (salida o cancelación). */
+export interface HistoryRow {
+  tripId: string;
+  jornada: string;
+  code: string;
+  guardianId?: string;
+  pickerName: string;
+  pickerRelation: string;
+  pickerKind: PickerKind;
+  method: ArrivalMethod;
+  vehicleLabel?: string;
+  vehicleColor?: string;
+  plate?: string;
+  tagId?: string;
+  studentIds: string[];
+  studentNames: string[];
+  zoneName?: string;
+  arrivalVia?: ArrivalVia;
+  departedVia?: DepartureVia;
+  requestedAt: string;
+  arrivedAt?: string;
+  deliveredAt?: string;
+  departedAt?: string;
+  cancelledAt?: string;
+  deliveredBy?: string;
+  status: PickupStatus;
+  waitMinutes?: number;
+  /** Ruta en el bucket de fotos (modo Supabase) o data-URL (modo memoria). */
+  photoPath?: string;
+  detail?: { events: PickupEvent[]; requests: PickupRequest[]; latePickups: LatePickup[] };
+  vehiclePhoto?: string;
+  level?: string;
+  /** Presente solo cuando la fila sigue viva en el snapshot del día en curso. */
+  live?: boolean;
+}
+
+export interface HistorySummary {
+  total: number;
+  delivered: number;
+  cancelled: number;
+  averageWait?: number;
+}
+
+export interface HistoryPage {
+  from: string;
+  to: string;
+  includesToday: boolean;
+  total: number;
+  summary: HistorySummary;
+  rows: HistoryRow[];
+  latePickups: ArchivedLatePickup[];
+  days: { jornada: string; summary: HistorySummary; rows: HistoryRow[]; latePickups: ArchivedLatePickup[] }[];
+}
+
+export interface ArchivedLatePickup {
+  id: string;
+  jornada: string;
+  notice: LatePickup;
+  studentNames: string[];
+  events: PickupEvent[];
+}
+
 export interface CreateTripInput {
   guardianId: string;
   studentIds: string[];
@@ -243,6 +305,7 @@ export interface CreateTripInput {
 export type SessionRole = "parent" | "staff";
 
 export interface DemoSession {
+  isAdmin?: boolean;
   role: SessionRole;
   name: string;
   username: string;
