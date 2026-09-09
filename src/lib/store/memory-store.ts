@@ -10,6 +10,7 @@ import {
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
 import { buildHistoryRow, buildLateHistoryRow } from "../history";
 import type { ArchivedLatePickup, HistoryRow } from "../types";
+import { lateEligibleStudentIds, lateReplacementTrips } from "../parent-home";
 import { jornadaOf, todayJornada } from "../school";
 import type {
   ArrivalMethod,
@@ -229,7 +230,8 @@ export class MemoryPickupStore {
       (request) =>
         input.studentIds.includes(request.studentId) &&
         request.status !== "delivered" &&
-        request.status !== "cancelled",
+        request.status !== "cancelled" &&
+        this.data.trips.some((trip) => trip.id === request.tripId && jornadaOf(trip.createdAt) === todayJornada()),
     );
     if (alreadyActive) {
       throw new Error("Ya hay una recogida activa para uno de estos alumnos.");
@@ -466,7 +468,7 @@ export class MemoryPickupStore {
   arriveByCode(codeOrToken: string, input: ArriveTripInput = {}) {
     const value = codeOrToken.trim();
     const trip = this.data.trips.find(
-      (item) => !item.cancelledAt && (item.code === value || item.qrToken === value),
+      (item) => !item.cancelledAt && jornadaOf(item.createdAt) === todayJornada() && (item.code === value || item.qrToken === value),
     );
     if (!trip) throw new Error("No encontramos una solicitud con ese código.");
 
@@ -481,7 +483,7 @@ export class MemoryPickupStore {
     if (!vehicle) return { vehicle: undefined, trip: undefined };
     const trip = this.data.trips.find(
       (item) =>
-        !item.cancelledAt &&
+        !item.cancelledAt && jornadaOf(item.createdAt) === todayJornada() &&
         (item.vehicleId === vehicle.id || (item.guardianId === vehicle.ownerGuardianId && !item.vehicleId)) &&
         this.hasOpenRequests(item.id),
     );
@@ -783,7 +785,7 @@ export class MemoryPickupStore {
     return true;
   }
 
-  cancelTrip(tripId: string) {
+  cancelTrip(tripId: string, notify = true) {
     const siblings = this.data.requests.filter((item) => item.tripId === tripId);
     if (siblings.length === 0) throw new Error("No encontramos esa solicitud.");
     if (!siblings.every((item) => canCancel(item.status))) {
@@ -808,7 +810,7 @@ export class MemoryPickupStore {
     }
     const trip = this.data.trips.find((item) => item.id === tripId);
     if (trip) trip.cancelledAt = now;
-    this.emit();
+    if (notify) this.emit();
     return this.snapshot();
   }
 
@@ -941,7 +943,7 @@ export class MemoryPickupStore {
   }
 
   createLatePickup(input: CreateLatePickupInput) {
-    if (input.studentIds.length === 0) {
+    if (!Array.isArray(input.studentIds) || input.studentIds.length === 0) {
       throw new Error("Selecciona al menos un alumno.");
     }
     const guardian = this.data.guardians.find((item) => item.id === input.guardianId);
@@ -949,21 +951,51 @@ export class MemoryPickupStore {
     const eta = Date.parse(input.etaAt);
     if (Number.isNaN(eta)) throw new Error("La hora estimada no es válida.");
 
-    const inTrip = this.data.requests.some(
-      (request) =>
-        input.studentIds.includes(request.studentId) &&
-        request.status !== "delivered" &&
-        request.status !== "cancelled",
-    );
-    if (inTrip) throw new Error("Esos alumnos ya tienen una recogida en curso.");
+    const today = todayJornada();
+    const eligible = lateEligibleStudentIds(this.data, guardian, today);
+    if (input.studentIds.some((id) => !eligible.includes(id))) {
+      throw new Error("Solo puedes avisar por tus hijos o alumnos con autorización aprobada.");
+    }
+    if (!input.pickerName?.trim() || !input.pickerRelationEs?.trim() || !input.pickerRelationEn?.trim() ||
+      !["self", "other_guardian", "authorized", "guest"].includes(input.pickerKind)) {
+      throw new Error("Indica quién va a recoger a los alumnos.");
+    }
+    const replacements = lateReplacementTrips(this.data, guardian.id, input.studentIds, today);
+    const conflicts = this.data.requests.filter((request) => input.studentIds.includes(request.studentId) &&
+      request.status !== "delivered" && request.status !== "cancelled" &&
+      this.data.trips.some((trip) => trip.id === request.tripId && jornadaOf(trip.createdAt) === today));
+    if (conflicts.some((request) => !replacements.some((trip) => trip.id === request.tripId))) {
+      throw new Error("Hay una recogida de otro tutor. Coordínate con el tutor o la oficina.");
+    }
+    if (replacements.some((trip) => trip.arrivedAt || this.data.requests.some((request) =>
+      request.tripId === trip.id && !canCancel(request.status)))) {
+      throw new Error("La recogida ya llegó al kiosco. Contacta a la oficina.");
+    }
+    if ((input.note !== undefined && typeof input.note !== "string") ||
+      (input.guestPhone !== undefined && typeof input.guestPhone !== "string")) {
+      throw new Error("Revisa la nota y el teléfono del aviso.");
+    }
+    const affected = this.data.requests.filter((request) => replacements.some((trip) => trip.id === request.tripId));
+    const expectedStudents = new Set(input.replaceStudentIds ?? []);
+    if (expectedStudents.size !== new Set(affected.map((request) => request.studentId)).size ||
+      affected.some((request) => !expectedStudents.has(request.studentId))) {
+      throw new Error("El plan cambió. Revisa los alumnos que se cancelarán e intenta de nuevo.");
+    }
+    const expected = new Set(input.replaceTripIds ?? []);
+    if (expected.size !== replacements.length || replacements.some((trip) => !expected.has(trip.id))) {
+      throw new Error("El plan cambió. Revisa los alumnos que se cancelarán e intenta de nuevo.");
+    }
 
     const duplicated = this.data.latePickups.some(
       (late) =>
         late.status === "announced" &&
         late.guardianId === guardian.id &&
+        jornadaOf(late.createdAt) === today &&
         late.studentIds.some((studentId) => input.studentIds.includes(studentId)),
     );
     if (duplicated) throw new Error("Ya hay un aviso de retraso activo para estos alumnos.");
+
+    for (const trip of replacements) this.cancelTrip(trip.id, false);
 
     const now = new Date().toISOString();
     const id = createId("lp");

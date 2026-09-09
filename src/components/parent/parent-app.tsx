@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlarmClock, Globe, House, UserRound } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { PhoneShell } from "@/components/parent/phone-shell";
 import { type LateCreatePayload, ParentLate } from "@/components/parent/parent-late";
+import { ParentDashboard } from "@/components/parent/parent-dashboard";
 import { ParentHome } from "@/components/parent/parent-home";
 import { ParentLogin } from "@/components/parent/parent-login";
 import { ParentPlanToday } from "@/components/parent/parent-plan-today";
@@ -16,12 +17,12 @@ import { AuthorizationInbox } from "@/components/parent/authorization-inbox";
 import { useLocale } from "@/hooks/use-locale";
 import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
-import { formatTime, friendKids } from "@/lib/school";
+import { formatTime, friendKids, jornadaOf, todayJornada } from "@/lib/school";
 import type { CreateTripInput, Snapshot } from "@/lib/types";
 
-function activeTripForGuardian(snapshot: Snapshot, guardianId: string) {
+function activeTripForGuardian(snapshot: Snapshot, guardianId: string, jornada: string) {
   return snapshot.trips.find((trip) => {
-    if (trip.guardianId !== guardianId || trip.cancelledAt) return false;
+    if (trip.guardianId !== guardianId || trip.cancelledAt || jornadaOf(trip.createdAt) !== jornada) return false;
     return snapshot.requests.some(
       (request) =>
         request.tripId === trip.id &&
@@ -33,9 +34,9 @@ function activeTripForGuardian(snapshot: Snapshot, guardianId: string) {
 
 const CLOSED_TRIP_VISIBLE_MS = 10 * 60 * 1000;
 
-function completedTripForGuardian(snapshot: Snapshot, guardianId: string) {
+function completedTripForGuardian(snapshot: Snapshot, guardianId: string, jornada: string) {
   return snapshot.trips.find((trip) => {
-    if (trip.guardianId !== guardianId || trip.cancelledAt) return false;
+    if (trip.guardianId !== guardianId || trip.cancelledAt || jornadaOf(trip.createdAt) !== jornada) return false;
     // Un viaje ya cerrado hace rato no debe volver a saludar al abrir la app.
     if (trip.departedAt && Date.now() - Date.parse(trip.departedAt) > CLOSED_TRIP_VISIBLE_MS) return false;
     const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
@@ -45,8 +46,16 @@ function completedTripForGuardian(snapshot: Snapshot, guardianId: string) {
 
 export function ParentApp() {
   const { snapshot } = useSnapshot();
+  const contentRef = useRef<HTMLDivElement>(null);
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const jornada = todayJornada(now);
+  const [notice, setNotice] = useState<"planCancelled" | "lateSent" | "lateSentReplaced" | "lateUpdated" | "lateCancelled" | null>(null);
   const [tab, setTab] = useState<"home" | "settings">("home");
   const [step, setStep] = useState<"home" | "select" | "setup" | "late">("home");
   const [lateMode, setLateMode] = useState<"create" | "edit">("create");
@@ -64,22 +73,28 @@ export function ParentApp() {
     () => (snapshot && guardian ? friendKids(snapshot, guardian) : []),
     [snapshot, guardian],
   );
-  const activeTrip = snapshot && guardian ? activeTripForGuardian(snapshot, guardian.id) : undefined;
-  const doneTrip = snapshot && guardian ? completedTripForGuardian(snapshot, guardian.id) : undefined;
+  const activeTrip = snapshot && guardian ? activeTripForGuardian(snapshot, guardian.id, jornada) : undefined;
+  const doneTrip = snapshot && guardian ? completedTripForGuardian(snapshot, guardian.id, jornada) : undefined;
   const trip = activeTrip ?? (doneTrip && doneTrip.id !== dismissedTripId ? doneTrip : undefined);
   const activeLate =
     (snapshot && guardian
       ? (snapshot.latePickups ?? []).find(
-          (late) => late.guardianId === guardian.id && late.status === "announced",
+          (late) => late.guardianId === guardian.id && late.status === "announced" && jornadaOf(late.createdAt) === jornada,
         )
       : null) ?? null;
   const tripRequests = snapshot && trip ? snapshot.requests.filter((request) => request.tripId === trip.id) : [];
   const tripArrived = Boolean(trip?.arrivedAt || tripRequests.some((request) => request.status !== "on_the_way"));
   const showNav = Boolean(session && guardian && step === "home" && !tripArrived);
 
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0);
+    window.scrollTo(0, 0);
+  }, [step, tab, trip?.id]);
+
   async function saveTrip(input: Omit<CreateTripInput, "guardianId" | "studentIds">) {
     if (!guardian) return;
     setBusy(true);
+    setNotice(null);
     setError(null);
     try {
       const payload = { ...input, guardianId: guardian.id, studentIds: selected };
@@ -95,8 +110,15 @@ export function ParentApp() {
 
   async function cancelTrip(tripId: string) {
     setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
       await postJson(`/api/trips/${tripId}/cancel`);
+      setSelected([]);
+      setStep("home");
+      setNotice("planCancelled");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.noActive);
     } finally {
       setBusy(false);
     }
@@ -105,9 +127,12 @@ export function ParentApp() {
   async function submitLate(payload: LateCreatePayload) {
     if (!guardian) return;
     setBusy(true);
+    setNotice(null);
     setError(null);
     try {
       await postJson("/api/late", { ...payload, guardianId: guardian.id });
+      setSelected([]);
+      setNotice(payload.replaceTripIds?.length ? "lateSentReplaced" : "lateSent");
       setStep("home");
       setTab("home");
     } catch (err) {
@@ -120,9 +145,11 @@ export function ParentApp() {
   async function updateLateEta(etaAt: string) {
     if (!activeLate) return;
     setBusy(true);
+    setNotice(null);
     setError(null);
     try {
       await postJson(`/api/late/${activeLate.id}`, { action: "eta", etaAt });
+      setNotice("lateUpdated");
       setStep("home");
     } catch (err) {
       setError(err instanceof Error ? err.message : t.noActive);
@@ -134,9 +161,11 @@ export function ParentApp() {
   async function cancelLateNotice() {
     if (!activeLate) return;
     setBusy(true);
+    setNotice(null);
     setError(null);
     try {
       await postJson(`/api/late/${activeLate.id}`, { action: "cancel" });
+      setNotice("lateCancelled");
       setStep("home");
     } catch (err) {
       setError(err instanceof Error ? err.message : t.noActive);
@@ -161,7 +190,9 @@ export function ParentApp() {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-8">
+      <div ref={contentRef} className="flex-1 overflow-y-auto px-5 pb-8">
+        {notice && step === "home" && tab === "home" ? <p role="status" className="mb-4 rounded-2xl bg-forest/10 p-3 text-sm text-forest">{t[notice]}</p> : null}
+        {error && step === "home" ? <p role="alert" className="mb-4 text-sm text-danger">{error}</p> : null}
         {session && snapshot && guardian && tab !== "settings" ? (
           <AuthorizationInbox snapshot={snapshot} guardian={guardian} locale={locale} t={t} />
         ) : null}
@@ -176,7 +207,8 @@ export function ParentApp() {
             className="mt-2 mb-4 flex w-full items-center gap-3 rounded-2xl border border-gold/50 bg-gold/15 px-4 py-3 text-left"
           >
             <AlarmClock className="h-5 w-5 shrink-0 text-gold-deep" />
-            <p className="min-w-0 flex-1 text-sm font-medium text-forest-deep">
+            <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-forest-deep">
               {t.lateActiveBanner
                 .replace(
                   "{names}",
@@ -186,8 +218,10 @@ export function ParentApp() {
                     .join(", "),
                 )
                 .replace("{time}", formatTime(activeLate.etaAt, locale))}
-            </p>
-            <span className="shrink-0 text-xs font-semibold text-gold-deep">{t.lateUpdate} →</span>
+            </span>
+            <span className="mt-1 block text-xs text-muted">{activeLate.pickerName}</span>
+            <span className="mt-2 block text-xs font-semibold text-gold-deep">{t.lateUpdate} →</span>
+            </span>
           </button>
         ) : null}
 
@@ -211,7 +245,10 @@ export function ParentApp() {
             t={t}
             busy={busy}
             error={error}
+            key={lateMode === "edit" ? activeLate?.id : "create"}
             existing={lateMode === "edit" ? activeLate : null}
+            initialTrip={activeTrip}
+            jornada={jornada}
             onBack={() => setStep("home")}
             onSubmit={submitLate}
             onEtaUpdate={updateLateEta}
@@ -246,6 +283,9 @@ export function ParentApp() {
           />
         ) : trip && step === "home" ? (
           <ParentPlanToday
+            key={trip.id}
+            busy={busy}
+            onCancel={() => cancelTrip(trip.id)}
             snapshot={snapshot}
             guardian={guardian}
             trip={trip}
@@ -265,6 +305,20 @@ export function ParentApp() {
               setStep("late");
             }}
           />
+        ) : step === "home" ? (
+          <ParentDashboard guardian={guardian} childrenList={children} locale={locale} t={t} now={now} hasLate={Boolean(activeLate)}
+            onCreate={() => {
+              setSelected([]);
+              setError(null);
+              setNotice(null);
+              setStep("select");
+            }}
+            onLate={() => {
+              setError(null);
+              setNotice(null);
+              setLateMode(activeLate ? "edit" : "create");
+              setStep("late");
+            }} />
         ) : (
           <ParentHome
             guardian={guardian}
@@ -280,7 +334,7 @@ export function ParentApp() {
               setError(null);
               setStep("setup");
             }}
-            onBack={trip ? () => setStep("home") : undefined}
+            onBack={() => setStep("home")}
             onLate={() => {
               setError(null);
               setLateMode(activeLate ? "edit" : "create");
