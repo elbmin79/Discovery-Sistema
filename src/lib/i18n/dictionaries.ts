@@ -138,6 +138,10 @@ export const dictionaries = {
     changeTodayPlan: "Cambiar el plan de hoy",
     saveTodayPlan: "Guardar cambios",
     addFriendsPickup: "Agregar hijos de una familia amiga",
+    expandQr: "Ampliar código QR",
+    closeQr: "Cerrar código QR",
+    tapToExpand: "Toca para ampliar",
+    tapToClose: "Toca para cerrar",
   },
   en: {
     appName: "Discovery Pickup",
@@ -277,6 +281,10 @@ export const dictionaries = {
     changeTodayPlan: "Change today's plan",
     saveTodayPlan: "Save changes",
     addFriendsPickup: "Add children from a family friend",
+    expandQr: "Expand QR code",
+    closeQr: "Close QR code",
+    tapToExpand: "Tap to expand",
+    tapToClose: "Tap to close",
   },
 } as const;
 

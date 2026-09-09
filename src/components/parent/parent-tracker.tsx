@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import QRCode from "qrcode";
+import { FullscreenQr } from "@/components/parent/fullscreen-qr";
 import { RadioTower } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -340,28 +341,7 @@ function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
         <p className="mt-4 text-sm text-cream">{t.codeHint}</p>
       </button>
 
-      {expanded ? (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-forest-deep px-6 text-paper"
-        >
-          <p className="text-xs tracking-[0.22em] uppercase text-gold">{t.qrLabel}</p>
-          {qr ? (
-            <Image
-              src={qr}
-              alt={t.qrLabel}
-              width={320}
-              height={320}
-              unoptimized
-              className="mt-4 h-72 w-72 rounded-3xl bg-paper p-4"
-            />
-          ) : null}
-          <p className="mt-8 text-xs tracking-[0.22em] uppercase text-gold">{t.codeLabel}</p>
-          <p className="mt-3 font-serif text-6xl tracking-[0.22em]">{trip.code.split("").join(" ")}</p>
-          <p className="mt-8 text-sm text-cream">Toca para cerrar</p>
-        </button>
-      ) : null}
+      {expanded ? <FullscreenQr qr={qr} trip={trip} t={t} onClose={() => setExpanded(false)} /> : null}
     </>
   );
 }

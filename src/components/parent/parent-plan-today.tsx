@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { AlarmClock, CalendarDays, Car, CheckCircle2, ChevronRight, RadioTower, UserRound } from "lucide-react";
+import { FullscreenQr } from "@/components/parent/fullscreen-qr";
 import { ShareRow } from "@/components/parent/parent-tracker";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { pickupPayload } from "@/lib/qr";
@@ -40,6 +41,7 @@ export function ParentPlanToday({
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
   const familyTime = earliestDismissal(students);
   const [qr, setQr] = useState("");
+  const [expandedQr, setExpandedQr] = useState(false);
 
   useEffect(() => {
     if (useTag) return;
@@ -118,16 +120,24 @@ export function ParentPlanToday({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setExpandedQr(true)}
+            aria-label={t.expandQr}
+            className="flex w-full items-center gap-4 text-left"
+          >
             {qr ? <Image src={qr} alt={t.qrLabel} width={88} height={88} unoptimized className="h-[88px] w-[88px] rounded-xl" /> : <div className="h-[88px] w-[88px] rounded-xl bg-cream" />}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gold-deep">{t.passReady}</p>
               <p className="mt-1 font-serif text-3xl tracking-[0.16em] text-forest">{trip.code.split("").join(" ")}</p>
               <p className="mt-1 text-sm text-muted">{t.codeHint}</p>
+              <p className="mt-2 text-xs font-semibold text-forest">{t.tapToExpand}</p>
             </div>
-          </div>
+          </button>
         )}
       </section>
+
+      {expandedQr ? <FullscreenQr qr={qr} trip={trip} t={t} onClose={() => setExpandedQr(false)} /> : null}
 
       {showShare ? <ShareRow trip={trip} students={students} passUrl={typeof window === "undefined" ? "" : `${window.location.origin}/pase/${trip.qrToken}`} t={t} /> : null}
 

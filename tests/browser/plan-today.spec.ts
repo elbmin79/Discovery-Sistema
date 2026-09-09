@@ -26,6 +26,13 @@ test("family sees, edits, scans and completes today's prepared plan", async ({ p
   await expect(page.getByText("Abuela · Rosa Madrid", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Código QR" })).toBeVisible();
   await expect(page.getByRole("link", { name: "WhatsApp" })).toBeVisible();
+  await page.getByRole("button", { name: "Ampliar código QR" }).click();
+  const fullScreenQr = page.getByRole("button", { name: "Cerrar código QR" });
+  await expect(fullScreenQr).toBeVisible();
+  await expect(fullScreenQr.getByRole("img", { name: "Código QR" })).toBeVisible();
+  expect(await fullScreenQr.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+  await fullScreenQr.click();
+  await expect(page.getByRole("button", { name: "Cerrar código QR" })).toHaveCount(0);
 
   const before: Snapshot = await (await page.request.get("/api/state")).json();
   const trip = before.trips.find((item) => item.id === "t-madrid-today")!;
