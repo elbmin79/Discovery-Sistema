@@ -12,7 +12,8 @@
     "test:storage": "node scripts/test-storage-start.mjs && tsx --test tests/history-storage.test.ts",
     "test:e2e": "playwright test",
     "history:backfill": "tsx scripts/history-maintenance.ts backfill",
-    "history:retention": "tsx scripts/history-maintenance.ts retention"
+    "history:retention": "tsx scripts/history-maintenance.ts retention",
+    "verify:supabase": "tsx scripts/verify-supabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

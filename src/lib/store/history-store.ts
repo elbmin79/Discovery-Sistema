@@ -2,7 +2,7 @@ import { buildLateHistoryRow, buildLiveHistoryRows, historyPage, matchesHistoryS
 import { todayJornada } from "../school";
 import { getSupabaseAdmin, isSupabaseConfigured } from "../supabase/admin";
 import type { ArchivedLatePickup, HistoryPage, HistoryRow } from "../types";
-import { getMemoryStore, mutateStore, readSnapshot } from "./index";
+import { getMemoryStore, isArchiveStoreReady, mutateStore, readSnapshot } from "./index";
 import { MemoryPickupStore } from "./memory-store";
 
 export async function queryHistory(from: string, to: string, limit = 200, offset = 0, status: HistoryStatusFilter = "all", zone = ""): Promise<HistoryPage> {
@@ -19,7 +19,7 @@ export async function queryHistory(from: string, to: string, limit = 200, offset
     liveRows = buildLiveHistoryRows(snapshot, today);
     liveLates = snapshot.latePickups.map((notice) => buildLateHistoryRow(snapshot, notice)).filter((row) => row.jornada === today);
   }
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && await isArchiveStoreReady()) {
     const { data, error } = await getSupabaseAdmin().rpc("query_pickup_history", {
       range_from: from, range_to: to, page_limit: limit, page_offset: offset, live_rows: liveRows, live_lates: liveLates, pickup_status: status, pickup_zone: zone,
     });
@@ -28,6 +28,10 @@ export async function queryHistory(from: string, to: string, limit = 200, offset
     if (page.summary.averageWait === null) delete page.summary.averageWait;
     page.days.forEach((day) => { if (day.summary.averageWait === null) delete day.summary.averageWait; });
     return { ...page, includesToday };
+  }
+  if (isSupabaseConfigured()) {
+    return historyPage(liveRows.filter((row) => matchesHistoryStatus(row, status) && (!zone || row.zoneName?.split(", ").includes(zone))), from, to, limit, offset,
+      liveLates.filter((late) => late.jornada >= from && late.jornada <= to));
   }
   const store = getMemoryStore();
   const archived = store.historyRows();

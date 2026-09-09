@@ -108,6 +108,42 @@ test("daily rollover keeps late notices even without a pickup and applies 90-day
   assert.equal(store.lateHistoryRows().length, 0);
 });
 
+test("unavailable history storage defers archival without dropping live records", () => {
+  const seed = createSeedSnapshot();
+  seed.trips = [];
+  seed.requests = [];
+  seed.events = [];
+  seed.guestPasses = [];
+  const student = seed.students[0];
+  seed.latePickups = [{ id: "late-deferred", guardianId: seed.guardians[0].id, studentIds: [student.id],
+    pickerKind: "self", pickerName: "Mamá", pickerRelationEs: "Madre", pickerRelationEn: "Mother",
+    etaAt: "2026-01-01T23:00:00Z", createdAt: "2026-01-01T20:00:00Z", updatedAt: "2026-01-01T21:00:00Z", status: "announced" }];
+  const store = new MemoryPickupStore(seed, Infinity, false);
+  const guardian = seed.guardians[0];
+  const created = store.createTrip({ guardianId: guardian.id, studentIds: [guardian.studentIds[0]],
+    pickerKind: "self", pickerName: `${guardian.firstName} ${guardian.lastName}`,
+    pickerRelationEs: guardian.relationEs, pickerRelationEn: guardian.relationEn,
+    method: "car", vehicleId: guardian.defaultVehicleId });
+  const trip = created.trips[0];
+  const deferred = store.cancelTrip(trip.id);
+  assert.equal(store.historyRows().length, 0);
+  assert.equal(deferred.trips.find((item) => item.id === trip.id)?.cancelledAt !== undefined, true);
+  assert.equal(store.hasClosedTrips(), true);
+  store.archiveClosedTrips();
+  assert.equal(store.snapshot().trips.some((item) => item.id === trip.id), true);
+  assert.equal(store.hasDailyArchives(), true);
+  store.archiveDailyLates();
+  assert.equal(store.snapshot().latePickups.some((item) => item.id === "late-deferred"), true);
+
+  const recovered = new MemoryPickupStore(store.snapshot(), Infinity, true);
+  recovered.archiveClosedTrips();
+  recovered.archiveDailyLates();
+  assert.equal(recovered.snapshot().trips.some((item) => item.id === trip.id), false);
+  assert.equal(recovered.historyRows()[0].tripId, trip.id);
+  assert.equal(recovered.snapshot().latePickups.some((item) => item.id === "late-deferred"), false);
+  assert.equal(recovered.lateHistoryRows()[0].notice.id, "late-deferred");
+});
+
 test("server sessions cannot be forged by browser role changes", () => {
   const cookie = sessionCookie({ name: "Office", username: "gabriela", role: "staff", isAdmin: true }, false).split(";")[0];
   assert.equal(serverSession(new Request("http://localhost", { headers: { cookie } }))?.isAdmin, true);
