@@ -55,9 +55,9 @@ Display a greeting and today's school-local date, then these areas in order:
 | Area | Content and action |
 | --- | --- |
 | Active late notice, when present | Children, picker, ETA; update time or cancel notice. Gold attention styling. |
-| Today's pickup | **No tienes una recogida programada para hoy** and primary **Crear recogida**. Opens child selection, then the existing setup flow. |
+| Today's pickup | **Sin recogida programada**, **¿Quién los recoge hoy?**, and primary **Crear recogida**. Opens child selection, then the existing setup flow. |
 | Running late | **¿Llegarás tarde?** with short explanation and **Avisar a la escuela**. With an active notice, use **Actualizar aviso** instead of encouraging a duplicate. |
-| School announcements | **Avisos de la escuela** with clearly labeled placeholder **Próximamente: avisos de tu escuela**. No invented announcements or nonfunctional buttons. |
+| School announcements | **De la escuela**, a **Próximamente** badge, and **Los avisos de tu escuela, aquí.** No invented announcements or nonfunctional buttons. |
 
 Keep Home/Account navigation and the authorization inbox accessible. Creating a
 pickup returns to the existing plan/pass screen. Kiosk arrival continues to show
@@ -125,8 +125,10 @@ large touch targets consistent with the existing design.
 
 ## Implementation and validation
 
-- Added a modular `ParentDashboard` with compact child schedules, side-by-side
-  action tiles, and smaller announcement/contact areas. Preserved child selection and the existing plan/tracker,
+- Matched the approved editorial mockup in `ParentDashboard`: illustrated greeting,
+  original child portraits with grades/times, full-width pickup card, late-notice
+  row, and school announcements/contact. Preserved the logo, bottom navigation,
+  child selection and the existing plan/tracker,
   and added school contact, dismissal times, ES/EN copy, and the announcements placeholder.
 - Late creation carries the displayed trip IDs and full child cancellation scope.
   The store validates both before changing anything and emits/persists once. Existing
@@ -148,3 +150,5 @@ large touch targets consistent with the existing design.
 
 Validation passed: TypeScript, ESLint, 20 unit tests, 6 targeted browser tests,
 production build, and read-only `/api/state` + `/api/health` checks (HTTP 200).
+
+Artwork sources and generation prompts: `docs/parent-home-artwork.md`.

@@ -175,7 +175,7 @@ export function ParentApp() {
   }
 
   return (
-    <PhoneShell>
+    <PhoneShell paper={Boolean(session && guardian && !trip && step === "home" && tab === "home")}>
       <header className="flex items-center justify-between px-5 pt-6 pb-3">
         <Link href="/" className="rounded-lg">
           <BrandRow />
