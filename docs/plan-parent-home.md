@@ -55,7 +55,7 @@ Display a greeting and today's school-local date, then these areas in order:
 | Area | Content and action |
 | --- | --- |
 | Active late notice, when present | Children, picker, ETA; update time or cancel notice. Gold attention styling. |
-| Today's pickup | **Sin recogida programada**, **¿Quién los recoge hoy?**, and primary **Crear recogida**. Opens child selection, then the existing setup flow. |
+| Today's pickup | **Sin recogida programada**, **¿Quién los recoge hoy?**, and primary **Crear Pick-Up**. Opens child selection, then the existing setup flow. |
 | Running late | **¿Llegarás tarde?** with short explanation and **Avisar a la escuela**. With an active notice, use **Actualizar aviso** instead of encouraging a duplicate. |
 | School announcements | **De la escuela**, a **Próximamente** badge, and **Los avisos de tu escuela, aquí.** No invented announcements or nonfunctional buttons. |
 

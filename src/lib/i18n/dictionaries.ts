@@ -14,7 +14,7 @@ export const dictionaries = {
     homeLateHint: "Avísale a la escuela",
     homeToday: "Tu día en Discovery",
     noPlanToday: "No tienes una recogida programada para hoy",
-    createPickup: "Crear recogida",
+    createPickup: "Crear Pick-Up",
     createPickupHint: "Prepara tu pase y ten todo listo para la salida.",
     lateHomeHint: "Comparte tu hora estimada para que la oficina esté al tanto.",
     announcements: "Avisos de la escuela",

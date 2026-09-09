@@ -28,7 +28,7 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
   await page.getByRole("button", { name: "Cancelar recogida de hoy", exact: true }).click();
   await page.getByRole("button", { name: "Sí, cancelar recogida" }).click();
   await expect(page.getByRole("status")).toHaveText("Recogida de hoy cancelada");
-  await expect(page.getByRole("button", { name: "Crear recogida", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   await expect(page.getByText("De la escuela", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Contactar a la escuela/ })).toHaveAttribute("href", "tel:+526868378517");
   expect((await page.request.post("/api/trips/arrive", { data: { code: "4170" } })).ok()).toBe(false);
@@ -57,7 +57,7 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
   await page.screenshot({ path: "test-results/parent-home-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "EN", exact: true }).click();
-  await page.getByRole("button", { name: "Crear recogida", exact: true }).click();
+  await page.getByRole("button", { name: "Crear Pick-Up", exact: true }).click();
   await page.getByRole("button", { name: /Sofía Madrid/ }).click();
   await page.getByRole("button", { name: /Lucas Madrid/ }).click();
   await page.getByRole("button", { name: "Pase para todos" }).click();
@@ -76,7 +76,7 @@ test("late notice replaces the plan, persists, appears to the office, and can be
   await page.getByRole("button", { name: "Avisar al colegio", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Aviso enviado y recogida de hoy cancelada");
   await expect(page.getByRole("status")).toBeInViewport();
-  await expect(page.getByRole("button", { name: "Crear recogida", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
   expect(snapshot.trips.some((trip) => trip.id === "t-madrid-today")).toBe(false);
   const late = snapshot.latePickups.find((notice) => notice.guardianId === "g-roberto" && notice.status === "announced")!;
@@ -91,7 +91,7 @@ test("late notice replaces the plan, persists, appears to the office, and can be
   await expect(lateSection.getByText("Aviso de prueba: cita familiar", { exact: false })).toBeVisible();
   await officeContext.close();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Crear recogida", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/parent-home-late.png", fullPage: true });
   await page.getByRole("button", { name: "Actualizar hora", exact: false }).last().click();
   await page.getByRole("button", { name: "+1h", exact: true }).click();
@@ -100,7 +100,7 @@ test("late notice replaces the plan, persists, appears to the office, and can be
   await page.getByRole("button", { name: "Actualizar hora", exact: false }).last().click();
   await page.getByRole("button", { name: "Cancelar aviso" }).click();
   await expect(page.getByRole("status")).toContainText("Aviso cancelado");
-  await expect(page.getByRole("button", { name: "Crear recogida", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /¿Llegarás tarde\?/ }).click();
   await expect(page.getByRole("note")).toHaveCount(0);
   await page.getByRole("button", { name: /Sofía Madrid/ }).click();
