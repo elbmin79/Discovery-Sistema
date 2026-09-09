@@ -17,6 +17,7 @@ export function ParentHome({
   onToggle,
   onContinue,
   onLate,
+  onBack,
   lateLabel,
   locale,
   t,
@@ -28,6 +29,7 @@ export function ParentHome({
   onToggle: (id: string) => void;
   onContinue: () => void;
   onLate?: () => void;
+  onBack?: () => void;
   lateLabel?: string;
   locale: Locale;
   t: Dictionary;
@@ -49,6 +51,7 @@ export function ParentHome({
 
   return (
     <div className="flex min-h-full flex-col">
+      {onBack ? <button type="button" onClick={onBack} className="mb-5 self-start text-sm font-medium text-forest">← {t.back}</button> : null}
       <p className="text-sm text-muted">{greeting(locale)},</p>
       <h1 className="font-serif text-4xl text-forest">{guardian.firstName}</h1>
       <p className="mt-6 text-xs font-semibold tracking-[0.16em] uppercase text-gold-deep">

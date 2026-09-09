@@ -55,6 +55,7 @@ export const STATUS_LABELS: Record<PickupStatus, string> = {
 export function buildAdminRows(snapshot: Snapshot): AdminRow[] {
   const rows: AdminRow[] = [];
   for (const request of snapshot.requests) {
+    if (request.status === "on_the_way") continue;
     const student = findStudent(snapshot, request.studentId);
     if (!student) continue;
     const trip = snapshot.trips.find((item) => item.id === request.tripId);
@@ -120,7 +121,7 @@ export function eventsForRequest(snapshot: Snapshot, request: PickupRequest): Pi
   const events = (snapshot.events ?? []).filter(
     (event) =>
       event.requestId === request.id ||
-      ((event.type === "trip_created" || event.type === "arrived" || event.type === "departed") &&
+      ((event.type === "trip_created" || event.type === "trip_changed" || event.type === "arrived" || event.type === "departed") &&
         event.tripId === request.tripId),
   );
   return events.sort((a, b) => a.at.localeCompare(b.at));
@@ -130,6 +131,7 @@ export function eventLabel(event: PickupEvent): string {
   if (event.type === "trip_created") {
     return event.note ? `Recogida solicitada · ${event.note}` : "Recogida solicitada";
   }
+  if (event.type === "trip_changed") return event.note ?? "Plan de hoy actualizado";
   if (event.type === "arrived") {
     return event.note ? `Llegada confirmada · ${event.note}` : "Llegada confirmada en kiosco";
   }

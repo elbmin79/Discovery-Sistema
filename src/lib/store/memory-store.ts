@@ -25,6 +25,7 @@ import type {
   PickupStatus,
   PickupTrip,
   Snapshot,
+  UpdateTripInput,
   Vehicle,
 } from "../types";
 
@@ -308,6 +309,97 @@ export class MemoryPickupStore {
       });
     }
 
+    this.emit();
+    return this.snapshot();
+  }
+
+  updateTrip(tripId: string, input: UpdateTripInput) {
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (!trip) throw new Error("No encontramos ese plan de recogida.");
+    const currentRequests = this.data.requests.filter((item) => item.tripId === tripId);
+    if (trip.arrivedAt || trip.cancelledAt || trip.departedAt || currentRequests.some((item) => item.status !== "on_the_way")) {
+      throw new Error("El plan ya no se puede cambiar porque la familia llegó.");
+    }
+    if (input.studentIds.length === 0) throw new Error("Selecciona al menos un alumno.");
+
+    const guardian = this.data.guardians.find((item) => item.id === trip.guardianId);
+    if (!guardian) throw new Error("No encontramos la cuenta del padre.");
+    const owners = new Map<string, Guardian>();
+    for (const studentId of input.studentIds) {
+      if (guardian.studentIds.includes(studentId)) continue;
+      const owner = this.ownerOf(studentId);
+      if (!owner || !(guardian.friendIds ?? []).includes(owner.id)) {
+        throw new Error("Solo puedes incluir a tus hijos o a los de familias amigas.");
+      }
+      owners.set(studentId, owner);
+    }
+    const alreadyActive = this.data.requests.some(
+      (request) =>
+        request.tripId !== tripId &&
+        input.studentIds.includes(request.studentId) &&
+        request.status !== "delivered" &&
+        request.status !== "cancelled",
+    );
+    if (alreadyActive) throw new Error("Ya hay una recogida activa para uno de estos alumnos.");
+    if (input.pickerKind === "guest" && !input.pickerName.trim()) {
+      throw new Error("Escribe el nombre de quien va a recoger.");
+    }
+
+    trip.pickerName = input.pickerName.trim();
+    trip.pickerRelationEs = input.pickerRelationEs;
+    trip.pickerRelationEn = input.pickerRelationEn;
+    trip.pickerKind = input.pickerKind;
+    trip.method = input.method;
+    trip.vehicleId = input.method === "car" ? input.vehicleId : undefined;
+    trip.guestPhone = input.guestPhone;
+
+    const now = new Date().toISOString();
+    const existing = new Map(currentRequests.map((request) => [request.studentId, request]));
+    const nextRequests: PickupRequestRef[] = [];
+    for (const studentId of input.studentIds) {
+      const owner = owners.get(studentId);
+      const request = existing.get(studentId);
+      const requestId = request?.id ?? createId("r");
+      nextRequests.push({
+        id: requestId,
+        tripId,
+        studentId,
+        status: "on_the_way",
+        requestedAt: request?.requestedAt ?? now,
+        authorization: owner ? { ownerGuardianId: owner.id, status: "pending" } : undefined,
+      });
+      if (owner) {
+        this.logEvent({
+          type: "authorization_requested",
+          tripId,
+          requestId,
+          studentId,
+          actorRole: "parent",
+          actorName: this.guardianLabel(guardian),
+          note: `Se pidió confirmación a ${this.guardianLabel(owner)}`,
+        }, now);
+      }
+    }
+    this.data.requests = [...nextRequests, ...this.data.requests.filter((request) => request.tripId !== tripId)];
+
+    this.data.guestPasses = this.data.guestPasses.filter((item) => item.tripId !== tripId);
+    if (input.pickerKind === "guest" || input.pickerKind === "authorized") {
+      this.data.guestPasses.unshift({
+        id: createId("p"),
+        token: trip.qrToken,
+        tripId,
+        phone: input.guestPhone,
+        createdAt: now,
+        expiresAt: new Date(Date.parse(now) + 24 * 60 * 60 * 1000).toISOString(),
+      });
+    }
+    this.logEvent({
+      type: "trip_changed",
+      tripId,
+      actorRole: "parent",
+      actorName: this.guardianLabel(guardian),
+      note: "Plan de hoy actualizado",
+    }, now);
     this.emit();
     return this.snapshot();
   }

@@ -182,6 +182,7 @@ export type EventActorRole = "parent" | "kiosk" | "staff";
 
 export type PickupEventType =
   | "trip_created"
+  | "trip_changed"
   | "arrived"
   | "status_changed"
   | "delivered"
@@ -301,6 +302,8 @@ export interface CreateTripInput {
   vehicleId?: string;
   guestPhone?: string;
 }
+
+export type UpdateTripInput = Omit<CreateTripInput, "guardianId">;
 
 export type SessionRole = "parent" | "staff";
 

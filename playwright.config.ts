@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 60000,
   use: {
     baseURL: process.env.HISTORY_TEST_BASE_URL ?? "http://localhost:3105",
-    channel: "msedge",
+    channel: process.env.PLAYWRIGHT_CHANNEL === "chromium" ? undefined : "msedge",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },

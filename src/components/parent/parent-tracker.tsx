@@ -366,7 +366,7 @@ function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
   );
 }
 
-function ShareRow({
+export function ShareRow({
   trip,
   students,
   passUrl,

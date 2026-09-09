@@ -43,6 +43,12 @@ export function buildHistoryRow(snapshot: Snapshot, trip: PickupTrip, live = fal
   };
 }
 
+export function buildLiveHistoryRows(snapshot: Snapshot, jornada = todayJornada()) {
+  return snapshot.trips
+    .map((trip) => buildHistoryRow(snapshot, trip, true))
+    .filter((row) => row.jornada === jornada && row.status !== "on_the_way");
+}
+
 export function historySummary(rows: HistoryRow[]): HistorySummary {
   const waits = rows.flatMap((row) => row.waitMinutes === undefined ? [] : [row.waitMinutes]);
   return { total: rows.length, delivered: rows.filter((row) => row.status === "delivered").length,

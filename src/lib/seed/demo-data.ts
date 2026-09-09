@@ -5,6 +5,12 @@ function minutesAgo(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
+function todayAt(hour: number, minute: number) {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
+
 export const HERO_GUARDIAN_ID = "g-roberto";
 export const BENJAMIN_GUARDIAN_ID = "g-benjamin";
 export const STAFF_ID = "st-gabriela";
@@ -474,11 +480,11 @@ export function createSeedSnapshot(): Snapshot {
         id: "lp-madrid",
         guardianId: "g-roberto",
         studentIds: ["s-sofia", "s-lucas"],
-        pickerKind: "authorized",
-        pickerName: "Rosa Madrid",
-        pickerRelationEs: "Abuela",
-        pickerRelationEn: "Grandmother",
-        etaAt: minutesAgo(-20),
+        pickerKind: "self",
+        pickerName: "Roberto Madrid",
+        pickerRelationEs: "Papá",
+        pickerRelationEn: "Dad",
+        etaAt: todayAt(15, 5),
         note: "Sale tarde del trabajo.",
         createdAt: minutesAgo(6),
         updatedAt: minutesAgo(6),
@@ -486,6 +492,32 @@ export function createSeedSnapshot(): Snapshot {
       },
     ],
     trips: [
+      {
+        id: "t-madrid-today",
+        code: "4170",
+        guardianId: "g-roberto",
+        pickerName: "Roberto Madrid",
+        pickerRelationEs: "Papá",
+        pickerRelationEn: "Dad",
+        pickerKind: "self",
+        method: "car",
+        vehicleId: "v-prius",
+        qrToken: "today-madrid",
+        createdAt: minutesAgo(1),
+      },
+      {
+        id: "t-marquez-today",
+        code: "6032",
+        guardianId: "g-benjamin",
+        pickerName: "Benjamín Márquez",
+        pickerRelationEs: "Papá",
+        pickerRelationEn: "Dad",
+        pickerKind: "self",
+        method: "car",
+        vehicleId: "v-kicks",
+        qrToken: "today-marquez",
+        createdAt: minutesAgo(1),
+      },
       {
         id: "t-lopez",
         code: "2291",
@@ -566,6 +598,41 @@ export function createSeedSnapshot(): Snapshot {
       },
     ],
     requests: [
+      {
+        id: "r-plan-sofia",
+        tripId: "t-madrid-today",
+        studentId: "s-sofia",
+        status: "on_the_way",
+        requestedAt: minutesAgo(1),
+      },
+      {
+        id: "r-plan-lucas",
+        tripId: "t-madrid-today",
+        studentId: "s-lucas",
+        status: "on_the_way",
+        requestedAt: minutesAgo(1),
+      },
+      {
+        id: "r-plan-emiliano",
+        tripId: "t-marquez-today",
+        studentId: "s-emiliano",
+        status: "on_the_way",
+        requestedAt: minutesAgo(1),
+      },
+      {
+        id: "r-plan-isabela",
+        tripId: "t-marquez-today",
+        studentId: "s-isabela",
+        status: "on_the_way",
+        requestedAt: minutesAgo(1),
+      },
+      {
+        id: "r-plan-paula",
+        tripId: "t-marquez-today",
+        studentId: "s-paula",
+        status: "on_the_way",
+        requestedAt: minutesAgo(1),
+      },
       {
         id: "r-mateo",
         tripId: "t-lopez",

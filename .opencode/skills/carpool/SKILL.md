@@ -32,7 +32,7 @@ Realidad operativa del cliente (restricciones duras):
 | Ruta | Qué es |
 |---|---|
 | `/` | Demo hub: tarjetas por superficie + "Nueva jornada" (`POST /api/demo/reset`) |
-| `/familia` | App del padre (PhoneShell): pase QR, "¿Llegarás tarde?", familias amigas + inbox de autorizaciones, cuenta (fotos/autos/autorizados) |
+| `/familia` | App del padre (PhoneShell): **Plan de hoy** listo con hijos/horario/picker/auto/tag o QR, cambio del día, "¿Llegarás tarde?", familias amigas + inbox, cuenta |
 | `/kiosco` | Entrada: QR/código **y modo tag** (foto automática, llegada sin aviso previo) |
 | `/personal` | Tablet del maestro: columnas **Esperando → Notificados** (1 toque: Notificar → Entregar), fotos de auto, chip **Tardes** (hoja solo-lectura), botón "＋ Simular llegadas" |
 | `/admin` | **Admin Dashboard** (antes *Bitácora*; `/bitacora` redirige): summary cards, sección **Retrasos** (oro, countdown, rojo si ETA+15min), tabla Recogidas + timeline, feed Movimientos, CSV |
