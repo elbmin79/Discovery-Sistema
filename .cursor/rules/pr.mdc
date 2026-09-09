@@ -1,0 +1,10 @@
+---
+description: Pre-flight antes de PR/push. Aplicar cuando el usuario escriba /pr o pida abrir/verificar un pull request.
+alwaysApply: false
+---
+
+# /pr
+
+Cuando el usuario invoque `/pr` o pida verificar/publicar un PR, lee y aplica
+`.opencode/skills/pr/SKILL.md` completo. No hagas push ni abras PR si hay checks
+en rojo o pasos manuales de Supabase/Vercel pendientes de confirmación.
