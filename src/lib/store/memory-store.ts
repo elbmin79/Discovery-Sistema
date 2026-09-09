@@ -89,6 +89,7 @@ export class MemoryPickupStore {
   }
 
   archiveDailyLates(force = false) {
+    if (!this.archiveEnabled) return;
     const today = todayJornada();
     for (const notice of [...this.data.latePickups]) {
       const jornada = jornadaOf(notice.createdAt);
@@ -113,6 +114,7 @@ export class MemoryPickupStore {
   }
 
   archiveClosedTrips() {
+    if (!this.archiveEnabled) return;
     for (const trip of [...this.data.trips]) {
       if (!trip.departedAt && !trip.cancelledAt) continue;
       this.history = [buildHistoryRow(this.data, trip), ...this.history.filter((row) => row.tripId !== trip.id)].slice(0, this.historyLimit);
@@ -123,7 +125,7 @@ export class MemoryPickupStore {
     }
   }
 
-  constructor(seed = createSeedSnapshot(), private historyLimit = 5000) {
+  constructor(seed = createSeedSnapshot(), private historyLimit = 5000, private archiveEnabled = true) {
     this.data = seed;
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
@@ -916,6 +918,10 @@ export class MemoryPickupStore {
     });
   }
 
+  hasClosedTrips() {
+    return this.data.trips.some((trip) => Boolean(trip.departedAt || trip.cancelledAt));
+  }
+
   private guardianName(tripId: string) {
     const trip = this.data.trips.find((item) => item.id === tripId);
     const guardian = trip && this.data.guardians.find((item) => item.id === trip.guardianId);
@@ -1062,8 +1068,10 @@ export class MemoryPickupStore {
   }
 
   private emit() {
-    this.archiveDailyLates();
-    this.archiveClosedTrips();
+    if (this.archiveEnabled) {
+      this.archiveDailyLates();
+      this.archiveClosedTrips();
+    }
     this.data.updatedAt = new Date().toISOString();
     const snapshot = this.snapshot();
     for (const listener of this.listeners) listener(snapshot);

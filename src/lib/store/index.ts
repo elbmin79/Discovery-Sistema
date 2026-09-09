@@ -5,6 +5,9 @@ import { MemoryPickupStore } from "./memory-store";
 
 const STATE_ID = "live";
 const MAX_RETRIES = 8;
+const ARCHIVE_CHECK_TTL_MS = 30_000;
+
+let archiveCheck: { ready: boolean; checkedAt: number } | null = null;
 
 const globalForStore = globalThis as typeof globalThis & {
   __discoveryStore?: MemoryPickupStore;
@@ -56,7 +59,7 @@ export async function mutateStore<T>(fn: (store: MemoryPickupStore) => T | Promi
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
     const row = await loadRow();
-    const store = new MemoryPickupStore(row.snapshot, Infinity);
+    const store = new MemoryPickupStore(row.snapshot, Infinity, await isArchiveStoreReady());
     const result = await fn(store);
     const next = store.snapshot();
     const saved = await saveVersioned(next, row.version, store.historyRows(), store.lateHistoryRows());
@@ -65,6 +68,46 @@ export async function mutateStore<T>(fn: (store: MemoryPickupStore) => T | Promi
     await wait(40 * (attempt + 1));
   }
   throw lastError ?? new Error("No se pudo guardar el cambio.");
+}
+
+export async function isArchiveStoreReady() {
+  if (!isSupabaseConfigured()) return true;
+  if (archiveCheck && Date.now() - archiveCheck.checkedAt < ARCHIVE_CHECK_TTL_MS) {
+    return archiveCheck.ready;
+  }
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const [tripHistory, lateHistory, commit, query] = await Promise.all([
+      supabase.from("pickup_history").select("trip_id").limit(1),
+      supabase.from("pickup_late_history").select("id").limit(1),
+      supabase.rpc("commit_pickup_state", {
+        expected_version: -1,
+        next_snapshot: {},
+        archive_rows: [],
+        late_rows: [],
+      }),
+      supabase.rpc("query_pickup_history", {
+        range_from: "1970-01-01",
+        range_to: "1970-01-01",
+        page_limit: 1,
+        page_offset: 0,
+        live_rows: [],
+        live_lates: [],
+        pickup_status: "all",
+        pickup_zone: "",
+      }),
+    ]);
+    const errors = [tripHistory.error, lateHistory.error, commit.error, query.error].filter(Boolean);
+    archiveCheck = { ready: errors.length === 0, checkedAt: Date.now() };
+    if (errors.length) {
+      console.error("El archivo histórico de Supabase no está disponible.", errors.map((error) => error?.message));
+    }
+  } catch (error) {
+    archiveCheck = { ready: false, checkedAt: Date.now() };
+    console.error("No se pudo verificar el archivo histórico de Supabase.", error);
+  }
+  return archiveCheck.ready;
 }
 
 async function loadRow(): Promise<StateRow> {
