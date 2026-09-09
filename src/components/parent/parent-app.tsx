@@ -96,7 +96,7 @@ export function ParentApp() {
   const activeTripRequests = tripRequests.filter((request) => request.status !== "cancelled");
   const removableRequests = activeTripRequests.filter((request) => canRemoveFromTrip(request.status));
   const tripArrived = Boolean(trip?.arrivedAt || activeTripRequests.some((request) => request.status !== "on_the_way"));
-  const showNav = Boolean(session && guardian && (step === "home" || step === "avisos" || step === "calendario") && !tripArrived);
+  const showNav = Boolean(session && guardian && (step === "home" || step === "avisos" || step === "calendario"));
   const unread = snapshot && guardian ? unreadAnnouncements(snapshot, guardian) : [];
   const toastNotice = unread.find((item) => !dismissedNoticeIds.includes(item.id)) ?? null;
 
@@ -215,7 +215,7 @@ export function ParentApp() {
 
   return (
     <PhoneShell paper={Boolean(session && guardian && !trip && step === "home" && tab === "home")}>
-      <header className="flex items-center justify-between px-5 pt-6 pb-3">
+      <header className="flex shrink-0 items-center justify-between px-5 pt-6 pb-3">
         <Link href="/" className="rounded-lg">
           <BrandRow />
         </Link>
@@ -229,7 +229,7 @@ export function ParentApp() {
         </button>
       </header>
 
-      <div ref={contentRef} className="flex-1 overflow-y-auto px-5 pb-8">
+      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
         {notice && step === "home" && tab === "home" ? <p role="status" className="mb-4 rounded-2xl bg-forest/10 p-3 text-sm text-forest">{t[notice]}</p> : null}
         {error && step === "home" ? <p role="alert" className="mb-4 text-sm text-danger">{error}</p> : null}
         {session && snapshot && guardian && tab !== "settings" && toastNotice && step === "home" && !trip ? (
@@ -489,7 +489,7 @@ export function ParentApp() {
       ) : null}
 
       {showNav ? (
-        <nav className="grid grid-cols-2 border-t border-line bg-paper">
+        <nav className="grid shrink-0 grid-cols-2 border-t border-line bg-paper pb-[env(safe-area-inset-bottom)]">
           <button
             type="button"
             onClick={() => {
