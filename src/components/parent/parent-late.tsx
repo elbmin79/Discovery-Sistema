@@ -1,13 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { lateEligibleStudentIds, lateReplacementTrips } from "@/lib/parent-home";
+import { SchoolContact } from "@/components/parent/parent-dashboard";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { formatTime, studentName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Guardian, LatePickup, Locale, PickerKind, Snapshot } from "@/lib/types";
+import type { Guardian, LatePickup, Locale, PickerKind, PickupTrip, Snapshot } from "@/lib/types";
 
 export interface LateCreatePayload {
+  replaceTripIds: string[];
+  replaceStudentIds: string[];
   studentIds: string[];
   pickerKind: PickerKind;
   pickerName: string;
@@ -38,6 +42,8 @@ export function ParentLate({
   busy,
   error,
   existing,
+  initialTrip,
+  jornada,
   onBack,
   onSubmit,
   onEtaUpdate,
@@ -50,23 +56,30 @@ export function ParentLate({
   busy: boolean;
   error: string | null;
   existing: LatePickup | null;
+  initialTrip?: PickupTrip;
+  jornada: string;
   onBack: () => void;
   onSubmit: (payload: LateCreatePayload) => void;
   onEtaUpdate: (etaAt: string) => void;
   onCancelNotice: () => void;
 }) {
-  const children = snapshot.students.filter((student) => guardian.studentIds.includes(student.id));
-  const [selectedIds, setSelectedIds] = useState<string[]>(existing?.studentIds ?? []);
+  const eligibleIds = lateEligibleStudentIds(snapshot, guardian, jornada);
+  const children = snapshot.students.filter((student) => eligibleIds.includes(student.id));
+  const [selectedIds, setSelectedIds] = useState<string[]>(existing?.studentIds ?? snapshot.requests.filter((request) => request.tripId === initialTrip?.id && eligibleIds.includes(request.studentId)).map((request) => request.studentId));
+  const replacements = lateReplacementTrips(snapshot, guardian.id, selectedIds, jornada);
+  const cancelledNames = snapshot.students.filter((student) => snapshot.requests.some((request) => request.studentId === student.id && replacements.some((trip) => trip.id === request.tripId))).map((student) => student.firstName).join(", ");
   const [etaAt, setEtaAt] = useState<string | null>(existing?.etaAt ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
 
   const authorized = snapshot.authorizedPeople.filter((person) =>
     person.studentIds.some((id) => (selectedIds.length > 0 ? selectedIds.includes(id) : guardian.studentIds.includes(id))),
   );
-  const [pickerId, setPickerId] = useState(`self:${guardian.id}`);
-  const [guestName, setGuestName] = useState("");
-  const [guestRelation, setGuestRelation] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
+  const initialAuthorized = authorized.find((person) => `${person.firstName} ${person.lastName}` === initialTrip?.pickerName);
+  const initialGuest = initialTrip && initialTrip.pickerKind !== "self" && !initialAuthorized;
+  const [pickerId, setPickerId] = useState(initialAuthorized ? `auth:${initialAuthorized.id}` : initialGuest ? "guest" : `self:${guardian.id}`);
+  const [guestName, setGuestName] = useState(initialGuest ? initialTrip.pickerName : "");
+  const [guestRelation, setGuestRelation] = useState(initialGuest ? (locale === "es" ? initialTrip.pickerRelationEs : initialTrip.pickerRelationEn) : "");
+  const [guestPhone, setGuestPhone] = useState(initialTrip?.guestPhone ?? "");
 
   const picker = useMemo(() => {
     if (pickerId === "guest") {
@@ -104,7 +117,7 @@ export function ParentLate({
   if (existing) {
     return (
       <div className="flex flex-col gap-6">
-        <button type="button" onClick={onBack} className="self-start text-sm font-medium text-forest">
+        <button type="button" disabled={busy} onClick={onBack} className="self-start text-sm font-medium text-forest">
           ← {t.back}
         </button>
         <div>
@@ -147,7 +160,7 @@ export function ParentLate({
 
   return (
     <div className="flex flex-col gap-6">
-      <button type="button" onClick={onBack} className="self-start text-sm font-medium text-forest">
+      <button type="button" disabled={busy} onClick={onBack} className="self-start text-sm font-medium text-forest">
         ← {t.back}
       </button>
       <div>
@@ -240,7 +253,8 @@ export function ParentLate({
         />
       </label>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {replacements.length ? <p role="note" className="rounded-2xl border border-gold/50 bg-gold/10 p-4 text-sm text-ink">{t.lateReplacement.replace("{names}", cancelledNames)}</p> : null}
+      {error ? <div role="alert" className="space-y-3"><p className="text-sm text-danger">{error}</p><SchoolContact t={t} /></div> : null}
 
       <button
         type="button"
@@ -248,6 +262,8 @@ export function ParentLate({
         onClick={() => {
           if (!etaAt) return;
           onSubmit({
+            replaceTripIds: replacements.map((trip) => trip.id),
+            replaceStudentIds: snapshot.requests.filter((request) => replacements.some((trip) => trip.id === request.tripId)).map((request) => request.studentId),
             studentIds: selectedIds,
             pickerKind: picker.pickerKind,
             pickerName: picker.pickerName,

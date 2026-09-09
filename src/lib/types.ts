@@ -167,6 +167,8 @@ export interface LatePickup {
 }
 
 export interface CreateLatePickupInput {
+  replaceTripIds?: string[];
+  replaceStudentIds?: string[];
   guardianId: string;
   studentIds: string[];
   pickerKind: PickerKind;

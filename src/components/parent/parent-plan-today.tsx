@@ -22,6 +22,8 @@ export function ParentPlanToday({
   onChange,
   onLate,
   onFriends,
+  onCancel,
+  busy,
 }: {
   snapshot: Snapshot;
   guardian: Guardian;
@@ -31,6 +33,8 @@ export function ParentPlanToday({
   onChange: () => void;
   onLate: () => void;
   onFriends?: () => void;
+  onCancel: () => void;
+  busy: boolean;
 }) {
   const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
   const students = requests
@@ -40,6 +44,7 @@ export function ParentPlanToday({
   const useTag = trip.pickerKind === "self" && trip.method === "car" && Boolean(vehicle?.tagId);
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
   const familyTime = earliestDismissal(students);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [qr, setQr] = useState("");
   const [expandedQr, setExpandedQr] = useState(false);
 
@@ -142,14 +147,21 @@ export function ParentPlanToday({
       {showShare ? <ShareRow trip={trip} students={students} passUrl={typeof window === "undefined" ? "" : `${window.location.origin}/pase/${trip.qrToken}`} t={t} /> : null}
 
       <div className="grid gap-2">
-        <button type="button" onClick={onChange} className="flex min-h-12 items-center justify-between rounded-full bg-forest px-5 text-base font-semibold text-paper">
+        <button type="button" disabled={busy} onClick={onChange} className="flex min-h-12 items-center justify-between rounded-full bg-forest px-5 text-base font-semibold text-paper">
           {t.changeTodayPlan}
           <ChevronRight className="h-5 w-5" />
         </button>
-        <button type="button" onClick={onLate} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-gold/60 bg-gold/10 px-5 text-sm font-semibold text-gold-deep">
+        <button type="button" disabled={busy} onClick={onLate} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-gold/60 bg-gold/10 px-5 text-sm font-semibold text-gold-deep">
           <AlarmClock className="h-4 w-4" />
           {t.lateCta}
         </button>
+        {confirmCancel ? (
+          <section className="rounded-2xl border border-danger/30 bg-paper p-4" aria-label={t.cancelToday}>
+            <p className="text-sm text-ink">{t.cancelTodayHint.replace("{names}", students.map((student) => student.firstName).join(", "))}</p>
+            <button type="button" disabled={busy} onClick={onCancel} className="mt-3 min-h-11 w-full rounded-full bg-danger px-4 text-sm font-semibold text-white disabled:opacity-50">{busy ? "…" : t.cancelTodayConfirm}</button>
+            <button type="button" disabled={busy} onClick={() => setConfirmCancel(false)} className="min-h-11 w-full text-sm font-semibold text-forest">{t.keepPlan}</button>
+          </section>
+        ) : <button type="button" disabled={busy} onClick={() => setConfirmCancel(true)} className="min-h-11 text-sm font-semibold text-danger">{t.cancelToday}</button>}
         {onFriends ? (
           <button type="button" onClick={onFriends} className="min-h-11 text-sm font-semibold text-forest">
             {t.addFriendsPickup}

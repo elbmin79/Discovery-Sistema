@@ -3,6 +3,8 @@ import type { Guardian, Level, Locale, PickupStatus, Snapshot, Student, Vehicle 
 export const SCHOOL = {
   name: "Discovery American Preschool & Academy",
   shortName: "Discovery",
+  phone: "+52 686 837 8517",
+  phoneHref: "tel:+526868378517",
   city: "Mexicali, B.C.",
   address: "Calzada CETYS & Del Sol Oeste, Residencial Veredas del Sol, 21259 Mexicali, B.C.",
 } as const;

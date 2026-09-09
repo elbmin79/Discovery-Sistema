@@ -45,7 +45,7 @@ test("family sees, edits, scans and completes today's prepared plan", async ({ p
   expect((await page.request.post(`/api/trips/${trip.id}/deliver`, { data: { staffName: "Mtra. Alejandra Ríos" } })).ok()).toBeTruthy();
   await expect(page.getByText("Entrega con éxito", { exact: true })).toBeVisible({ timeout: 5000 });
   expect((await page.request.post(`/api/trips/${trip.id}/depart`, { data: { via: "parent" } })).ok()).toBeTruthy();
-  await expect(page.getByRole("button", { name: "Pase para todos" })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible({ timeout: 5000 });
   expect(errors).toEqual([]);
 });
 
