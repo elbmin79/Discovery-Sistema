@@ -18,3 +18,10 @@ Invocar el comando solo para cargar contexto no requiere modificar código ni ej
 Antes de modificar código, lee `.opencode/skills/carpool/SKILL.md`: contiene el contexto
 completo del producto (idea, restricciones reales, superficies, arquitectura, mapa de
 archivos, convenciones y buenas prácticas). Resúmelo en máximo 3 líneas y confirma la tarea.
+
+# Pre-flight de PR (/pr)
+
+Cuando el usuario escriba `/pr` (o pida verificar/abrir un pull request / subir cambios
+con checks de prod), lee y aplica `.opencode/skills/pr/SKILL.md`. Analiza el diff local
+vs `main`, corre verificaciones, arregla lo automático, **detente** si hace falta acción
+manual en Supabase o Vercel, y solo entonces commit/push/PR.
