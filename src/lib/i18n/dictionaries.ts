@@ -1,5 +1,10 @@
 export const dictionaries = {
   es: {
+    homeDismissal: "Horarios de hoy",
+    homeNoPlan: "Sin recogida programada",
+    homePickupHint: "Elige quién recoge y prepara tu pase.",
+    homeLateTitle: "Llegaré tarde",
+    homeLateHint: "Avisa a la escuela tu hora de llegada.",
     homeToday: "Tu día en Discovery",
     noPlanToday: "No tienes una recogida programada para hoy",
     createPickup: "Crear recogida",
@@ -163,6 +168,11 @@ export const dictionaries = {
     tapToClose: "Toca para cerrar",
   },
   en: {
+    homeDismissal: "Today's dismissal",
+    homeNoPlan: "No pickup planned",
+    homePickupHint: "Choose who's picking up and get your pass.",
+    homeLateTitle: "Running late",
+    homeLateHint: "Let the school know when to expect you.",
     homeToday: "Your day at Discovery",
     noPlanToday: "You have no pickup planned for today",
     createPickup: "Create pickup",

@@ -125,7 +125,8 @@ large touch targets consistent with the existing design.
 
 ## Implementation and validation
 
-- Added `ParentDashboard`, preserved child selection and the existing plan/tracker,
+- Added a modular `ParentDashboard` with compact child schedules, side-by-side
+  action tiles, and smaller announcement/contact areas. Preserved child selection and the existing plan/tracker,
   and added school contact, dismissal times, ES/EN copy, and the announcements placeholder.
 - Late creation carries the displayed trip IDs and full child cancellation scope.
   The store validates both before changing anything and emits/persists once. Existing
