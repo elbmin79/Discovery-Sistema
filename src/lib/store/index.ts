@@ -146,6 +146,20 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
   if (!Array.isArray(snapshot.latePickups)) {
     snapshot.latePickups = [];
   }
+  if (!Array.isArray(snapshot.announcements)) {
+    snapshot.announcements = [];
+  }
+  if (!Array.isArray(snapshot.calendarEvents)) {
+    snapshot.calendarEvents = [];
+  }
+  if (!snapshot.simulation) {
+    snapshot.simulation = { running: false };
+  }
+  for (const guardian of snapshot.guardians ?? []) {
+    if (!Array.isArray(guardian.readAnnouncementIds)) {
+      guardian.readAnnouncementIds = [];
+    }
+  }
   return snapshot;
 }
 

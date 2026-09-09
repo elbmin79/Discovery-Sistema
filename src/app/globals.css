@@ -17,6 +17,17 @@
   --arrived: #c4a15a;
 }
 
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 @theme inline {
   --color-forest: var(--forest);
   --color-forest-deep: var(--forest-deep);
@@ -112,4 +123,212 @@ a {
   text-shadow:
     0 0 8px rgb(21 88 192 / 0.75),
     0 0 18px rgb(21 88 192 / 0.4);
+}
+
+@keyframes status-lane-move {
+  0% {
+    transform: translateX(-28px);
+  }
+  100% {
+    transform: translateX(28px);
+  }
+}
+
+@keyframes status-lane-idle {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes status-kids-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes status-window-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes status-sun-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+
+@keyframes status-sun-stuck {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+}
+
+@keyframes status-cone-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes status-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.status-lane {
+  animation: status-lane-move 2.8s ease-in-out infinite alternate;
+}
+
+.status-lane-stuck {
+  animation: status-lane-idle 2.2s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+.status-lane-error {
+  opacity: 0.55;
+}
+
+.status-kids {
+  animation: status-kids-bounce 1.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.status-window {
+  animation: status-window-glow 1.8s ease-in-out infinite;
+}
+
+.status-window-delay {
+  animation-delay: 0.4s;
+}
+
+.status-sun {
+  transform-origin: center;
+  animation: status-sun-pulse 3.2s ease-in-out infinite;
+}
+
+.status-sun-stuck {
+  transform-origin: center;
+  animation: status-sun-stuck 2.4s ease-in-out infinite;
+}
+
+.status-cone {
+  transform-origin: 128px 100px;
+  animation: status-cone-wobble 1.6s ease-in-out infinite;
+}
+
+.status-dot {
+  display: block;
+  height: 0.4rem;
+  width: 0.4rem;
+  border-radius: 999px;
+  background: var(--gold-deep);
+  animation: status-dot 1.2s ease-in-out infinite;
+}
+
+.status-dot-delay {
+  animation-delay: 0.18s;
+}
+
+.status-dot-delay-2 {
+  animation-delay: 0.36s;
+}
+
+@keyframes status-spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-spinner {
+  border-radius: 999px;
+  border: 3px solid rgb(27 77 62 / 0.15);
+  border-top-color: var(--forest);
+  border-right-color: var(--gold);
+  animation: status-spinner-spin 0.85s linear infinite;
+}
+
+@keyframes sim-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.sim-light-on {
+  animation: sim-blink 1s ease-in-out infinite;
+}
+
+.account-wheel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+}
+
+.account-wheel::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-lane,
+  .status-lane-stuck,
+  .status-kids,
+  .status-window,
+  .status-sun,
+  .status-sun-stuck,
+  .status-cone,
+  .status-dot {
+    animation: none;
+  }
+
+  .status-spinner {
+    animation: status-spinner-spin 1.6s linear infinite;
+  }
 }

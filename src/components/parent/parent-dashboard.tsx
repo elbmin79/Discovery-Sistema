@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, ChevronRight, Clock3, Megaphone, Phone } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronRight, Clock3, Megaphone, Phone } from "lucide-react";
 import { LEVEL_LABELS, SCHOOL, SCHOOL_TIMEZONE } from "@/lib/school";
 import { StudentAvatar } from "@/components/ui/avatar";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -17,15 +17,30 @@ export function SchoolContact({ t }: { t: Dictionary }) {
   );
 }
 
-export function ParentDashboard({ guardian, childrenList, locale, t, now, hasLate, onCreate, onLate }: {
+export function ParentDashboard({
+  guardian,
+  childrenList,
+  locale,
+  t,
+  now,
+  hasLate,
+  unreadCount,
+  onCreate,
+  onLate,
+  onAvisos,
+  onCalendar,
+}: {
   guardian: Guardian;
   childrenList: Student[];
   locale: Locale;
   t: Dictionary;
   now: Date;
   hasLate: boolean;
+  unreadCount: number;
   onCreate: () => void;
   onLate: () => void;
+  onAvisos: () => void;
+  onCalendar: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4 pb-1">
@@ -73,20 +88,58 @@ export function ParentDashboard({ guardian, childrenList, locale, t, now, hasLat
         <ChevronRight className="h-5 w-5 shrink-0 text-forest" strokeWidth={1.6} />
       </button>
 
-      <section className="pt-1" aria-label={t.announcements}>
-        <div className="mb-3 flex items-center gap-3">
-          <h2 className="shrink-0 font-serif text-[23px] tracking-tight text-[#102e27]">{t.homeSchoolNews}</h2>
-          <span className="h-px flex-1 bg-[#dcdcd4]" />
-        </div>
-        <div className="flex items-center gap-5 rounded-xl border border-[#e7e5df] bg-[#f5f4ef]/70 px-5 py-4">
-          <Megaphone className="h-8 w-8 shrink-0 -rotate-12 text-[#839a84]" strokeWidth={1.4} />
-          <div>
-            <span className="inline-block rounded-full bg-[#eae7d9] px-2.5 py-1 text-[9px] font-medium tracking-[0.14em] text-[#53664c] uppercase">{t.homeComingSoon}</span>
-            <p className="mt-2 text-xs leading-relaxed text-muted">{t.homeNewsPlaceholder}</p>
-          </div>
-        </div>
-      </section>
+      <ParentSchoolNews t={t} unreadCount={unreadCount} onAvisos={onAvisos} onCalendar={onCalendar} />
       <SchoolContact t={t} />
     </div>
+  );
+}
+
+export function ParentSchoolNews({
+  t,
+  unreadCount,
+  onAvisos,
+  onCalendar,
+}: {
+  t: Dictionary;
+  unreadCount: number;
+  onAvisos: () => void;
+  onCalendar: () => void;
+}) {
+  return (
+    <section className="pt-1" aria-label={t.homeSchoolNews}>
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="shrink-0 font-serif text-[23px] tracking-tight text-[#102e27]">{t.homeSchoolNews}</h2>
+        <span className="h-px flex-1 bg-[#dcdcd4]" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onAvisos}
+          className="relative flex min-h-[5.5rem] flex-col items-start justify-between rounded-xl border border-[#e7e5df] bg-white/50 p-3.5 text-left transition hover:bg-white"
+        >
+          <Megaphone className="h-6 w-6 text-forest" strokeWidth={1.5} />
+          <span>
+            <span className="block text-sm font-semibold text-forest">{t.schoolAvisos}</span>
+            <span className="mt-0.5 block text-[11px] text-muted">{t.schoolAvisosHint}</span>
+          </span>
+          {unreadCount > 0 ? (
+            <span className="absolute top-2.5 right-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-paper">
+              {unreadCount}
+            </span>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={onCalendar}
+          className="flex min-h-[5.5rem] flex-col items-start justify-between rounded-xl border border-[#e7e5df] bg-white/50 p-3.5 text-left transition hover:bg-white"
+        >
+          <CalendarDays className="h-6 w-6 text-forest" strokeWidth={1.5} />
+          <span>
+            <span className="block text-sm font-semibold text-forest">{t.schoolCalendar}</span>
+            <span className="mt-0.5 block text-[11px] text-muted">{t.schoolCalendarHint}</span>
+          </span>
+        </button>
+      </div>
+    </section>
   );
 }

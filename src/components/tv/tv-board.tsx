@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Maximize2 } from "lucide-react";
 import { BrandMark, BrandRow } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
+import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { DELIVERED_VISIBLE_MS as PICKUP_DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
@@ -87,9 +88,10 @@ function buildRecent(snapshot: Snapshot, nowMs: number): Kid[] {
 }
 
 export function TvBoard() {
-  const { snapshot } = useSnapshot();
+  const { snapshot, error, retry } = useSnapshot();
   const [index, setIndex] = useState(0);
   const knownTrips = useRef<Set<string>>(new Set());
+  const loadingSlow = useSlowLoading(!snapshot && !error);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -104,7 +106,6 @@ export function TvBoard() {
   const safeIndex = total ? index % total : 0;
   const current = total ? families[safeIndex] : undefined;
 
-  // Al llegar una familia nueva, la pantalla salta a ella de inmediato.
   useEffect(() => {
     const ids = families.map((family) => family.trip.id);
     const fresh = ids.findIndex((id) => !knownTrips.current.has(id));
@@ -123,6 +124,27 @@ export function TvBoard() {
     const rotated = [...families.slice(safeIndex + 1), ...families.slice(0, safeIndex)];
     return rotated;
   }, [families, safeIndex, total]);
+
+  if (error && !snapshot) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-forest-deep">
+        <SystemStatus kind="error" context="pantalla" detail={error} onRetry={retry} className="text-paper [&_h2]:text-paper [&_p]:text-cream" />
+      </main>
+    );
+  }
+
+  if (!snapshot) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-forest-deep">
+        <SystemStatus
+          kind={loadingSlow ? "stuck" : "loading"}
+          context="pantalla"
+          onRetry={loadingSlow ? retry : undefined}
+          className="text-paper [&_h2]:text-paper [&_p]:text-cream"
+        />
+      </main>
+    );
+  }
 
   function goFullscreen() {
     if (document.fullscreenElement) {

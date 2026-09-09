@@ -121,7 +121,7 @@ export function eventsForRequest(snapshot: Snapshot, request: PickupRequest): Pi
   const events = (snapshot.events ?? []).filter(
     (event) =>
       event.requestId === request.id ||
-      ((event.type === "trip_created" || event.type === "trip_changed" || event.type === "arrived" || event.type === "departed") &&
+      ((event.type === "trip_created" || event.type === "trip_changed" || event.type === "arrived" || event.type === "departed" || event.type === "student_removed") &&
         event.tripId === request.tripId),
   );
   return events.sort((a, b) => a.at.localeCompare(b.at));
@@ -136,7 +136,12 @@ export function eventLabel(event: PickupEvent): string {
     return event.note ? `Llegada confirmada · ${event.note}` : "Llegada confirmada en kiosco";
   }
   if (event.type === "delivered") return "Entregado";
-  if (event.type === "cancelled") return "Solicitud cancelada";
+  if (event.type === "cancelled") {
+    return event.note ? `Solicitud cancelada · ${event.note}` : "Solicitud cancelada";
+  }
+  if (event.type === "student_removed") {
+    return event.note ? `Alumno retirado · ${event.note}` : "Alumno retirado de la recogida";
+  }
   if (event.type === "authorization_requested") return event.note ?? "Se pidió confirmación a la familia";
   if (event.type === "authorization_changed") return event.note ?? "La familia respondió";
   if (event.type === "departed") return event.note ? `Ciclo cerrado · ${event.note}` : "Ciclo cerrado";

@@ -3,6 +3,7 @@ import {
   canAdvance,
   canCancel,
   canComplete,
+  canRemoveFromTrip,
   canUndo,
   nextStatus,
   previousStatus,
@@ -12,8 +13,10 @@ import { buildHistoryRow, buildLateHistoryRow } from "../history";
 import type { ArchivedLatePickup, HistoryRow } from "../types";
 import { lateEligibleStudentIds, lateReplacementTrips } from "../parent-home";
 import { jornadaOf, todayJornada } from "../school";
+import { isCalendarEventColor } from "../school-comms";
 import type {
   ArrivalMethod,
+  ArrivalVia,
   ArriveByTagInput,
   ArriveTripInput,
   AuthorizationStatus,
@@ -22,6 +25,7 @@ import type {
   CreateTripInput,
   DepartureVia,
   Guardian,
+  Level,
   PickupEvent,
   PickupStatus,
   PickupTrip,
@@ -35,6 +39,43 @@ type PickupRequestRef = Snapshot["requests"][number];
 
 const MAX_EVENTS = 800;
 export const AUTO_CLOSE_MS = 30 * 60 * 1000;
+const SIM_WAITING_CAP = 8;
+const SIM_MIN_MS = 7_000;
+const SIM_MAX_MS = 10_000;
+
+const SIM_FIRST_NAMES_F = ["Camila", "Valeria", "Renata", "Paulina", "Ximena", "Daniela", "Regina", "Natalia", "Fernanda", "Andrea"];
+const SIM_FIRST_NAMES_M = ["Emiliano", "Santiago", "Diego", "Mateo", "Sebastián", "Leonardo", "Gael", "Iván", "Adrián", "Joaquín"];
+const SIM_LAST_NAMES = ["Herrera", "Castillo", "Navarro", "Rangel", "Pineda", "Quiroz", "Salinas", "Beltrán", "Cárdenas", "Delgado", "Ibarra", "Mendoza"];
+const SIM_LEVELS: Level[] = [
+  "toddlers-b",
+  "toddlers-a",
+  "primary",
+  "pre-kinder",
+  "kindergarten",
+  "grade-1",
+  "grade-2",
+  "grade-3",
+  "grade-4",
+  "grade-5",
+  "grade-6",
+];
+const SIM_VEHICLES = [
+  { label: "Nissan Versa gris", color: "Gris" },
+  { label: "Mazda CX-5 blanca", color: "Blanca" },
+  { label: "VW Jetta negro", color: "Negro" },
+  { label: "Toyota Highlander plata", color: "Plata" },
+  { label: "Honda Civic azul", color: "Azul" },
+  { label: "Kia Forte rojo", color: "Rojo" },
+];
+const SIM_ACCENTS = ["#1B4D3E", "#3E6B54", "#2F5D4A", "#A4843D", "#5C7A6A", "#8F3A32"];
+
+function randomOf<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function simDelayMs() {
+  return SIM_MIN_MS + Math.floor(Math.random() * (SIM_MAX_MS - SIM_MIN_MS + 1));
+}
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -92,9 +133,14 @@ export class MemoryPickupStore {
   archiveDailyLates(force = false) {
     if (!this.archiveEnabled) return;
     const today = todayJornada();
+    const now = new Date().toISOString();
     for (const notice of [...this.data.latePickups]) {
       const jornada = jornadaOf(notice.createdAt);
       if (!force && jornada >= today) continue;
+      if (notice.status === "announced") {
+        notice.status = "cancelled";
+        notice.updatedAt = now;
+      }
       const archived = buildLateHistoryRow(this.data, notice);
       this.lateHistory = [archived, ...this.lateHistory.filter((late) => late.id !== notice.id)].slice(0, this.historyLimit);
       this.data.latePickups = this.data.latePickups.filter((late) => late.id !== notice.id);
@@ -160,6 +206,20 @@ export class MemoryPickupStore {
     // Estados intermedios de versiones anteriores ("preparing"/"ready") vuelven a la fila.
     for (const request of this.data.requests) {
       if (!isPickupStatus(request.status)) request.status = "arrived";
+    }
+    if (!this.data.simulation) {
+      this.data.simulation = { running: false };
+    }
+    if (!Array.isArray(this.data.announcements)) {
+      this.data.announcements = [];
+    }
+    if (!Array.isArray(this.data.calendarEvents)) {
+      this.data.calendarEvents = [];
+    }
+    for (const guardian of this.data.guardians) {
+      if (!Array.isArray(guardian.readAnnouncementIds)) {
+        guardian.readAnnouncementIds = [];
+      }
     }
   }
 
@@ -463,6 +523,200 @@ export class MemoryPickupStore {
 
     this.emit();
     return this.snapshot();
+  }
+
+  waitingFamilyCount() {
+    const trips = new Set<string>();
+    for (const request of this.data.requests) {
+      if (request.status !== "arrived") continue;
+      trips.add(request.tripId);
+    }
+    return trips.size;
+  }
+
+  hasSimulationDue() {
+    const sim = this.data.simulation;
+    if (!sim?.running) return false;
+    if (!sim.nextAt) return true;
+    return Date.now() >= Date.parse(sim.nextAt);
+  }
+
+  setSimulationRunning(running: boolean) {
+    if (!this.data.simulation) this.data.simulation = { running: false };
+    this.data.simulation.running = running;
+    if (running) {
+      this.data.simulation.nextAt = new Date().toISOString();
+    } else {
+      delete this.data.simulation.nextAt;
+    }
+    this.emit();
+    return this.snapshot();
+  }
+
+  tickSimulation() {
+    if (!this.hasSimulationDue()) return this.snapshot();
+    if (this.waitingFamilyCount() >= SIM_WAITING_CAP) {
+      this.data.simulation = { running: false };
+      this.emit();
+      return this.snapshot();
+    }
+    this.addSimulatedArrival(false);
+    if (this.waitingFamilyCount() >= SIM_WAITING_CAP) {
+      this.data.simulation = { running: false };
+    } else if (this.data.simulation?.running) {
+      this.data.simulation.nextAt = new Date(Date.now() + simDelayMs()).toISOString();
+    }
+    this.emit();
+    return this.snapshot();
+  }
+
+  addSimulatedArrival(notify = true) {
+    const usedCodes = new Set(this.data.trips.map((trip) => trip.code));
+    const lastName = randomOf(SIM_LAST_NAMES);
+    const siblingCount = 1 + Math.floor(Math.random() * 3);
+    const students = Array.from({ length: siblingCount }, () => {
+      const gender = Math.random() < 0.5 ? ("f" as const) : ("m" as const);
+      const firstName = randomOf(gender === "f" ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M);
+      const level = randomOf(SIM_LEVELS);
+      const preschool =
+        level === "toddlers-b" ||
+        level === "toddlers-a" ||
+        level === "primary" ||
+        level === "pre-kinder" ||
+        level === "kindergarten";
+      return {
+        id: createId("s-sim"),
+        firstName,
+        lastName,
+        level,
+        group: Math.random() < 0.5 ? "Grupo A" : "Grupo B",
+        zoneId: preschool ? "zone-preschool" : "zone-elementary",
+        dismissalTime: preschool ? "1:30 p.m." : "2:30 p.m.",
+        accent: randomOf(SIM_ACCENTS),
+        gender,
+      };
+    });
+
+    const isMom = Math.random() < 0.5;
+    const guardian = {
+      id: createId("g-sim"),
+      firstName: randomOf(isMom ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M),
+      lastName,
+      relationEs: isMom ? "Mamá" : "Papá",
+      relationEn: isMom ? "Mom" : "Dad",
+      studentIds: students.map((student) => student.id),
+      phone: `686${String(Math.floor(1000000 + Math.random() * 9000000)).slice(0, 7)}`,
+      friendCode: generateFriendCode(lastName),
+      friendIds: [] as string[],
+      defaultVehicleId: undefined as string | undefined,
+    };
+
+    const car = randomOf(SIM_VEHICLES);
+    const vehicle = {
+      id: createId("v-sim"),
+      label: car.label,
+      color: car.color,
+      plate: `SIM-${Math.floor(100 + Math.random() * 900)}`,
+      ownerGuardianId: guardian.id,
+      tagId: `SIM-${Math.floor(1000 + Math.random() * 9000)}`,
+    };
+    guardian.defaultVehicleId = vehicle.id;
+
+    this.data.students.unshift(...students);
+    this.data.guardians.unshift(guardian);
+    this.data.vehicles.unshift(vehicle);
+
+    const via = randomOf<ArrivalVia>(["tag", "qr", "code"]);
+    const unannounced = via === "tag" ? Math.random() < 0.75 : Math.random() < 0.35;
+    const arrivedAt = new Date().toISOString();
+    const tripId = createId("t-sim");
+    const code = createCode(usedCodes);
+    const pickerName = `${guardian.firstName} ${guardian.lastName}`;
+
+    this.data.trips.unshift({
+      id: tripId,
+      code,
+      guardianId: guardian.id,
+      pickerName,
+      pickerRelationEs: guardian.relationEs,
+      pickerRelationEn: guardian.relationEn,
+      pickerKind: "self",
+      method: "car",
+      vehicleId: vehicle.id,
+      qrToken: createToken(),
+      createdAt: arrivedAt,
+      arrivedAt,
+      arrivalPhoto: fallbackArrivalPhoto(vehicle.label, vehicle.color),
+      arrivalVia: via,
+      unannounced,
+      simulated: true,
+    });
+
+    for (const student of students) {
+      this.data.requests.unshift({
+        id: createId("r"),
+        tripId,
+        studentId: student.id,
+        status: "arrived",
+        requestedAt: arrivedAt,
+        arrivedAt,
+      });
+    }
+
+    this.logEvent(
+      {
+        type: "arrived",
+        tripId,
+        actorRole: "kiosk",
+        actorName: pickerName,
+        note: unannounced ? `Simulación · ${via} sin aviso` : `Simulación · ${via}`,
+      },
+      arrivedAt,
+    );
+
+    if (notify) this.emit();
+    return this.snapshot();
+  }
+
+  clearSimulatedArrivals() {
+    const tripIds = new Set(
+      this.data.trips
+        .filter((trip) => trip.simulated || trip.id.startsWith("t-sim-") || trip.guardianId.startsWith("g-sim-"))
+        .map((trip) => trip.id),
+    );
+    this.data.trips = this.data.trips.filter((trip) => !tripIds.has(trip.id));
+    this.data.requests = this.data.requests.filter((request) => !tripIds.has(request.tripId));
+    this.data.guestPasses = this.data.guestPasses.filter((pass) => !tripIds.has(pass.tripId));
+    this.data.events = this.data.events.filter((event) => !event.tripId || !tripIds.has(event.tripId));
+    this.removeSimulatedEntities();
+    this.emit();
+    return this.snapshot();
+  }
+
+  clearAllArrivals() {
+    this.data.simulation = { running: false };
+    this.data.trips = [];
+    this.data.requests = [];
+    this.data.guestPasses = [];
+    this.data.events = [];
+    this.removeSimulatedEntities();
+    this.emit();
+    return this.snapshot();
+  }
+
+  private removeSimulatedEntities() {
+    const keepStudent = (id: string) => !id.startsWith("s-sim-");
+    const keepGuardian = (id: string) => !id.startsWith("g-sim-");
+    const keepVehicle = (id: string) => !id.startsWith("v-sim-");
+    this.data.students = this.data.students.filter((student) => keepStudent(student.id));
+    this.data.guardians = this.data.guardians.filter((guardian) => keepGuardian(guardian.id));
+    this.data.vehicles = this.data.vehicles.filter((vehicle) => keepVehicle(vehicle.id));
+    this.data.latePickups = this.data.latePickups
+      .map((late) => ({
+        ...late,
+        studentIds: late.studentIds.filter(keepStudent),
+      }))
+      .filter((late) => keepGuardian(late.guardianId) && late.studentIds.length > 0);
   }
 
   arriveByCode(codeOrToken: string, input: ArriveTripInput = {}) {
@@ -814,6 +1068,71 @@ export class MemoryPickupStore {
     return this.snapshot();
   }
 
+  removeStudentsFromTrip(tripId: string, studentIds: string[], note?: string) {
+    const uniqueIds = [...new Set(studentIds)];
+    if (uniqueIds.length === 0) throw new Error("Selecciona al menos un alumno.");
+
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (!trip || trip.cancelledAt || trip.departedAt) {
+      throw new Error("Esa recogida ya no se puede modificar.");
+    }
+
+    const targets = this.data.requests.filter(
+      (item) => item.tripId === tripId && uniqueIds.includes(item.studentId),
+    );
+    if (targets.length !== uniqueIds.length) {
+      throw new Error("Uno de esos alumnos no está en esta recogida.");
+    }
+    if (!targets.every((item) => canRemoveFromTrip(item.status))) {
+      throw new Error("Esos alumnos ya fueron entregados y no se pueden quitar.");
+    }
+
+    const message = note?.trim() || undefined;
+    const now = new Date().toISOString();
+    const actorName = this.guardianName(tripId);
+
+    for (const request of targets) {
+      const fromStatus = request.status;
+      request.status = "cancelled";
+      const student = this.data.students.find((item) => item.id === request.studentId);
+      const who = student ? student.firstName : "Alumno";
+      this.logEvent(
+        {
+          type: "student_removed",
+          tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "parent",
+          actorName,
+          fromStatus,
+          toStatus: "cancelled",
+          note: message ? `${who} · ${message}` : `${who} se quedó en la escuela`,
+        },
+        now,
+      );
+    }
+
+    const remaining = this.data.requests.filter(
+      (item) => item.tripId === tripId && item.status !== "cancelled",
+    );
+    if (remaining.length === 0) {
+      trip.cancelledAt = now;
+      this.logEvent(
+        {
+          type: "cancelled",
+          tripId,
+          actorRole: "parent",
+          actorName,
+          note: message ?? "Se quitaron todos los alumnos de la recogida",
+        },
+        now,
+      );
+    }
+
+    this.emit();
+    return this.snapshot();
+  }
+
   deliverTrip(tripId: string, staffName?: string) {
     const requests = this.data.requests.filter(
       (item) => item.tripId === tripId && item.status !== "cancelled" && item.status !== "delivered",
@@ -1091,6 +1410,136 @@ export class MemoryPickupStore {
 
   removeAuthorized(personId: string) {
     this.data.authorizedPeople = this.data.authorizedPeople.filter((item) => item.id !== personId);
+    this.emit();
+    return this.snapshot();
+  }
+
+  createAnnouncement(input: {
+    title: string;
+    subtitle?: string;
+    body: string;
+    photoUrl?: string;
+    authorName?: string;
+  }) {
+    const title = input.title.trim();
+    const body = input.body.trim();
+    if (!title) throw new Error("Escribe un título para el aviso.");
+    if (!body) throw new Error("Escribe el contenido del aviso.");
+    const now = new Date().toISOString();
+    this.data.announcements.unshift({
+      id: createId("an"),
+      title,
+      subtitle: input.subtitle?.trim() || undefined,
+      body,
+      photoUrl: input.photoUrl?.trim() || undefined,
+      createdAt: now,
+      authorName: input.authorName?.trim() || undefined,
+    });
+    this.emit();
+    return this.snapshot();
+  }
+
+  updateAnnouncement(
+    id: string,
+    input: { title: string; subtitle?: string; body: string; photoUrl?: string | null },
+  ) {
+    const notice = this.data.announcements.find((item) => item.id === id);
+    if (!notice) throw new Error("No encontramos ese aviso.");
+    const title = input.title.trim();
+    const body = input.body.trim();
+    if (!title) throw new Error("Escribe un título para el aviso.");
+    if (!body) throw new Error("Escribe el contenido del aviso.");
+    notice.title = title;
+    notice.subtitle = input.subtitle?.trim() || undefined;
+    notice.body = body;
+    if (input.photoUrl === null) delete notice.photoUrl;
+    else if (typeof input.photoUrl === "string") {
+      notice.photoUrl = input.photoUrl.trim() || undefined;
+    }
+    this.emit();
+    return this.snapshot();
+  }
+
+  deleteAnnouncement(id: string) {
+    if (!this.data.announcements.some((item) => item.id === id)) {
+      throw new Error("No encontramos ese aviso.");
+    }
+    this.data.announcements = this.data.announcements.filter((item) => item.id !== id);
+    for (const guardian of this.data.guardians) {
+      guardian.readAnnouncementIds = (guardian.readAnnouncementIds ?? []).filter((item) => item !== id);
+    }
+    this.emit();
+    return this.snapshot();
+  }
+
+  markAnnouncementRead(guardianId: string, announcementId: string) {
+    const guardian = this.data.guardians.find((item) => item.id === guardianId);
+    if (!guardian) throw new Error("No encontramos la cuenta del padre.");
+    if (!this.data.announcements.some((item) => item.id === announcementId)) {
+      throw new Error("No encontramos ese aviso.");
+    }
+    const reads = new Set(guardian.readAnnouncementIds ?? []);
+    reads.add(announcementId);
+    guardian.readAnnouncementIds = [...reads];
+    this.emit();
+    return this.snapshot();
+  }
+
+  createCalendarEvent(input: {
+    title: string;
+    description?: string;
+    date: string;
+    time?: string;
+    color?: string;
+    authorName?: string;
+  }) {
+    const title = input.title.trim();
+    if (!title) throw new Error("Escribe un título para el evento.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new Error("La fecha del evento no es válida.");
+    const time = input.time?.trim();
+    if (time && !/^\d{2}:\d{2}$/.test(time)) throw new Error("La hora debe ser HH:MM.");
+    const color = isCalendarEventColor(input.color) ? input.color : "forest";
+    this.data.calendarEvents.unshift({
+      id: createId("ce"),
+      title,
+      description: input.description?.trim() || undefined,
+      date: input.date,
+      time: time || undefined,
+      color,
+      createdAt: new Date().toISOString(),
+      authorName: input.authorName?.trim() || undefined,
+    });
+    this.data.calendarEvents.sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`));
+    this.emit();
+    return this.snapshot();
+  }
+
+  updateCalendarEvent(
+    id: string,
+    input: { title: string; description?: string; date: string; time?: string | null; color?: string },
+  ) {
+    const event = this.data.calendarEvents.find((item) => item.id === id);
+    if (!event) throw new Error("No encontramos ese evento.");
+    const title = input.title.trim();
+    if (!title) throw new Error("Escribe un título para el evento.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new Error("La fecha del evento no es válida.");
+    const time = input.time === null ? undefined : input.time?.trim();
+    if (time && !/^\d{2}:\d{2}$/.test(time)) throw new Error("La hora debe ser HH:MM.");
+    event.title = title;
+    event.description = input.description?.trim() || undefined;
+    event.date = input.date;
+    event.time = time || undefined;
+    if (isCalendarEventColor(input.color)) event.color = input.color;
+    this.data.calendarEvents.sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`));
+    this.emit();
+    return this.snapshot();
+  }
+
+  deleteCalendarEvent(id: string) {
+    if (!this.data.calendarEvents.some((item) => item.id === id)) {
+      throw new Error("No encontramos ese evento.");
+    }
+    this.data.calendarEvents = this.data.calendarEvents.filter((item) => item.id !== id);
     this.emit();
     return this.snapshot();
   }

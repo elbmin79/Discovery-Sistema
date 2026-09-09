@@ -25,6 +25,27 @@ export const FAMILY_ACCOUNTS: DemoAccount[] = [
     name: "Benjamín Márquez",
     guardianId: "g-benjamin",
   },
+  {
+    username: "jose",
+    password: "vazquez",
+    role: "parent",
+    name: "José Vázquez",
+    guardianId: "g-jose",
+  },
+  {
+    username: "ian",
+    password: "ramirez",
+    role: "parent",
+    name: "Ian Ramírez",
+    guardianId: "g-ian",
+  },
+  {
+    username: "joseluis",
+    password: "torres",
+    role: "parent",
+    name: "José Luis Torres",
+    guardianId: "g-joseluis",
+  },
 ];
 
 export const STAFF_ACCOUNTS: DemoAccount[] = [

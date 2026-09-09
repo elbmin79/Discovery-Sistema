@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Download, Info, X } from "lucide-react";
 import { actorLabel, eventLabel, STATUS_LABELS } from "@/lib/admin-dashboard";
+import { SystemStatus } from "@/components/ui/system-status";
 import { isCapturedPhoto, jornadaLabel, resolvePhotoSrc, SCHOOL_TIMEZONE, todayJornada } from "@/lib/school";
 import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 import { validJornada } from "@/lib/history";
@@ -41,6 +42,7 @@ export function HistoryPanel() {
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<HistoryRow | null>(null);
+  const [refresh, setRefresh] = useState(0);
   const closeSelected = useCallback(() => setSelected(null), []);
   const from = range === "custom" ? customFrom : daysAgo(today, range === "week" ? 6 : range === "month" ? 29 : 0);
   const to = range === "custom" ? customTo : today;
@@ -62,7 +64,7 @@ export function HistoryPanel() {
     };
     void load();
     return () => { controller.abort(); if (timeout) clearTimeout(timeout); };
-  }, [from, to, offset, range, valid]);
+  }, [from, to, offset, range, valid, refresh]);
 
   function changeRange(next: Range) {
     setRange(next); setOffset(0); setPage(null); setError(""); setSelected(null); setToday(todayJornada());
@@ -94,10 +96,10 @@ export function HistoryPanel() {
       <label className="text-sm">Desde<input aria-label="Desde" type="date" value={customFrom} onChange={(event) => { setCustomFrom(event.target.value); setOffset(0); setPage(null); }} className="ml-2 min-h-11 rounded-xl border border-line bg-paper px-3" /></label>
       <label className="text-sm">Hasta<input aria-label="Hasta" type="date" value={customTo} onChange={(event) => { setCustomTo(event.target.value); setOffset(0); setPage(null); }} className="ml-2 min-h-11 rounded-xl border border-line bg-paper px-3" /></label>
     </div>}
-    {!valid ? <p role="alert" className="text-danger">Selecciona un rango de fechas válido.</p> : error ? <p role="alert" className="rounded-2xl bg-danger/10 p-4 text-danger">{error}</p> : !page ? <p role="status" className="p-6 text-muted">Cargando histórico…</p> : <>
+    {!valid ? <p role="alert" className="text-danger">Selecciona un rango de fechas válido.</p> : error ? <SystemStatus kind="error" context="admin" compact detail={error} onRetry={() => { setError(""); setRefresh((value) => value + 1); }} /> : !page ? <SystemStatus kind="loading" context="admin" compact /> : <>
       <p className="text-sm text-muted">{range === "today" ? "En vivo · se actualiza cada 2 segundos" : `${from} — ${to}`}</p>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><SummaryCard label="Total de recogidas" value={String(page.summary.total)} /><SummaryCard label="Entregados" value={String(page.summary.delivered)} /><SummaryCard label="Cancelados" value={String(page.summary.cancelled)} /><SummaryCard label="Espera promedio" value={page.summary.averageWait === undefined ? "—" : `${page.summary.averageWait} min`} /></div>
-      {page.total === 0 && <p className="rounded-3xl bg-paper p-10 text-center text-muted">No hay recogidas en este rango.</p>}
+      {page.total === 0 && <SystemStatus kind="empty" context="admin" compact />}
       {page.days.map((day) => <section key={day.jornada} className="overflow-hidden rounded-3xl border border-line bg-paper">
         <h3 className="border-b border-line px-4 py-4 font-serif text-xl text-forest">{jornadaLabel(day.jornada)} · {day.summary.total} recogidas</h3>
         {day.latePickups.length > 0 && <div className="space-y-2 border-b border-gold/30 bg-gold/10 p-4"><h4 className="font-semibold text-forest">Retrasos · {day.latePickups.length}</h4>{day.latePickups.map((late) => <article key={late.id} className="rounded-2xl bg-paper p-3 text-sm"><strong>{late.studentNames.join(", ")}</strong><p>{late.notice.pickerName} · Hora estimada {time(late.notice.etaAt)} · {late.notice.status === "cancelled" ? "Cancelado" : "Avisado"}</p>{late.notice.note && <p className="text-muted">{late.notice.note}</p>}<p className="text-xs text-muted">Aviso {time(late.notice.createdAt)} · Actualizado {time(late.notice.updatedAt)}</p></article>)}</div>}

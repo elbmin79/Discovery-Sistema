@@ -2,21 +2,27 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Globe, House, UserRound } from "lucide-react";
+import { AlarmClock, Globe, House, Megaphone, UserRound } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { PhoneShell } from "@/components/parent/phone-shell";
 import { type LateCreatePayload, ParentLate } from "@/components/parent/parent-late";
 import { ParentDashboard } from "@/components/parent/parent-dashboard";
 import { ParentHome } from "@/components/parent/parent-home";
 import { ParentLogin } from "@/components/parent/parent-login";
+import { ParentAnnouncements } from "@/components/parent/parent-announcements";
+import { ParentCalendar } from "@/components/parent/parent-calendar";
 import { ParentPlanToday } from "@/components/parent/parent-plan-today";
 import { ParentSettings } from "@/components/parent/parent-settings";
 import { ParentSetup } from "@/components/parent/parent-setup";
 import { ParentTracker } from "@/components/parent/parent-tracker";
 import { AuthorizationInbox } from "@/components/parent/authorization-inbox";
+import { RemoveFromPickupSheet } from "@/components/parent/remove-from-pickup-sheet";
+import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useLocale } from "@/hooks/use-locale";
 import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
+import { canRemoveFromTrip } from "@/lib/pickup-machine";
+import { unreadAnnouncements } from "@/lib/school-comms";
 import { formatTime, friendKids, jornadaOf, todayJornada } from "@/lib/school";
 import type { CreateTripInput, Snapshot } from "@/lib/types";
 
@@ -45,7 +51,7 @@ function completedTripForGuardian(snapshot: Snapshot, guardianId: string, jornad
 }
 
 export function ParentApp() {
-  const { snapshot } = useSnapshot();
+  const { snapshot, error: syncError, retry } = useSnapshot();
   const contentRef = useRef<HTMLDivElement>(null);
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
@@ -57,12 +63,16 @@ export function ParentApp() {
   const jornada = todayJornada(now);
   const [notice, setNotice] = useState<"planCancelled" | "lateSent" | "lateSentReplaced" | "lateUpdated" | "lateCancelled" | null>(null);
   const [tab, setTab] = useState<"home" | "settings">("home");
-  const [step, setStep] = useState<"home" | "select" | "setup" | "late">("home");
+  const [step, setStep] = useState<"home" | "select" | "setup" | "late" | "avisos" | "calendario">("home");
   const [lateMode, setLateMode] = useState<"create" | "edit">("create");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissedTripId, setDismissedTripId] = useState<string | null>(null);
+  const [removingKids, setRemovingKids] = useState(false);
+  const [openAnnouncementId, setOpenAnnouncementId] = useState<string | null>(null);
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<string[]>([]);
+  const loadingSlow = useSlowLoading(Boolean(session && !snapshot && !syncError));
 
   const guardian = snapshot?.guardians.find((item) => item.id === session?.guardianId);
   const children = useMemo(
@@ -83,13 +93,28 @@ export function ParentApp() {
         )
       : null) ?? null;
   const tripRequests = snapshot && trip ? snapshot.requests.filter((request) => request.tripId === trip.id) : [];
-  const tripArrived = Boolean(trip?.arrivedAt || tripRequests.some((request) => request.status !== "on_the_way"));
-  const showNav = Boolean(session && guardian && step === "home" && !tripArrived);
+  const activeTripRequests = tripRequests.filter((request) => request.status !== "cancelled");
+  const removableRequests = activeTripRequests.filter((request) => canRemoveFromTrip(request.status));
+  const tripArrived = Boolean(trip?.arrivedAt || activeTripRequests.some((request) => request.status !== "on_the_way"));
+  const showNav = Boolean(session && guardian && (step === "home" || step === "avisos" || step === "calendario") && !tripArrived);
+  const unread = snapshot && guardian ? unreadAnnouncements(snapshot, guardian) : [];
+  const toastNotice = unread.find((item) => !dismissedNoticeIds.includes(item.id)) ?? null;
 
   useEffect(() => {
     contentRef.current?.scrollTo(0, 0);
     window.scrollTo(0, 0);
-  }, [step, tab, trip?.id]);
+  }, [step, tab, trip?.id, openAnnouncementId]);
+
+  async function openAnnouncement(id: string) {
+    setOpenAnnouncementId(id);
+    setStep("avisos");
+    setDismissedNoticeIds((current) => (current.includes(id) ? current : [...current, id]));
+    try {
+      await postJson(`/api/school/announcements/${id}`, { action: "read" });
+    } catch {
+      /* el aviso sigue abierto; el badge se sincroniza en el próximo poll */
+    }
+  }
 
   async function saveTrip(input: Omit<CreateTripInput, "guardianId" | "studentIds">) {
     if (!guardian) return;
@@ -174,6 +199,20 @@ export function ParentApp() {
     }
   }
 
+  async function removeStudents(studentIds: string[], note?: string) {
+    if (!trip) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson(`/api/trips/${trip.id}/remove-students`, { studentIds, note });
+      setRemovingKids(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.noActive);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <PhoneShell paper={Boolean(session && guardian && !trip && step === "home" && tab === "home")}>
       <header className="flex items-center justify-between px-5 pt-6 pb-3">
@@ -193,6 +232,32 @@ export function ParentApp() {
       <div ref={contentRef} className="flex-1 overflow-y-auto px-5 pb-8">
         {notice && step === "home" && tab === "home" ? <p role="status" className="mb-4 rounded-2xl bg-forest/10 p-3 text-sm text-forest">{t[notice]}</p> : null}
         {error && step === "home" ? <p role="alert" className="mb-4 text-sm text-danger">{error}</p> : null}
+        {session && snapshot && guardian && tab !== "settings" && toastNotice && step === "home" && !trip ? (
+          <div className="mb-4 flex w-full items-start gap-3 rounded-2xl border border-line bg-paper px-3.5 py-3 shadow-[0_10px_30px_rgb(18_56_45/0.12)]">
+            <button
+              type="button"
+              onClick={() => void openAnnouncement(toastNotice.id)}
+              className="flex min-w-0 flex-1 items-start gap-3 text-left"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest text-paper">
+                <Megaphone className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold tracking-wide text-muted uppercase">{t.noticeFromSchool}</span>
+                <span className="mt-0.5 block truncate text-sm font-semibold text-forest">{toastNotice.title}</span>
+                <span className="mt-0.5 block truncate text-xs text-muted">{toastNotice.subtitle || toastNotice.body}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-label={t.back}
+              onClick={() => setDismissedNoticeIds((current) => [...current, toastNotice.id])}
+              className="rounded-full px-2 py-1 text-xs font-semibold text-muted"
+            >
+              ✕
+            </button>
+          </div>
+        ) : null}
         {session && snapshot && guardian && tab !== "settings" ? (
           <AuthorizationInbox snapshot={snapshot} guardian={guardian} locale={locale} t={t} />
         ) : null}
@@ -227,8 +292,23 @@ export function ParentApp() {
 
         {!session ? (
           <ParentLogin t={t} onSignedIn={setSession} />
-        ) : !snapshot || !guardian ? (
-          <p className="pt-10 text-center text-muted">Cargando tu cuenta…</p>
+        ) : syncError && !snapshot ? (
+          <SystemStatus kind="error" context="familia" detail={syncError} onRetry={retry} />
+        ) : !snapshot ? (
+          <SystemStatus
+            kind={loadingSlow ? "stuck" : "loading"}
+            context="familia"
+            onRetry={loadingSlow ? retry : undefined}
+          />
+        ) : !guardian ? (
+          <SystemStatus
+            kind="error"
+            context="familia"
+            title="No encontramos tu familia"
+            body="Cierra sesión e ingresa de nuevo con tu usuario."
+            onRetry={clearSession}
+            retryLabel="Cerrar sesión"
+          />
         ) : tab === "settings" ? (
           <ParentSettings
             snapshot={snapshot}
@@ -254,18 +334,48 @@ export function ParentApp() {
             onEtaUpdate={updateLateEta}
             onCancelNotice={cancelLateNotice}
           />
+        ) : step === "avisos" ? (
+          <ParentAnnouncements
+            snapshot={snapshot}
+            guardian={guardian}
+            locale={locale}
+            t={t}
+            selectedId={openAnnouncementId}
+            onOpen={(id) => void openAnnouncement(id)}
+            onBack={() => {
+              if (openAnnouncementId) setOpenAnnouncementId(null);
+              else setStep("home");
+            }}
+          />
+        ) : step === "calendario" ? (
+          <ParentCalendar
+            snapshot={snapshot}
+            locale={locale}
+            t={t}
+            onBack={() => setStep("home")}
+          />
         ) : trip && tripArrived ? (
           <ParentTracker
             snapshot={snapshot}
             trip={trip}
             locale={locale}
             t={t}
+            unreadCount={unread.length}
             onCancel={() => cancelTrip(trip.id)}
+            onRemoveKids={removableRequests.length > 0 ? () => {
+              setError(null);
+              setRemovingKids(true);
+            } : undefined}
             onStartOver={() => {
               setDismissedTripId(trip.id);
               setSelected([]);
               setStep("home");
             }}
+            onAvisos={() => {
+              setOpenAnnouncementId(null);
+              setStep("avisos");
+            }}
+            onCalendar={() => setStep("calendario")}
             busy={busy}
           />
         ) : step === "setup" ? (
@@ -291,12 +401,13 @@ export function ParentApp() {
             trip={trip}
             locale={locale}
             t={t}
+            unreadCount={unread.length}
             onChange={() => {
-              setSelected(tripRequests.map((request) => request.studentId));
+              setSelected(activeTripRequests.map((request) => request.studentId));
               setStep("select");
             }}
             onFriends={friendsChildren.length ? () => {
-              setSelected(tripRequests.map((request) => request.studentId));
+              setSelected(activeTripRequests.map((request) => request.studentId));
               setStep("select");
             } : undefined}
             onLate={() => {
@@ -304,9 +415,21 @@ export function ParentApp() {
               setLateMode(activeLate ? "edit" : "create");
               setStep("late");
             }}
+            onAvisos={() => {
+              setOpenAnnouncementId(null);
+              setStep("avisos");
+            }}
+            onCalendar={() => setStep("calendario")}
           />
         ) : step === "home" ? (
-          <ParentDashboard guardian={guardian} childrenList={children} locale={locale} t={t} now={now} hasLate={Boolean(activeLate)}
+          <ParentDashboard
+            guardian={guardian}
+            childrenList={children}
+            locale={locale}
+            t={t}
+            now={now}
+            hasLate={Boolean(activeLate)}
+            unreadCount={unread.length}
             onCreate={() => {
               setSelected([]);
               setError(null);
@@ -318,7 +441,13 @@ export function ParentApp() {
               setNotice(null);
               setLateMode(activeLate ? "edit" : "create");
               setStep("late");
-            }} />
+            }}
+            onAvisos={() => {
+              setOpenAnnouncementId(null);
+              setStep("avisos");
+            }}
+            onCalendar={() => setStep("calendario")}
+          />
         ) : (
           <ParentHome
             guardian={guardian}
@@ -346,6 +475,18 @@ export function ParentApp() {
           />
         )}
       </div>
+
+      {removingKids && trip ? (
+        <RemoveFromPickupSheet
+          snapshot={snapshot!}
+          requests={removableRequests}
+          t={t}
+          busy={busy}
+          error={error}
+          onClose={() => setRemovingKids(false)}
+          onConfirm={removeStudents}
+        />
+      ) : null}
 
       {showNav ? (
         <nav className="grid grid-cols-2 border-t border-line bg-paper">

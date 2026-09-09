@@ -39,7 +39,8 @@ Realidad operativa del cliente (restricciones duras):
 | `/pantalla` | Carrusel para TV (Siguientes/Entregados, foto del auto) |
 | `/pase/[token]` | Pase de invitado compartible (WhatsApp/SMS/copia) |
 
-Cuentas demo — padres: `roberto/madrid`, `benjamin/marquez`; staff: `gabriela/salida`,
+Cuentas demo — padres: `roberto/madrid`, `benjamin/marquez`, `jose/vazquez`,
+`ian/ramirez`, `joseluis/torres`; staff: `gabriela/salida`,
 `alejandra/preescolar`, `luis/primaria`.
 
 ## 3. Arquitectura

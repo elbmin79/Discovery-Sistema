@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { QuickAccountSelect } from "@/components/ui/quick-account-select";
 import { FAMILY_ACCOUNTS } from "@/lib/auth/accounts";
 import { postJson } from "@/hooks/use-snapshot";
 import type { DemoSession } from "@/lib/types";
@@ -16,6 +17,7 @@ export function ParentLogin({
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [quickUsername, setQuickUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,62 +40,87 @@ export function ParentLogin({
   }
 
   return (
-    <div className="flex min-h-full flex-col justify-center gap-8 py-6">
-      <BrandMark size={72} />
-      <div>
-        <h1 className="font-serif text-3xl text-forest">{t.loginTitle}</h1>
-        <p className="mt-2 text-sm text-muted">{t.loginHint}</p>
-      </div>
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center gap-6 py-4">
+        <BrandMark size={64} />
+        <div>
+          <h1 className="font-serif text-3xl text-forest">{t.loginTitle}</h1>
+          <p className="mt-1 text-sm text-muted">{t.loginHint}</p>
+        </div>
 
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block text-sm font-medium text-ink">
-          {t.loginUser}
-          <input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
-          />
-        </label>
-        <label className="block text-sm font-medium text-ink">
-          {t.loginPassword}
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
-          />
-        </label>
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
-        >
-          {t.loginAction}
-        </button>
-      </form>
-
-      <div className="rounded-3xl bg-paper px-4 py-4 text-sm">
-        {FAMILY_ACCOUNTS.map((account) => (
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block text-sm font-medium text-ink">
+            {t.loginUser}
+            <input
+              value={username}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                setQuickUsername("");
+              }}
+              autoComplete="username"
+              className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block text-sm font-medium text-ink">
+            {t.loginPassword}
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setQuickUsername("");
+              }}
+              autoComplete="current-password"
+              className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
+            />
+          </label>
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
           <button
-            key={account.username}
-            type="button"
-            onClick={() => {
-              setUsername(account.username);
-              setPassword(account.password);
-            }}
-            className="flex w-full items-center justify-between border-b border-line py-3 last:border-b-0"
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
           >
-            <span>
-              <span className="block font-medium text-ink">{account.name}</span>
-              <span className="text-muted">Familia {account.name.split(" ").slice(-1)}</span>
-            </span>
-            <span className="text-forest">Entrar</span>
+            {t.loginAction}
           </button>
-        ))}
+        </form>
+
+        <QuickAccountSelect
+          accounts={FAMILY_ACCOUNTS}
+          value={quickUsername}
+          familyHint
+          label={t.quickAccount}
+          placeholder={t.quickAccountPick}
+          noneLabel={t.quickAccountNone}
+          onChange={(account) => {
+            if (!account) {
+              setQuickUsername("");
+              setUsername("");
+              setPassword("");
+              setError(null);
+              return;
+            }
+            setQuickUsername(account.username);
+            setUsername(account.username);
+            setPassword(account.password);
+            setError(null);
+          }}
+        />
       </div>
+
+      <footer className="mt-auto shrink-0 pb-3 pt-2 text-center text-[10px] leading-4 text-muted/70">
+        <p>© 2026 Discovery · All rights reserved</p>
+        <p>
+          Digital solution by{" "}
+          <a
+            href="https://bandiasolutions.com.mx"
+            target="_blank"
+            rel="noreferrer"
+            className="bandia-glow font-medium tracking-wide"
+          >
+            BANDIA
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

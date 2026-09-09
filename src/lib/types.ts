@@ -55,6 +55,8 @@ export interface Guardian {
   /** Código que se comparte con otras familias para agregarse como amigos. */
   friendCode?: string;
   friendIds?: string[];
+  /** Avisos de la escuela que este tutor ya abrió (deja de notificar). */
+  readAnnouncementIds?: string[];
 }
 
 export interface AuthorizedPerson {
@@ -110,6 +112,8 @@ export interface PickupTrip {
   departedAt?: string;
   departedVia?: DepartureVia;
   cancelledAt?: string;
+  /** Llegada inyectada por el simulador continuo (familia sintética). */
+  simulated?: boolean;
 }
 
 /**
@@ -194,7 +198,8 @@ export type PickupEventType =
   | "departed"
   | "late_announced"
   | "late_eta_changed"
-  | "late_cancelled";
+  | "late_cancelled"
+  | "student_removed";
 
 export interface PickupEvent {
   id: string;
@@ -228,8 +233,41 @@ export interface Snapshot {
   guestPasses: GuestPass[];
   latePickups: LatePickup[];
   events: PickupEvent[];
+  announcements: SchoolAnnouncement[];
+  calendarEvents: SchoolCalendarEvent[];
   updatedAt: string;
+  /** Simulador continuo de llegadas en /personal (compartido entre clientes). */
+  simulation?: {
+    running: boolean;
+    nextAt?: string;
+  };
 }
+
+export interface SchoolAnnouncement {
+  id: string;
+  title: string;
+  subtitle?: string;
+  body: string;
+  photoUrl?: string;
+  createdAt: string;
+  authorName?: string;
+}
+
+export interface SchoolCalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  /** Día escolar YYYY-MM-DD (America/Tijuana). */
+  date: string;
+  /** Hora local HH:mm; si falta, es evento de día completo. */
+  time?: string;
+  /** Color de fondo en la app de familia (paleta fija). */
+  color?: CalendarEventColor;
+  createdAt: string;
+  authorName?: string;
+}
+
+export type CalendarEventColor = "forest" | "gold" | "sky" | "coral" | "sand" | "mint";
 
 /** Registro archivado cuando el ciclo del trip se cierra (salida o cancelación). */
 export interface HistoryRow {

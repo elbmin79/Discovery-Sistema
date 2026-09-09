@@ -1,4 +1,4 @@
-import { LEVEL_LABELS, SCHOOL } from "../school";
+import { LEVEL_LABELS, SCHOOL, todayJornada } from "../school";
 import type { PickupEvent, Snapshot } from "../types";
 
 function minutesAgo(minutes: number) {
@@ -9,6 +9,12 @@ function todayAt(hour: number, minute: number) {
   const date = new Date();
   date.setHours(hour, minute, 0, 0);
   return date.toISOString();
+}
+
+function daysAheadJornada(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return todayJornada(date);
 }
 
 export const HERO_GUARDIAN_ID = "g-roberto";
@@ -248,6 +254,72 @@ export function createSeedSnapshot(): Snapshot {
         accent: "#C4A15A",
         gender: "f",
       },
+      {
+        id: "s-renata",
+        firstName: "Renata",
+        lastName: "Vázquez",
+        level: "grade-2",
+        group: "Grupo A",
+        zoneId: "zone-elementary",
+        dismissalTime: "2:30 p.m.",
+        accent: "#1B4D3E",
+        gender: "f",
+      },
+      {
+        id: "s-thiago",
+        firstName: "Thiago",
+        lastName: "Vázquez",
+        level: "kindergarten",
+        group: "K",
+        zoneId: "zone-preschool",
+        dismissalTime: "1:15 p.m.",
+        accent: "#3E6B54",
+        gender: "m",
+      },
+      {
+        id: "s-noah",
+        firstName: "Noah",
+        lastName: "Ramírez",
+        level: "grade-3",
+        group: "Grupo B",
+        zoneId: "zone-elementary",
+        dismissalTime: "2:45 p.m.",
+        accent: "#2F5D4A",
+        gender: "m",
+      },
+      {
+        id: "s-mia",
+        firstName: "Mía",
+        lastName: "Ramírez",
+        level: "pre-kinder",
+        group: "PK",
+        zoneId: "zone-preschool",
+        dismissalTime: "1:00 p.m.",
+        accent: "#C4A15A",
+        gender: "f",
+      },
+      {
+        id: "s-diego-torres",
+        firstName: "Diego",
+        lastName: "Torres",
+        level: "grade-1",
+        group: "Grupo A",
+        zoneId: "zone-elementary",
+        dismissalTime: "2:30 p.m.",
+        accent: "#5C4A28",
+        gender: "m",
+      },
+      {
+        id: "s-luna",
+        firstName: "Luna",
+        lastName: "Torres",
+        level: "grade-4",
+        group: "Grupo B",
+        zoneId: "zone-elementary",
+        dismissalTime: "2:45 p.m.",
+        accent: "#8C6A3C",
+        gender: "f",
+      },
     ],
     guardians: [
       {
@@ -345,6 +417,42 @@ export function createSeedSnapshot(): Snapshot {
         phone: "686 555 0206",
         friendCode: "MARQUEZ-3PD",
         friendIds: ["g-roberto"],
+      },
+      {
+        id: "g-jose",
+        firstName: "José",
+        lastName: "Vázquez",
+        relationEs: "Papá",
+        relationEn: "Dad",
+        studentIds: ["s-renata", "s-thiago"],
+        defaultVehicleId: "v-rav4",
+        phone: "686 555 0311",
+        friendCode: "VAZQUEZ-1MX",
+        friendIds: [],
+      },
+      {
+        id: "g-ian",
+        firstName: "Ian",
+        lastName: "Ramírez",
+        relationEs: "Papá",
+        relationEn: "Dad",
+        studentIds: ["s-noah", "s-mia"],
+        defaultVehicleId: "v-sportage",
+        phone: "686 555 0322",
+        friendCode: "RAMIREZ-8KC",
+        friendIds: [],
+      },
+      {
+        id: "g-joseluis",
+        firstName: "José Luis",
+        lastName: "Torres",
+        relationEs: "Papá",
+        relationEn: "Dad",
+        studentIds: ["s-diego-torres", "s-luna"],
+        defaultVehicleId: "v-tucson",
+        phone: "686 555 0333",
+        friendCode: "TORRES-5BQ",
+        friendIds: [],
       },
     ],
     authorizedPeople: [
@@ -445,6 +553,33 @@ export function createSeedSnapshot(): Snapshot {
         ownerGuardianId: "g-miguel",
         photoUrl: "/cars/v-explorer.jpg",
         tagId: "DSC-0715",
+      },
+      {
+        id: "v-rav4",
+        label: "Toyota RAV4 blanca",
+        color: "Blanca",
+        plate: "MXL-4410",
+        ownerGuardianId: "g-jose",
+        photoUrl: "/cars/v-crv.jpg",
+        tagId: "DSC-0911",
+      },
+      {
+        id: "v-sportage",
+        label: "Kia Sportage gris",
+        color: "Gris",
+        plate: "BCS-8821",
+        ownerGuardianId: "g-ian",
+        photoUrl: "/cars/v-kicks.jpg",
+        tagId: "DSC-0922",
+      },
+      {
+        id: "v-tucson",
+        label: "Hyundai Tucson negra",
+        color: "Negra",
+        plate: "SOL-7744",
+        ownerGuardianId: "g-joseluis",
+        photoUrl: "/cars/v-trax.jpg",
+        tagId: "DSC-0933",
       },
     ],
     staff: [
@@ -690,7 +825,48 @@ export function createSeedSnapshot(): Snapshot {
         deliveredByStaffName: "Mtra. Gabriela Núñez",
       },
     ],
+    announcements: [
+      {
+        id: "an-welcome",
+        title: "Bienvenida al ciclo",
+        subtitle: "Comunicado de dirección",
+        body: "Les damos la bienvenida a la familia Discovery. Recuerden usar la app de salida para generar su pase o llegar con el tag del auto. Cualquier duda, la oficina está para ayudarles.",
+        createdAt: minutesAgo(90),
+        authorName: "Dirección",
+      },
+      {
+        id: "an-photo",
+        title: "Día de fotos escolares",
+        subtitle: "Preescolar y Primaria",
+        body: "El jueves habrá sesión de fotos en el patio. Traigan a sus hijos con el uniforme completo. Si no pueden asistir, avisen a la coordinación.",
+        createdAt: minutesAgo(25),
+        authorName: "Coordinación",
+      },
+    ],
+    calendarEvents: [
+      {
+        id: "ce-fotos",
+        title: "Día de fotos",
+        description: "Sesión en el patio · uniforme completo",
+        date: todayJornada(),
+        time: "09:00",
+        color: "gold",
+        createdAt: minutesAgo(40),
+        authorName: "Coordinación",
+      },
+      {
+        id: "ce-junta",
+        title: "Junta de padres",
+        description: "Salón de usos múltiples",
+        date: daysAheadJornada(3),
+        time: "18:00",
+        color: "sky",
+        createdAt: minutesAgo(50),
+        authorName: "Dirección",
+      },
+    ],
     updatedAt: new Date().toISOString(),
+    simulation: { running: false },
   };
   snapshot.events = buildSeedEvents(snapshot);
   return snapshot;
