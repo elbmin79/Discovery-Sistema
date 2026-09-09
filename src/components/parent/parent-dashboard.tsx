@@ -29,7 +29,7 @@ export function ParentDashboard({ guardian, childrenList, locale, t, now, hasLat
 }) {
   return (
     <div className="flex flex-col gap-4 pb-1">
-      <header className="relative grid min-h-32 grid-cols-[minmax(0,1fr)_112px] items-center gap-1 pt-3 pb-2 min-[400px]:grid-cols-[minmax(0,1fr)_128px]">
+      <header className="relative -mb-2 grid min-h-32 grid-cols-[minmax(0,1fr)_112px] items-center gap-1 pt-3 min-[400px]:grid-cols-[minmax(0,1fr)_128px]">
         <div className="relative z-10">
           <p className="mb-3 text-[9px] font-medium tracking-[0.12em] text-muted uppercase min-[400px]:text-[10px]">{now.toLocaleDateString(locale === "es" ? "es-MX" : "en-US", { timeZone: SCHOOL_TIMEZONE, weekday: "long", month: "long", day: "numeric" })}</p>
           <h1 className="font-serif text-[30px] leading-[1.05] tracking-[-0.045em] text-[#102e27] min-[400px]:text-[34px]">{t.homeHello.replace("{name}", guardian.firstName)}</h1>
