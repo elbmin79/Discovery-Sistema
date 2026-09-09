@@ -6,6 +6,7 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { AlarmClock, CalendarDays, Car, CheckCircle2, ChevronRight, RadioTower, UserRound } from "lucide-react";
 import { FullscreenQr } from "@/components/parent/fullscreen-qr";
+import { ParentSchoolNews, SchoolContact } from "@/components/parent/parent-dashboard";
 import { ShareRow } from "@/components/parent/parent-tracker";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { pickupPayload } from "@/lib/qr";
@@ -23,6 +24,9 @@ export function ParentPlanToday({
   onLate,
   onFriends,
   onCancel,
+  onAvisos,
+  onCalendar,
+  unreadCount,
   busy,
 }: {
   snapshot: Snapshot;
@@ -34,6 +38,9 @@ export function ParentPlanToday({
   onLate: () => void;
   onFriends?: () => void;
   onCancel: () => void;
+  onAvisos: () => void;
+  onCalendar: () => void;
+  unreadCount: number;
   busy: boolean;
 }) {
   const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
@@ -168,6 +175,9 @@ export function ParentPlanToday({
           </button>
         ) : null}
       </div>
+
+      <ParentSchoolNews t={t} unreadCount={unreadCount} onAvisos={onAvisos} onCalendar={onCalendar} />
+      <SchoolContact t={t} />
     </div>
   );
 }

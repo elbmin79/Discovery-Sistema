@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { QuickAccountSelect } from "@/components/ui/quick-account-select";
 import { STAFF_ACCOUNTS } from "@/lib/auth/accounts";
 import { postJson } from "@/hooks/use-snapshot";
 import type { DemoSession } from "@/lib/types";
@@ -9,8 +10,13 @@ import type { DemoSession } from "@/lib/types";
 export function StaffLogin({ onSignedIn, adminOnly = false }: { onSignedIn: (session: DemoSession) => void; adminOnly?: boolean }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [quickUsername, setQuickUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const accounts = useMemo(
+    () => STAFF_ACCOUNTS.filter((account) => !adminOnly || account.isAdmin),
+    [adminOnly],
+  );
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -43,14 +49,20 @@ export function StaffLogin({ onSignedIn, adminOnly = false }: { onSignedIn: (ses
       <form onSubmit={submit} className="mt-8 space-y-3">
         <input
           value={username}
-          onChange={(event) => setUsername(event.target.value)}
+          onChange={(event) => {
+            setUsername(event.target.value);
+            setQuickUsername("");
+          }}
           placeholder="Usuario"
           className="w-full rounded-2xl border border-line bg-paper px-4 py-4 text-lg"
         />
         <input
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setQuickUsername("");
+          }}
           placeholder="Contraseña"
           className="w-full rounded-2xl border border-line bg-paper px-4 py-4 text-lg"
         />
@@ -64,23 +76,27 @@ export function StaffLogin({ onSignedIn, adminOnly = false }: { onSignedIn: (ses
         </button>
       </form>
 
-      <div className="mt-8 divide-y divide-line rounded-3xl bg-paper">
-        {STAFF_ACCOUNTS.filter((account) => !adminOnly || account.isAdmin).map((account) => (
-          <button
-            key={account.username}
-            type="button"
-            onClick={() => {
-              setUsername(account.username);
-              setPassword(account.password);
-            }}
-            className="flex w-full items-center justify-between px-5 py-4 text-left"
-          >
-            <span>
-              <span className="block font-medium">{account.name}</span>
-            </span>
-            <span className="text-sm font-medium text-forest">Entrar</span>
-          </button>
-        ))}
+      <div className="mt-8">
+        <QuickAccountSelect
+          accounts={accounts}
+          value={quickUsername}
+          label="Cuenta rápida"
+          placeholder="Elige una cuenta…"
+          noneLabel="Ninguna"
+          onChange={(account) => {
+            if (!account) {
+              setQuickUsername("");
+              setUsername("");
+              setPassword("");
+              setError(null);
+              return;
+            }
+            setQuickUsername(account.username);
+            setUsername(account.username);
+            setPassword(account.password);
+            setError(null);
+          }}
+        />
       </div>
     </main>
   );

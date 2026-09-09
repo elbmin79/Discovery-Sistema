@@ -6,6 +6,7 @@ import { Camera, Keyboard, QrCode, RadioTower } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { KioskScan } from "@/components/kiosk/kiosk-scan";
 import { StudentAvatar } from "@/components/ui/avatar";
+import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { postJson, rememberSnapshot, useSnapshot } from "@/hooks/use-snapshot";
 import { findStudent, findVehicle, findZone, formatTime, studentGrade, studentName } from "@/lib/school";
 import type { Guardian, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
@@ -40,7 +41,8 @@ function activeTripForVehicle(snapshot: Snapshot, vehicle: Vehicle) {
 }
 
 export function KioskApp() {
-  const { snapshot } = useSnapshot();
+  const { snapshot, error: syncError, retry } = useSnapshot();
+  const loadingSlow = useSlowLoading(!snapshot && !syncError);
   const [mode, setMode] = useState<Mode>("code");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<Step>("idle");
@@ -290,6 +292,27 @@ export function KioskApp() {
     setError(null);
     setCameraError(null);
     setStep("idle");
+  }
+
+  if (syncError && !snapshot) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-forest-deep text-paper">
+        <SystemStatus kind="error" context="kiosco" detail={syncError} onRetry={retry} className="[&_h2]:text-paper [&_p]:text-cream" />
+      </main>
+    );
+  }
+
+  if (!snapshot) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-forest-deep text-paper">
+        <SystemStatus
+          kind={loadingSlow ? "stuck" : "loading"}
+          context="kiosco"
+          onRetry={loadingSlow ? retry : undefined}
+          className="[&_h2]:text-paper [&_p]:text-cream"
+        />
+      </main>
+    );
   }
 
   return (

@@ -95,14 +95,22 @@ export function DemoHub() {
         </div>
 
         <div className="flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={resetDemo}
-            disabled={resetting}
-            className="rounded-full border border-line bg-paper px-5 py-2 text-sm font-medium text-forest disabled:opacity-60 md:py-2.5"
-          >
-            {resetting ? "Reiniciando…" : "Nueva jornada"}
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={resetDemo}
+              disabled={resetting}
+              className="rounded-full border border-line bg-paper px-5 py-2 text-sm font-medium text-forest disabled:opacity-60 md:py-2.5"
+            >
+              {resetting ? "Reiniciando…" : "Nueva jornada"}
+            </button>
+            <Link
+              href="/error"
+              className="rounded-full border border-line bg-paper px-5 py-2 text-sm font-medium text-muted md:py-2.5"
+            >
+              Vitrina de estados
+            </Link>
+          </div>
           {message ? <p className="text-sm text-muted">{message}</p> : null}
         </div>
       </div>

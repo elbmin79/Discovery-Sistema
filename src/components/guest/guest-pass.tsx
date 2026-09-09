@@ -5,15 +5,17 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { StudentAvatar } from "@/components/ui/avatar";
+import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { pickupPayload } from "@/lib/qr";
 import { findStudent, studentName } from "@/lib/school";
 
 export function GuestPass({ token }: { token: string }) {
-  const { snapshot } = useSnapshot();
+  const { snapshot, error, retry } = useSnapshot();
   const [qr, setQr] = useState("");
   const [expanded, setExpanded] = useState(false);
   const trip = snapshot?.trips.find((item) => item.qrToken === token && !item.cancelledAt);
+  const loadingSlow = useSlowLoading(!snapshot && !error);
 
   useEffect(() => {
     if (!trip) return;
@@ -24,16 +26,30 @@ export function GuestPass({ token }: { token: string }) {
     }).then(setQr);
   }, [trip]);
 
+  if (error && !snapshot) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6">
+        <SystemStatus kind="error" context="pase" detail={error} onRetry={retry} />
+      </main>
+    );
+  }
+
   if (!snapshot) {
-    return <p className="p-8 text-center text-muted">Cargando pase…</p>;
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6">
+        <SystemStatus
+          kind={loadingSlow ? "stuck" : "loading"}
+          context="pase"
+          onRetry={loadingSlow ? retry : undefined}
+        />
+      </main>
+    );
   }
 
   if (!trip) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6 text-center">
-        <BrandMark />
-        <h1 className="mt-8 font-serif text-3xl text-forest">Este pase no está activo</h1>
-        <p className="mt-3 text-muted">Pide a la familia que genere uno nuevo desde la app.</p>
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6">
+        <SystemStatus kind="empty" context="pase" />
       </main>
     );
   }

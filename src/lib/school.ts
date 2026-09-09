@@ -53,6 +53,10 @@ export function studentName(student: Student) {
   return `${student.firstName} ${student.lastName}`;
 }
 
+export function studentLastFirst(student: Student) {
+  return `${student.lastName}, ${student.firstName}`;
+}
+
 export function studentGrade(student: Student, locale: Locale) {
   const level = LEVEL_LABELS[student.level][locale];
   return student.group ? `${level} · ${student.group}` : level;

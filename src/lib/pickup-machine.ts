@@ -27,6 +27,10 @@ export function canCancel(status: PickupStatus) {
   return status === "on_the_way";
 }
 
+export function canRemoveFromTrip(status: PickupStatus) {
+  return status === "on_the_way" || status === "arrived";
+}
+
 export function canComplete(status: PickupStatus) {
   return status === "arrived";
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { FullscreenQr } from "@/components/parent/fullscreen-qr";
+import { ParentSchoolNews, SchoolContact } from "@/components/parent/parent-dashboard";
 import { RadioTower } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -32,7 +33,11 @@ export function ParentTracker({
   locale,
   t,
   onCancel,
+  onRemoveKids,
   onStartOver,
+  onAvisos,
+  onCalendar,
+  unreadCount,
   busy,
 }: {
   snapshot: Snapshot;
@@ -40,10 +45,16 @@ export function ParentTracker({
   locale: Locale;
   t: Dictionary;
   onCancel: () => void;
+  onRemoveKids?: () => void;
   onStartOver: () => void;
+  onAvisos: () => void;
+  onCalendar: () => void;
+  unreadCount: number;
   busy: boolean;
 }) {
-  const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
+  const requests = snapshot.requests.filter(
+    (request) => request.tripId === trip.id && request.status !== "cancelled",
+  );
   const students = requests
     .map((request) => findStudent(snapshot, request.studentId))
     .filter((student): student is Student => Boolean(student));
@@ -135,6 +146,14 @@ export function ParentTracker({
           {t.cancelPickup}
         </button>
       ) : null}
+      {onRemoveKids ? (
+        <button type="button" disabled={busy} onClick={onRemoveKids} className="text-sm font-semibold text-danger">
+          {t.removeFromPickup}
+        </button>
+      ) : null}
+
+      <ParentSchoolNews t={t} unreadCount={unreadCount} onAvisos={onAvisos} onCalendar={onCalendar} />
+      <SchoolContact t={t} />
     </div>
   );
 }

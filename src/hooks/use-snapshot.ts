@@ -28,6 +28,7 @@ export function rememberSnapshot(next: Snapshot) {
 export function useSnapshot(enabled = true) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(latest);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
@@ -60,9 +61,14 @@ export function useSnapshot(enabled = true) {
       listeners.delete(listener);
       window.clearInterval(poll);
     };
-  }, [enabled]);
+  }, [enabled, retryToken]);
 
-  return { snapshot, error };
+  function retry() {
+    setError(null);
+    setRetryToken((value) => value + 1);
+  }
+
+  return { snapshot, error, retry };
 }
 
 export async function postJson<T>(url: string, body?: unknown): Promise<T> {

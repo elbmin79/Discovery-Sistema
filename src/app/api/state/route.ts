@@ -9,14 +9,22 @@ export async function GET() {
   // de forma perezosa cuando algún cliente consulta el estado.
   const store = new MemoryPickupStore(snapshot);
   const archiveReady = await isArchiveStoreReady();
-  if (store.hasExpiredTrips() || (archiveReady && (store.hasDailyArchives() || store.hasClosedTrips()))) {
+  if (
+    store.hasExpiredTrips() ||
+    store.hasSimulationDue() ||
+    (archiveReady && (store.hasDailyArchives() || store.hasClosedTrips()))
+  ) {
     try {
-      return Response.json(await mutateStore((store) => {
-        store.closeExpiredTrips();
-        store.archiveDailyLates();
-        store.archiveClosedTrips();
-        return store.snapshot();
-      }), { headers: { "Cache-Control": "no-store" } });
+      return Response.json(
+        await mutateStore((store) => {
+          store.closeExpiredTrips();
+          store.archiveDailyLates();
+          store.archiveClosedTrips();
+          store.tickSimulation();
+          return store.snapshot();
+        }),
+        { headers: { "Cache-Control": "no-store" } },
+      );
     } catch (error) {
       console.error("No se pudo aplicar el mantenimiento al consultar el estado.", error);
     }
