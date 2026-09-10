@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { initials, studentPhoto } from "@/lib/school";
 import type { Student } from "@/lib/types";
@@ -22,14 +25,15 @@ export function Avatar({
   photoUrl?: string;
   size?: keyof typeof SIZES;
 }) {
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   return (
     <div
       className={`relative shrink-0 overflow-hidden rounded-full ${SIZES[size]}`}
       style={{ background: accent ?? "#1B4D3E" }}
       aria-hidden
     >
-      {photoUrl ? (
-        <Image src={photoUrl} alt="" fill unoptimized className="object-cover" />
+      {photoUrl && failedPhoto !== photoUrl ? (
+        <Image src={photoUrl} alt="" fill unoptimized onError={() => setFailedPhoto(photoUrl)} className="object-cover" />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-semibold text-paper">
           {initials(name)}
@@ -48,7 +52,7 @@ export function StudentAvatar({
 }) {
   return (
     <Avatar
-      name={`${student.firstName} ${student.lastName}`}
+      name={`${student.lastName} ${student.firstName}`}
       accent={student.accent}
       photoUrl={studentPhoto(student)}
       size={size}

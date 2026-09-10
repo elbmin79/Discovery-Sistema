@@ -587,7 +587,7 @@ export function createSeedSnapshot(): Snapshot {
         id: STAFF_ID,
         firstName: "Gabriela",
         lastName: "Núñez",
-        name: "Mtra. Gabriela Núñez",
+        name: "Mtra. Núñez Gabriela",
         titleEs: "Coordinación de salida",
         titleEn: "Dismissal coordinator",
       },
@@ -595,7 +595,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "st-alejandra",
         firstName: "Alejandra",
         lastName: "Ríos",
-        name: "Mtra. Alejandra Ríos",
+        name: "Mtra. Ríos Alejandra",
         titleEs: "Preescolar",
         titleEn: "Preschool",
       },
@@ -603,7 +603,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "st-luis",
         firstName: "Luis",
         lastName: "Ortega",
-        name: "Mtro. Luis Ortega",
+        name: "Mtro. Ortega Luis",
         titleEs: "Primaria",
         titleEn: "Elementary",
       },
@@ -616,7 +616,7 @@ export function createSeedSnapshot(): Snapshot {
         guardianId: "g-roberto",
         studentIds: ["s-sofia", "s-lucas"],
         pickerKind: "self",
-        pickerName: "Roberto Madrid",
+        pickerName: "Madrid Roberto",
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         etaAt: todayAt(15, 5),
@@ -631,7 +631,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-madrid-today",
         code: "4170",
         guardianId: "g-roberto",
-        pickerName: "Roberto Madrid",
+        pickerName: "Madrid Roberto",
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         pickerKind: "self",
@@ -644,7 +644,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-marquez-today",
         code: "6032",
         guardianId: "g-benjamin",
-        pickerName: "Benjamín Márquez",
+        pickerName: "Márquez Benjamín",
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         pickerKind: "self",
@@ -657,7 +657,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-lopez",
         code: "2291",
         guardianId: "g-laura",
-        pickerName: "Laura López",
+        pickerName: "López Laura",
         pickerRelationEs: "Mamá",
         pickerRelationEn: "Mom",
         pickerKind: "self",
@@ -672,7 +672,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-soto",
         code: "7740",
         guardianId: "g-pedro",
-        pickerName: "Pedro Soto",
+        pickerName: "Soto Pedro",
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         pickerKind: "self",
@@ -687,7 +687,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-ruiz",
         code: "1503",
         guardianId: "g-ana",
-        pickerName: "Ana Ruiz",
+        pickerName: "Ruiz Ana",
         pickerRelationEs: "Mamá",
         pickerRelationEn: "Mom",
         pickerKind: "self",
@@ -702,7 +702,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-navarro",
         code: "3388",
         guardianId: "g-elena",
-        pickerName: "Elena Navarro",
+        pickerName: "Navarro Elena",
         pickerRelationEs: "Mamá",
         pickerRelationEn: "Mom",
         pickerKind: "self",
@@ -717,7 +717,7 @@ export function createSeedSnapshot(): Snapshot {
         id: "t-garcia",
         code: "9012",
         guardianId: "g-miguel",
-        pickerName: "Miguel García",
+        pickerName: "García Miguel",
         pickerRelationEs: "Papá",
         pickerRelationEn: "Dad",
         pickerKind: "self",
@@ -792,7 +792,7 @@ export function createSeedSnapshot(): Snapshot {
         requestedAt: minutesAgo(18),
         arrivedAt: minutesAgo(9),
         deliveredAt: minutesAgo(2),
-        deliveredByStaffName: "Mtra. Alejandra Ríos",
+        deliveredByStaffName: "Mtra. Ríos Alejandra",
       },
       {
         id: "r-camila",
@@ -802,7 +802,7 @@ export function createSeedSnapshot(): Snapshot {
         requestedAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
         deliveredAt: minutesAgo(1),
-        deliveredByStaffName: "Mtro. Luis Ortega",
+        deliveredByStaffName: "Mtro. Ortega Luis",
       },
       {
         id: "r-iker",
@@ -812,7 +812,7 @@ export function createSeedSnapshot(): Snapshot {
         requestedAt: minutesAgo(22),
         arrivedAt: minutesAgo(14),
         deliveredAt: minutesAgo(1),
-        deliveredByStaffName: "Mtro. Luis Ortega",
+        deliveredByStaffName: "Mtro. Ortega Luis",
       },
       {
         id: "r-valentina",
@@ -822,7 +822,7 @@ export function createSeedSnapshot(): Snapshot {
         requestedAt: minutesAgo(40),
         arrivedAt: minutesAgo(28),
         deliveredAt: minutesAgo(16),
-        deliveredByStaffName: "Mtra. Gabriela Núñez",
+        deliveredByStaffName: "Mtra. Núñez Gabriela",
       },
     ],
     announcements: [
@@ -883,15 +883,15 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
   const guardianName = (tripId: string) => {
     const trip = snapshot.trips.find((item) => item.id === tripId);
     const guardian = trip && snapshot.guardians.find((item) => item.id === trip.guardianId);
-    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
   };
 
   const stageStaff = (studentId?: string) => {
     const student = snapshot.students.find((item) => item.id === studentId);
     if (!student) return "Personal de Discovery";
     return LEVEL_LABELS[student.level].stage === "preschool"
-      ? "Mtra. Alejandra Ríos"
-      : "Mtro. Luis Ortega";
+      ? "Mtra. Ríos Alejandra"
+      : "Mtro. Ortega Luis";
   };
 
   for (const trip of snapshot.trips) {
@@ -949,7 +949,7 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
         type: "late_announced",
         lateId: late.id,
         actorRole: "parent",
-        actorName: guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined,
+        actorName: guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined,
       });
     }
   }

@@ -332,3 +332,24 @@ a {
     animation: status-spinner-spin 1.6s linear infinite;
   }
 }
+@keyframes pickup-toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pickup-toast-check {
+  from { transform: scale(0.5) rotate(-25deg); }
+  to { transform: scale(1) rotate(0); }
+}
+
+@keyframes pickup-toast-timer {
+  to { transform: scaleX(0); }
+}
+
+.pickup-toast { animation: pickup-toast-in 240ms ease-out; }
+.pickup-toast-check { animation: pickup-toast-check 380ms ease-out; }
+.pickup-toast-timer { animation: pickup-toast-timer 4200ms linear forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pickup-toast, .pickup-toast-check, .pickup-toast-timer { animation: none; }
+}

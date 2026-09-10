@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { parentName } from "@/lib/parent-home";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { canRemoveFromTrip } from "@/lib/pickup-machine";
-import { studentName } from "@/lib/school";
+
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { PickupRequest, Snapshot, Student } from "@/lib/types";
 
@@ -118,7 +119,7 @@ function StudentToggle({
       }`}
     >
       <StudentAvatar student={student} size="sm" />
-      <p className="min-w-0 flex-1 truncate font-medium text-ink">{studentName(student)}</p>
+      <p className="min-w-0 flex-1 truncate font-medium text-ink">{parentName(student)}</p>
       <span
         className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs ${
           active ? "border-danger bg-danger text-paper" : "border-line"

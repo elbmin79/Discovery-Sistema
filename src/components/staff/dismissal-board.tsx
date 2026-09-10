@@ -454,7 +454,7 @@ function Section({
       </header>
 
       <div className="@container">
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+        <div className="grid items-stretch gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))]">
           {cards.length === 0 ? (
             <p className="col-span-full rounded-xl bg-paper/70 px-4 py-8 text-center text-sm text-muted">
               Nadie en la fila.
@@ -514,7 +514,7 @@ function NotifiedList({ cards, onOpen }: { cards: FamilyCard[]; onOpen: (card: F
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-serif text-base leading-tight text-forest">
-                  {card.kids.map((kid) => kid.student.firstName).join(" y ")}
+                  {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
                 </p>
                 <p className="truncate text-xs text-muted">
                   {card.trip.pickerName} · {formatTime(card.deliveredAt)}
@@ -575,34 +575,32 @@ function FamilyCardView({
       : null;
 
   return (
-    <article className={`relative ${siblings ? "@md:col-span-2" : ""}`}>
+    <article className="relative min-w-0">
       <button
         type="button"
         disabled={busy}
         onClick={onTap}
-        className={`flex w-full flex-col rounded-xl border bg-paper p-4 pt-5 text-left transition active:scale-[0.98] disabled:opacity-60 ${frame}`}
+        className={`flex h-full w-full flex-col rounded-xl border bg-paper p-4 text-left transition active:scale-[0.98] disabled:opacity-60 ${frame}`}
       >
-        {siblings ? (
-          <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase text-gold-deep">
+          <p className="mb-3 flex min-h-8 items-center gap-1.5 pr-9 text-[11px] font-semibold tracking-[0.1em] uppercase text-gold-deep">
             <Users className="h-3.5 w-3.5" />
-            Hermanos · mismo auto
+            Auto {position} · {card.kids.length} {siblings ? "alumnos" : "alumno"}
           </p>
-        ) : null}
 
-        <div className={siblings ? "grid gap-4 @md:grid-cols-2" : ""}>
+        <div className="flex w-full flex-1 flex-col gap-3">
           {card.kids.map((kid) => (
             <div key={kid.request.id} className="flex items-center gap-3.5">
-              <StudentAvatar student={kid.student} size="xl" />
+              <StudentAvatar student={kid.student} size="lg" />
               <div className="min-w-0 flex-1">
-                <p className="font-serif text-xl leading-tight text-forest">{kid.student.firstName}</p>
-                <p className="text-sm text-muted">{kid.student.lastName}</p>
+                <p className="font-serif text-xl leading-tight text-forest">{kid.student.lastName}</p>
+                <p className="text-sm text-forest">{kid.student.firstName}</p>
                 <p className="mt-0.5 text-xs text-muted">{studentGrade(kid.student, "es")}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-3 flex items-start justify-between gap-2">
+        <div className="mt-4 flex items-start justify-between gap-2 border-t border-line pt-3">
           <div className="min-w-0 space-y-1">
             <p className="text-xs text-muted">
               {card.trip.pickerRelationEs} · {card.trip.pickerName}
@@ -694,7 +692,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
         <div>
           <p className="text-xs tracking-[0.18em] uppercase text-gold-deep">Solicitud {card.trip.code}</p>
           <h2 className="mt-1 font-serif text-2xl text-forest">
-            {card.kids.map((kid) => kid.student.firstName).join(" y ")}
+            {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
           </h2>
         </div>
         <button
@@ -732,7 +730,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
           {card.vehicle?.tagId ? <span className="block font-mono text-xs text-muted">Tag {card.vehicle.tagId}</span> : null}
         </Field>
         <Field label="Solicitó desde la app">
-          {requester ? `${requester.firstName} ${requester.lastName}` : card.trip.pickerName}
+          {requester ? `${requester.lastName} ${requester.firstName}` : card.trip.pickerName}
         </Field>
       </dl>
 
@@ -799,7 +797,7 @@ function ConfirmDeniedSheet({
         {denied.map((kid) => ownerLabel(kid)).join(" y ")} {denied.length > 1 ? "dijeron" : "dijo"} que no
       </h2>
       <p className="mt-3 text-sm leading-6 text-muted">
-        La familia de {denied.map((kid) => kid.student.firstName).join(" y ")} no confirmó que{" "}
+        La familia de {denied.map((kid) => studentName(kid.student)).join(" y ")} no confirmó que{" "}
         {card.trip.pickerName} pueda recogerlos hoy. Puede ser un error; verifica con la familia antes de entregar.
       </p>
       <div className="mt-6 grid gap-2">
@@ -839,7 +837,7 @@ function NotifiedSheet({
         <div>
           <p className="text-xs tracking-[0.18em] uppercase text-forest">Entregado · {formatTime(card.deliveredAt)}</p>
           <h2 className="mt-1 font-serif text-2xl text-forest">
-            {card.kids.map((kid) => kid.student.firstName).join(" y ")}
+            {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
           </h2>
           <p className="mt-1 text-sm text-muted">
             {card.trip.pickerRelationEs} · {card.trip.pickerName} · {card.vehicleLabel}
@@ -949,7 +947,7 @@ function LateSheet({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate font-serif text-lg text-forest">
-                        {students.map((student) => student.firstName).join(", ") || "Alumnos"}
+                        {students.map((student) => studentName(student)).join(", ") || "Alumnos"}
                       </p>
                       <span
                         className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold tabular-nums ${

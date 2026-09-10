@@ -28,6 +28,10 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
   await page.getByRole("button", { name: "Cancelar recogida de hoy", exact: true }).click();
   await page.getByRole("button", { name: "Sí, cancelar recogida" }).click();
   await expect(page.getByRole("status")).toHaveText("Recogida de hoy cancelada");
+  await expect(page.getByRole("status")).toHaveCount(0, { timeout: 6000 });
+  const cancelled: Snapshot = await (await page.request.get("/api/state")).json();
+  expect(cancelled.trips.some((trip) => trip.id === "t-madrid-today")).toBe(false);
+  expect(cancelled.requests.some((request) => request.tripId === "t-madrid-today")).toBe(false);
   await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   await expect(page.getByText("De la escuela", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Contactar a la escuela/ })).toHaveAttribute("href", "tel:+526868378517");

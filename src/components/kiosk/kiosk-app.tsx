@@ -545,7 +545,7 @@ function TagPanel({
           .map((request) => request.studentId)
       : target.owner.studentIds;
     return ids
-      .map((id) => findStudent(snapshot, id)?.firstName)
+      .map((id) => studentName(findStudent(snapshot, id)))
       .filter(Boolean)
       .join(", ");
   };
@@ -698,7 +698,7 @@ function AutoArrivePanel({
   const title =
     target.kind === "tag"
       ? `Familia ${target.target.owner.lastName}`
-      : students.map((student) => student.firstName).join(" y ");
+      : students.map((student) => studentName(student)).join(" y ");
   const subtitle =
     target.kind === "tag"
       ? vehicle?.label
@@ -811,7 +811,7 @@ function ReviewPanel({
       <div className="rounded-[2rem] bg-forest p-8">
         <p className="text-gold">Solicitud {trip.code}</p>
         <h1 className="mt-2 font-serif text-4xl">
-          {students.map((student) => student.firstName).join(" y ")}
+          {students.map((student) => studentName(student)).join(" y ")}
         </h1>
         <div className="mt-6 space-y-4">
           {students.map((student) => {
@@ -875,7 +875,7 @@ function SuccessPanel({
 }) {
   const names = snapshot.requests
     .filter((request) => request.tripId === trip.id && request.status !== "cancelled")
-    .map((request) => findStudent(snapshot, request.studentId)?.firstName)
+    .map((request) => studentName(findStudent(snapshot, request.studentId)))
     .filter(Boolean)
     .join(" y ");
   const vehicle = findVehicle(snapshot, trip.vehicleId);

@@ -224,7 +224,7 @@ export class MemoryPickupStore {
   }
 
   private guardianLabel(guardian: Guardian) {
-    return `${guardian.firstName} ${guardian.lastName}`;
+    return `${guardian.lastName} ${guardian.firstName}`;
   }
 
   private ownerOf(studentId: string) {
@@ -491,7 +491,7 @@ export class MemoryPickupStore {
       const tripId = createId("t");
       const code = createCode(usedCodes);
       usedCodes.add(code);
-      const pickerName = `${guardian.firstName} ${guardian.lastName}`;
+      const pickerName = `${guardian.lastName} ${guardian.firstName}`;
 
       this.data.trips.unshift({
         id: tripId,
@@ -594,6 +594,7 @@ export class MemoryPickupStore {
         dismissalTime: preschool ? "1:30 p.m." : "2:30 p.m.",
         accent: randomOf(SIM_ACCENTS),
         gender,
+        photoUrl: `/students/${randomOf(gender === "f" ? ["s-sofia", "s-regina", "s-emilia", "s-isabela"] : ["s-lucas", "s-mateo", "s-diego", "s-emiliano"])}.png`,
       };
     });
 
@@ -631,7 +632,7 @@ export class MemoryPickupStore {
     const arrivedAt = new Date().toISOString();
     const tripId = createId("t-sim");
     const code = createCode(usedCodes);
-    const pickerName = `${guardian.firstName} ${guardian.lastName}`;
+    const pickerName = `${guardian.lastName} ${guardian.firstName}`;
 
     this.data.trips.unshift({
       id: tripId,
@@ -1045,25 +1046,10 @@ export class MemoryPickupStore {
     if (!siblings.every((item) => canCancel(item.status))) {
       throw new Error("Esta solicitud ya no se puede cancelar.");
     }
-    const now = new Date().toISOString();
-    for (const request of siblings) {
-      const fromStatus = request.status;
-      request.status = "cancelled";
-      this.logEvent(
-        {
-          type: "cancelled",
-          tripId,
-          requestId: request.id,
-          studentId: request.studentId,
-          actorRole: "parent",
-          actorName: this.guardianName(tripId),
-          fromStatus,
-        },
-        now,
-      );
-    }
-    const trip = this.data.trips.find((item) => item.id === tripId);
-    if (trip) trip.cancelledAt = now;
+    this.data.trips = this.data.trips.filter((item) => item.id !== tripId);
+    this.data.requests = this.data.requests.filter((item) => item.tripId !== tripId);
+    this.data.events = this.data.events.filter((item) => item.tripId !== tripId);
+    this.data.guestPasses = this.data.guestPasses.filter((item) => item.tripId !== tripId);
     if (notify) this.emit();
     return this.snapshot();
   }
@@ -1246,12 +1232,12 @@ export class MemoryPickupStore {
   private guardianName(tripId: string) {
     const trip = this.data.trips.find((item) => item.id === tripId);
     const guardian = trip && this.data.guardians.find((item) => item.id === trip.guardianId);
-    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
   }
 
   private guardianNameById(guardianId: string) {
     const guardian = this.data.guardians.find((item) => item.id === guardianId);
-    return guardian ? `${guardian.firstName} ${guardian.lastName}` : undefined;
+    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
   }
 
   private findActiveLate(id: string) {
@@ -1335,7 +1321,7 @@ export class MemoryPickupStore {
     });
 
     this.logEvent(
-      { type: "late_announced", lateId: id, actorRole: "parent", actorName: `${guardian.firstName} ${guardian.lastName}` },
+      { type: "late_announced", lateId: id, actorRole: "parent", actorName: `${guardian.lastName} ${guardian.firstName}` },
       now,
     );
     this.emit();

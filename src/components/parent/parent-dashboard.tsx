@@ -58,12 +58,12 @@ export function ParentDashboard({
           <h2 className="shrink-0 font-serif text-[22px] tracking-tight text-[#102e27]">{t.homeChildrenToday}</h2>
           <span className="h-px flex-1 bg-[#dcdcd4]" />
         </div>
-        <div className="grid grid-cols-2 gap-y-4">
-          {childrenList.map((child, index) => (
-            <div key={child.id} className={`flex min-w-0 items-center gap-2.5 ${index % 2 ? "border-l border-[#deded5] pl-3" : "pr-2"}`}>
+        <div className="flex flex-col gap-3">
+          {childrenList.map((child) => (
+            <div key={child.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line/60 p-3">
               <StudentAvatar student={child} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[#172c26]">{child.firstName}</p>
+                <p className="text-sm font-medium text-[#172c26]">{child.firstName} {child.lastName}</p>
                 <p className="mt-0.5 text-[10px] leading-tight text-muted">{LEVEL_LABELS[child.level][locale]}</p>
                 <p className="mt-1 text-[16px] font-semibold whitespace-nowrap tabular-nums tracking-tight text-[#172c26]">{child.dismissalTime}</p>
               </div>

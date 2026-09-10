@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { parentName, parentPickerName } from "@/lib/parent-home";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { FullscreenQr } from "@/components/parent/fullscreen-qr";
@@ -12,7 +13,7 @@ import { postJson } from "@/hooks/use-snapshot";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { canCancel } from "@/lib/pickup-machine";
 import { pickupPayload } from "@/lib/qr";
-import { findStudent, findVehicle, findZone, studentGrade, studentName } from "@/lib/school";
+import { findStudent, findVehicle, findZone, studentGrade } from "@/lib/school";
 import type {
   Locale,
   PickupStatus,
@@ -66,7 +67,7 @@ export function ParentTracker({
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
   // Con tag en el auto no hace falta QR: el lector de la entrada reconoce a la familia.
   const useTag = trip.pickerKind === "self" && trip.method === "car" && Boolean(vehicle?.tagId);
-  const names = joinKidNames(students.map((student) => student.firstName));
+  const names = joinKidNames(students.map((student) => parentName(student)));
 
   if (allDelivered) {
     return (
@@ -87,7 +88,7 @@ export function ParentTracker({
       <div>
         <p className="text-sm text-muted">{allDelivered ? t.deliveredTitle : t.trackerTitle}</p>
         <h1 className="font-serif text-3xl text-forest">
-          {students.map((student) => student.firstName).join(" y ")}
+          {students.map((student) => parentName(student)).join(" y ")}
         </h1>
       </div>
 
@@ -109,7 +110,7 @@ export function ParentTracker({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-ink">{studentName(student)}</p>
+                      <p className="font-semibold text-ink">{parentName(student)}</p>
                       <p className="text-sm text-muted">{studentGrade(student, locale)}</p>
                     </div>
                     <StatusBadge
@@ -136,7 +137,7 @@ export function ParentTracker({
       </div>
 
       <p className="text-sm text-muted">
-        {locale === "es" ? trip.pickerRelationEs : trip.pickerRelationEn} · {trip.pickerName}
+        {locale === "es" ? trip.pickerRelationEs : trip.pickerRelationEn} · {parentPickerName(snapshot, trip)}
         {vehicle ? ` · ${vehicle.label}` : ""}
         {trip.method === "walk" ? ` · ${t.walking}` : ""}
       </p>
@@ -377,7 +378,7 @@ export function ShareRow({
   t: Dictionary;
 }) {
   const [copied, setCopied] = useState(false);
-  const names = students.map((student) => student.firstName).join(" y ");
+  const names = students.map((student) => parentName(student)).join(" y ");
   const message = `Pase de salida Discovery para ${names}. Código ${trip.code}. ${passUrl}`;
   const phone = (trip.guestPhone ?? "").replace(/\D/g, "");
 
@@ -418,7 +419,7 @@ function statusCopy(student: Student, status: PickupStatus, t: Dictionary, useTa
   if (status === "on_the_way") return useTag ? t.tagHint : t.onTheWayBody;
   if (status === "arrived") return t.arrivedBody;
   if (status === "delivered") {
-    return `${student.firstName} ${student.gender === "f" ? t.deliveredBodyF : t.deliveredBody}`;
+    return `${parentName(student)} ${student.gender === "f" ? t.deliveredBodyF : t.deliveredBody}`;
   }
   return t.status[status];
 }

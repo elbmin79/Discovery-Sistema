@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { parentName, parentPickerName } from "@/lib/parent-home";
 import Link from "next/link";
-import { AlarmClock, Globe, House, Megaphone, UserRound } from "lucide-react";
+import { AlarmClock, Check, Globe, House, UserRound } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
 import { PhoneShell } from "@/components/parent/phone-shell";
 import { type LateCreatePayload, ParentLate } from "@/components/parent/parent-late";
@@ -71,7 +72,6 @@ export function ParentApp() {
   const [dismissedTripId, setDismissedTripId] = useState<string | null>(null);
   const [removingKids, setRemovingKids] = useState(false);
   const [openAnnouncementId, setOpenAnnouncementId] = useState<string | null>(null);
-  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<string[]>([]);
   const loadingSlow = useSlowLoading(Boolean(session && !snapshot && !syncError));
 
   const guardian = snapshot?.guardians.find((item) => item.id === session?.guardianId);
@@ -98,7 +98,12 @@ export function ParentApp() {
   const tripArrived = Boolean(trip?.arrivedAt || activeTripRequests.some((request) => request.status !== "on_the_way"));
   const showNav = Boolean(session && guardian && (step === "home" || step === "avisos" || step === "calendario"));
   const unread = snapshot && guardian ? unreadAnnouncements(snapshot, guardian) : [];
-  const toastNotice = unread.find((item) => !dismissedNoticeIds.includes(item.id)) ?? null;
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     contentRef.current?.scrollTo(0, 0);
@@ -108,7 +113,6 @@ export function ParentApp() {
   async function openAnnouncement(id: string) {
     setOpenAnnouncementId(id);
     setStep("avisos");
-    setDismissedNoticeIds((current) => (current.includes(id) ? current : [...current, id]));
     try {
       await postJson(`/api/school/announcements/${id}`, { action: "read" });
     } catch {
@@ -230,34 +234,8 @@ export function ParentApp() {
       </header>
 
       <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
-        {notice && step === "home" && tab === "home" ? <p role="status" className="mb-4 rounded-2xl bg-forest/10 p-3 text-sm text-forest">{t[notice]}</p> : null}
+        {notice && step === "home" && tab === "home" ? <div role="status" className="pickup-toast sticky top-3 z-30 mb-4 flex items-center gap-3 overflow-hidden rounded-2xl bg-forest p-4 text-sm text-paper shadow-lg"><span className="pickup-toast-check flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper/15"><Check className="h-5 w-5" /></span><span>{t[notice]}</span><span aria-hidden className="pickup-toast-timer absolute inset-x-0 bottom-0 h-1 origin-left bg-gold" /></div> : null}
         {error && step === "home" ? <p role="alert" className="mb-4 text-sm text-danger">{error}</p> : null}
-        {session && snapshot && guardian && tab !== "settings" && toastNotice && step === "home" && !trip ? (
-          <div className="mb-4 flex w-full items-start gap-3 rounded-2xl border border-line bg-paper px-3.5 py-3 shadow-[0_10px_30px_rgb(18_56_45/0.12)]">
-            <button
-              type="button"
-              onClick={() => void openAnnouncement(toastNotice.id)}
-              className="flex min-w-0 flex-1 items-start gap-3 text-left"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest text-paper">
-                <Megaphone className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-semibold tracking-wide text-muted uppercase">{t.noticeFromSchool}</span>
-                <span className="mt-0.5 block truncate text-sm font-semibold text-forest">{toastNotice.title}</span>
-                <span className="mt-0.5 block truncate text-xs text-muted">{toastNotice.subtitle || toastNotice.body}</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-label={t.back}
-              onClick={() => setDismissedNoticeIds((current) => [...current, toastNotice.id])}
-              className="rounded-full px-2 py-1 text-xs font-semibold text-muted"
-            >
-              ✕
-            </button>
-          </div>
-        ) : null}
         {session && snapshot && guardian && tab !== "settings" ? (
           <AuthorizationInbox snapshot={snapshot} guardian={guardian} locale={locale} t={t} />
         ) : null}
@@ -279,12 +257,12 @@ export function ParentApp() {
                   "{names}",
                   (snapshot?.students ?? [])
                     .filter((student) => activeLate.studentIds.includes(student.id))
-                    .map((student) => student.firstName)
+                    .map((student) => parentName(student))
                     .join(", "),
                 )
                 .replace("{time}", formatTime(activeLate.etaAt, locale))}
             </span>
-            <span className="mt-1 block text-xs text-muted">{activeLate.pickerName}</span>
+            <span className="mt-1 block text-xs text-muted">{parentPickerName(snapshot!, activeLate)}</span>
             <span className="mt-2 block text-xs font-semibold text-gold-deep">{t.lateUpdate} →</span>
             </span>
           </button>

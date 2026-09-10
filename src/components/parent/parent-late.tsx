@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { parentName } from "@/lib/parent-home";
 import { lateEligibleStudentIds, lateReplacementTrips } from "@/lib/parent-home";
 import { SchoolContact } from "@/components/parent/parent-dashboard";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { formatTime, studentName } from "@/lib/school";
+import { formatTime } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, LatePickup, Locale, PickerKind, PickupTrip, Snapshot } from "@/lib/types";
 
@@ -67,14 +68,14 @@ export function ParentLate({
   const children = snapshot.students.filter((student) => eligibleIds.includes(student.id));
   const [selectedIds, setSelectedIds] = useState<string[]>(existing?.studentIds ?? snapshot.requests.filter((request) => request.tripId === initialTrip?.id && eligibleIds.includes(request.studentId)).map((request) => request.studentId));
   const replacements = lateReplacementTrips(snapshot, guardian.id, selectedIds, jornada);
-  const cancelledNames = snapshot.students.filter((student) => snapshot.requests.some((request) => request.studentId === student.id && replacements.some((trip) => trip.id === request.tripId))).map((student) => student.firstName).join(", ");
+  const cancelledNames = snapshot.students.filter((student) => snapshot.requests.some((request) => request.studentId === student.id && replacements.some((trip) => trip.id === request.tripId))).map((student) => parentName(student)).join(", ");
   const [etaAt, setEtaAt] = useState<string | null>(existing?.etaAt ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
 
   const authorized = snapshot.authorizedPeople.filter((person) =>
     person.studentIds.some((id) => (selectedIds.length > 0 ? selectedIds.includes(id) : guardian.studentIds.includes(id))),
   );
-  const initialAuthorized = authorized.find((person) => `${person.firstName} ${person.lastName}` === initialTrip?.pickerName);
+  const initialAuthorized = authorized.find((person) => [`${person.lastName} ${person.firstName}`, `${person.firstName} ${person.lastName}`].includes(initialTrip?.pickerName ?? ""));
   const initialGuest = initialTrip && initialTrip.pickerKind !== "self" && !initialAuthorized;
   const [pickerId, setPickerId] = useState(initialAuthorized ? `auth:${initialAuthorized.id}` : initialGuest ? "guest" : `self:${guardian.id}`);
   const [guestName, setGuestName] = useState(initialGuest ? initialTrip.pickerName : "");
@@ -95,7 +96,7 @@ export function ParentLate({
     if (person) {
       return {
         pickerKind: "authorized" as PickerKind,
-        pickerName: `${person.firstName} ${person.lastName}`,
+        pickerName: `${person.lastName} ${person.firstName}`,
         pickerRelationEs: person.relationEs,
         pickerRelationEn: person.relationEn,
         guestPhone: undefined,
@@ -103,7 +104,7 @@ export function ParentLate({
     }
     return {
       pickerKind: "self" as PickerKind,
-      pickerName: `${guardian.firstName} ${guardian.lastName}`,
+      pickerName: `${guardian.lastName} ${guardian.firstName}`,
       pickerRelationEs: guardian.relationEs,
       pickerRelationEn: guardian.relationEn,
       guestPhone: undefined,
@@ -129,7 +130,7 @@ export function ParentLate({
           <p className="mt-1 text-sm text-muted">
             {snapshot.students
               .filter((student) => existing.studentIds.includes(student.id))
-              .map((student) => student.firstName)
+              .map((student) => parentName(student))
               .join(" y ")}
           </p>
         </div>
@@ -189,7 +190,7 @@ export function ParentLate({
                 }`}
               >
                 <StudentAvatar student={child} size="sm" />
-                <p className="min-w-0 flex-1 truncate font-medium text-ink">{studentName(child)}</p>
+                <p className="min-w-0 flex-1 truncate font-medium text-ink">{parentName(child)}</p>
                 <span
                   className={`flex h-6 w-6 items-center justify-center rounded-full border ${
                     active ? "border-forest bg-forest text-paper" : "border-line"

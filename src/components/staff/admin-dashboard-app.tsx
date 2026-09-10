@@ -191,7 +191,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
         <AdminSchoolPanel snapshot={catalog} onSnapshot={setCatalog} />
       ) : (
       <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><SummaryCard label="Entregados" value={String(summary.delivered)} /><SummaryCard label="En proceso" value={String(summary.active)} /><SummaryCard label="Cancelados" value={String(summary.cancelled)} /><SummaryCard label="Espera promedio" value={summary.averageWait === undefined ? "—" : summary.averageWait + " min"} /></div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3"><SummaryCard label="Entregados" value={String(summary.delivered)} /><SummaryCard label="En proceso" value={String(summary.active)} /><SummaryCard label="Espera promedio" value={summary.averageWait === undefined ? "—" : summary.averageWait + " min"} /></div>
       {lateItems.length > 0 && (
         <LateNoticesPanel
           items={lateItems}
@@ -208,7 +208,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
       <div className="mt-5 overflow-x-auto pb-1" aria-label="Filtros de recogidas"><div className="mx-auto flex w-max items-center justify-center gap-3 whitespace-nowrap">
         <div role="group" aria-label="Filtrar por puerta" className="flex shrink-0 gap-1"><FilterPill active={!zoneId} onClick={() => setZoneId(null)}>Ambas puertas</FilterPill>{catalog.zones.map((zone) => <FilterPill key={zone.id} active={zoneId === zone.id} onClick={() => setZoneId(zone.id)}>{zone.shortEs}</FilterPill>)}</div>
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line" />
-        <div role="group" aria-label="Filtrar por estado" className="flex shrink-0 gap-1">{([["all", "Todo"], ["delivered", "Entregados"], ["active", "En proceso"], ["cancelled", "Cancelados"]] as const).map(([value,label]) => <FilterPill key={value} active={statusFilter === value} onClick={() => { setStatusFilter(value); setOffset(0); setPage(null); }}>{label}</FilterPill>)}</div>
+        <div role="group" aria-label="Filtrar por estado" className="flex shrink-0 gap-1">{([["all", "Todo"], ["delivered", "Entregados"], ["active", "En proceso"]] as const).map(([value,label]) => <FilterPill key={value} active={statusFilter === value} onClick={() => { setStatusFilter(value); setOffset(0); setPage(null); }}>{label}</FilterPill>)}</div>
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line" />
         <div role="group" aria-label="Periodo de consulta" className="flex shrink-0 gap-1">{([["today", "Hoy"], ["week", "7 días"], ["month", "30 días"], ["custom", "Personalizado"]] as const).map(([value,label]) => <FilterPill key={value} active={range === value} onClick={() => changeRange(value)}>{label}</FilterPill>)}</div>
       </div></div>
