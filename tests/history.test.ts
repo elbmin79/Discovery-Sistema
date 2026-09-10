@@ -56,13 +56,13 @@ test("departure archives a complete trip and removes only its live records", () 
   assert.equal(store.historyRows().length, 1);
 });
 
-test("cancellation and timeout archive and survive a new demo day", () => {
+test("cancellation deletes the pickup while timeout preserves delivery history", () => {
   const { store, trip } = setup();
   store.cancelTrip(trip.id);
-  assert.equal(store.historyRows()[0].status, "cancelled");
+  assert.equal(store.historyRows().length, 0);
   assert.equal(store.snapshot().trips.length, 0);
   store.reset();
-  assert.ok(store.historyRows().some((row) => row.tripId === trip.id));
+  assert.equal(store.historyRows().some((row) => row.tripId === trip.id), false);
   const next = setup();
   next.store.arriveByCode(next.trip.code);
   next.store.deliverTrip(next.trip.id);
@@ -100,7 +100,7 @@ test("daily rollover keeps late notices even without a pickup and applies 90-day
   assert.equal(store.snapshot().latePickups.length, 0);
   assert.equal(store.lateHistoryRows()[0].notice.note, "Tráfico");
   const page = historyPage([], "2026-01-01", "2026-01-01", 200, 0, store.lateHistoryRows());
-  assert.equal(page.days[0].latePickups[0].studentNames[0], `${student.firstName} ${student.lastName}`);
+  assert.equal(page.days[0].latePickups[0].studentNames[0], `${student.lastName} ${student.firstName}`);
   assert.equal(retentionCutoff("2026-04-01"), "2026-01-01");
   store.pruneHistory("2026-01-01");
   assert.equal(store.lateHistoryRows().length, 1);
@@ -125,9 +125,11 @@ test("unavailable history storage defers archival without dropping live records"
     pickerRelationEs: guardian.relationEs, pickerRelationEn: guardian.relationEn,
     method: "car", vehicleId: guardian.defaultVehicleId });
   const trip = created.trips[0];
-  const deferred = store.cancelTrip(trip.id);
+  store.arriveByCode(trip.code);
+  store.deliverTrip(trip.id);
+  const deferred = store.closeTrip(trip.id, "parent");
   assert.equal(store.historyRows().length, 0);
-  assert.equal(deferred.trips.find((item) => item.id === trip.id)?.cancelledAt !== undefined, true);
+  assert.equal(deferred.trips.find((item) => item.id === trip.id)?.departedAt !== undefined, true);
   assert.equal(store.hasClosedTrips(), true);
   store.archiveClosedTrips();
   assert.equal(store.snapshot().trips.some((item) => item.id === trip.id), true);

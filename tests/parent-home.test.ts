@@ -2,9 +2,60 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MemoryPickupStore } from "../src/lib/store/memory-store";
 import { createSeedSnapshot } from "../src/lib/seed/demo-data";
-import { lateEligibleStudentIds, lateReplacementTrips } from "../src/lib/parent-home";
+import { lateEligibleStudentIds, lateReplacementTrips, parentName, parentPickerName } from "../src/lib/parent-home";
 import { todayJornada } from "../src/lib/school";
 import type { CreateLatePickupInput } from "../src/lib/types";
+import { existsSync } from "node:fs";
+import { studentName, studentPhoto } from "../src/lib/school";
+
+test("family names are first-last while school displays remain last-first", () => {
+  const snapshot = createSeedSnapshot();
+  const student = snapshot.students.find((student) => student.id === "s-sofia")!;
+  const trip = snapshot.trips.find((trip) => trip.id === "t-madrid-today")!;
+  assert.equal(parentName(student), "Sofía Madrid");
+  assert.equal(studentName(student), "Madrid Sofía");
+  assert.equal(parentPickerName(snapshot, trip), "Roberto Madrid");
+  assert.equal(trip.pickerName, "Madrid Roberto");
+  for (const pickerName of ["Madrid Rosa", "Rosa Madrid"]) {
+    assert.equal(parentPickerName(snapshot, { ...trip, pickerKind: "authorized", pickerName }), "Rosa Madrid");
+  }
+  assert.equal(parentPickerName(snapshot, { ...trip, pickerKind: "guest", pickerName: "María del Carmen Ruiz" }), "María del Carmen Ruiz");
+});
+
+test("cancelled pickups leave no records or usable guest passes", () => {
+  const { store, trip } = setup();
+  const before = store.snapshot();
+  const after = store.cancelTrip(trip.id);
+  assert.equal(after.trips.some((item) => item.id === trip.id), false);
+  for (const records of [after.requests, after.events, after.guestPasses]) {
+    assert.equal(records.some((item) => item.tripId === trip.id), false);
+  }
+  assert.equal(store.historyRows().some((item) => item.tripId === trip.id), false);
+  assert.deepEqual(after.students, before.students);
+  assert.throws(() => store.arriveByCode(trip.qrToken));
+  assert.throws(() => store.arriveByCode(trip.code));
+});
+
+test("delivered pickups cannot be deleted by cancellation", () => {
+  const { store, trip } = setup();
+  store.arriveByCode(trip.code);
+  store.deliverTrip(trip.id);
+  const before = store.snapshot();
+  assert.throws(() => store.cancelTrip(trip.id));
+  assert.deepEqual(store.snapshot(), before);
+});
+
+test("simulated children use available portraits including older persisted simulations", () => {
+  const { store } = setup();
+  for (let index = 0; index < 10; index++) store.addSimulatedArrival();
+  const simulated = store.snapshot().students.filter((student) => student.id.startsWith("s-sim"));
+  assert.ok(simulated.length >= 10);
+  for (const student of simulated) {
+    assert.ok(existsSync(`public${studentPhoto(student)}`));
+    assert.ok(existsSync(`public${studentPhoto({ ...student, photoUrl: undefined })}`));
+    assert.equal(studentName(student), `${student.lastName} ${student.firstName}`);
+  }
+});
 
 function setup() {
   const seed = createSeedSnapshot();
@@ -22,7 +73,7 @@ function setup() {
   return { store, trip, guardian, input };
 }
 
-test("late replacement publishes once with cancellation history and an invalidated pass", () => {
+test("late replacement publishes once, removes the pickup and invalidates its pass", () => {
   const { store, trip, input } = setup();
   let notifications = 0;
   store.subscribe((snapshot) => {
@@ -32,9 +83,9 @@ test("late replacement publishes once with cancellation history and an invalidat
   });
   const snapshot = store.createLatePickup(input);
   assert.equal(notifications, 1);
-  const history = store.historyRows().find((row) => row.tripId === trip.id)!;
-  assert.equal(history.status, "cancelled");
-  assert.equal(history.detail?.events.filter((event) => event.type === "cancelled").length, input.studentIds.length);
+  assert.equal(store.historyRows().some((row) => row.tripId === trip.id), false);
+  assert.equal(snapshot.requests.some((request) => request.tripId === trip.id), false);
+  assert.equal(snapshot.events.some((event) => event.tripId === trip.id), false);
   assert.ok(snapshot.events.some((event) => event.type === "late_announced"));
   assert.throws(() => store.arriveByCode(trip.code));
   assert.throws(() => store.arriveByCode(trip.qrToken));
@@ -78,7 +129,8 @@ test("partial late selection cancels the disclosed whole sibling plan", () => {
   const snapshot = store.createLatePickup({ ...input, studentIds: input.studentIds.slice(0, 1) });
   assert.equal(snapshot.trips.some((item) => item.id === trip.id), false);
   assert.equal(snapshot.latePickups[0].studentIds.length, 1);
-  assert.equal(store.historyRows().find((row) => row.tripId === trip.id)!.detail?.requests.length, input.studentIds.length);
+  assert.equal(store.historyRows().some((row) => row.tripId === trip.id), false);
+  assert.equal(snapshot.requests.some((request) => request.tripId === trip.id), false);
 });
 
 test("duplicate notice is harmless and a later pass does not resolve the notice", () => {

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { parentName } from "@/lib/parent-home";
 import { ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { greeting, studentGrade, studentName } from "@/lib/school";
+import { greeting, studentGrade } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, Locale, Student } from "@/lib/types";
 
@@ -44,7 +45,7 @@ export function ParentHome({
     selected.length === 0
       ? t.selectChildren
       : selected.length === 1
-        ? t.goForOne.replace("{name}", everyone.find((child) => child.id === selected[0])?.firstName ?? "")
+        ? t.goForOne.replace("{name}", parentName(everyone.find((child) => child.id === selected[0])))
         : allOwnSelected && onlyOwn
           ? t.goForAll
           : t.goForCount.replace("{count}", String(selected.length));
@@ -230,7 +231,7 @@ function FriendPicker({
                       <p className="truncate text-sm text-muted">
                         {count > 0
                           ? t.selectedCount.replace("{count}", String(count))
-                          : kids.map((kid) => kid.firstName).join(", ")}
+                          : kids.map((kid) => parentName(kid)).join(", ")}
                       </p>
                     </div>
                     {count > 0 ? (
@@ -280,7 +281,7 @@ function KidRow({
     >
       <StudentAvatar student={child} size="lg" />
       <div className="min-w-0 flex-1">
-        <p className="text-lg font-semibold text-ink">{studentName(child)}</p>
+        <p className="text-lg font-semibold text-ink">{parentName(child)}</p>
         <p className="text-sm text-muted">{detail}</p>
       </div>
       {removable ? (

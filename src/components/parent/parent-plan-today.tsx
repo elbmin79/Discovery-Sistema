@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { parentName, parentPickerName } from "@/lib/parent-home";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import QRCode from "qrcode";
@@ -101,7 +102,7 @@ export function ParentPlanToday({
           <div className="relative mt-5 space-y-2 border-t border-paper/15 pt-4">
             {students.map((student) => (
               <div key={student.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-semibold">{student.firstName}</span>
+                <span className="font-semibold">{parentName(student)}</span>
                 <span className="text-cream">
                   {studentGrade(student, locale)} · <span className="tabular-nums">{student.dismissalTime}</span>
                 </span>
@@ -114,7 +115,7 @@ export function ParentPlanToday({
       <section className="rounded-3xl border border-line bg-paper p-4 shadow-[0_10px_30px_rgb(28_36_31/0.05)]">
         <p className="text-xs font-semibold tracking-[0.16em] uppercase text-gold-deep">{t.pickupDetails}</p>
         <div className="mt-3 grid gap-3">
-          <Detail icon={<UserRound className="h-4 w-4" />} label={t.whoPicks} value={`${locale === "es" ? trip.pickerRelationEs : trip.pickerRelationEn} · ${trip.pickerName}`} />
+          <Detail icon={<UserRound className="h-4 w-4" />} label={t.whoPicks} value={`${locale === "es" ? trip.pickerRelationEs : trip.pickerRelationEn} · ${parentPickerName(snapshot, trip)}`} />
           <Detail icon={<Car className="h-4 w-4" />} label={t.howArrive} value={trip.method === "walk" ? t.walking : [vehicle?.label, vehicle?.plate].filter(Boolean).join(" · ")} />
         </div>
       </section>
@@ -164,7 +165,7 @@ export function ParentPlanToday({
         </button>
         {confirmCancel ? (
           <section className="rounded-2xl border border-danger/30 bg-paper p-4" aria-label={t.cancelToday}>
-            <p className="text-sm text-ink">{t.cancelTodayHint.replace("{names}", students.map((student) => student.firstName).join(", "))}</p>
+            <p className="text-sm text-ink">{t.cancelTodayHint.replace("{names}", students.map((student) => parentName(student)).join(", "))}</p>
             <button type="button" disabled={busy} onClick={onCancel} className="mt-3 min-h-11 w-full rounded-full bg-danger px-4 text-sm font-semibold text-white disabled:opacity-50">{busy ? "…" : t.cancelTodayConfirm}</button>
             <button type="button" disabled={busy} onClick={() => setConfirmCancel(false)} className="min-h-11 w-full text-sm font-semibold text-forest">{t.keepPlan}</button>
           </section>

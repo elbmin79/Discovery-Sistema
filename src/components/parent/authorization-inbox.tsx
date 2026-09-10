@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parentName, parentPickerName } from "@/lib/parent-home";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { postJson } from "@/hooks/use-snapshot";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -67,13 +68,13 @@ function AuthorizationCard({
   if (!trip || students.length === 0) return null;
 
   const requester = snapshot.guardians.find((item) => item.id === trip.guardianId);
-  const requesterName = requester ? `${requester.firstName} ${requester.lastName}` : trip.pickerName;
+  const requesterName = requester ? `${requester.firstName} ${requester.lastName}` : parentPickerName(snapshot, trip);
   const status = requests.every((r) => r.authorization?.status === "approved")
     ? "approved"
     : requests.some((r) => r.authorization?.status === "denied")
       ? "denied"
       : "pending";
-  const kids = students.map((student) => student.firstName).join(" y ");
+  const kids = students.map((student) => parentName(student)).join(" y ");
 
   async function respond(decision: "approved" | "denied") {
     setBusy(true);
@@ -111,7 +112,7 @@ function AuthorizationCard({
           </p>
           {trip.pickerKind !== "self" ? (
             <p className="mt-1 text-xs text-muted">
-              {trip.pickerRelationEs} · {trip.pickerName}
+              {trip.pickerRelationEs} · {parentPickerName(snapshot, trip)}
             </p>
           ) : null}
         </div>

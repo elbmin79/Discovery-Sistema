@@ -9,7 +9,7 @@ import { StudentAvatar } from "@/components/ui/avatar";
 import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { DELIVERED_VISIBLE_MS as PICKUP_DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
-import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
+import { studentName, arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
 import type { PickupRequest, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
 import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 
@@ -198,16 +198,16 @@ export function TvBoard() {
             <ul className="mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
               {upNext.slice(0, 5).map((family) => (
                 <li key={family.trip.id} className="flex items-center gap-4 rounded-2xl bg-paper/8 px-4 py-3.5">
-                  <div className="flex -space-x-4">
-                    {family.kids.slice(0, 3).map((kid) => (
+                  <div className="flex -space-x-3">
+                    {family.kids.slice(0, 2).map((kid) => (
                       <div key={kid.request.id} className="rounded-full ring-[3px] ring-forest-deep">
-                        <StudentAvatar student={kid.student} size="lg" />
+                        <StudentAvatar student={kid.student} size="md" />
                       </div>
                     ))}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-serif text-2xl leading-tight xl:text-3xl">
-                      {family.kids.map((kid) => kid.student.firstName).join(" y ")}
+                    <p className="line-clamp-2 font-serif text-xl leading-tight xl:text-2xl">
+                      {family.kids.map((kid) => studentName(kid.student)).join(" y ")}
                     </p>
                     <p className="mt-0.5 truncate text-base text-paper/60">
                       {family.trip.pickerName} · {formatTime(family.arrivedAt)}
@@ -226,7 +226,7 @@ export function TvBoard() {
           </aside>
         </div>
 
-        <section className="rounded-[1.75rem] bg-forest/60 px-6 py-5 xl:px-8 xl:py-6">
+        <section className="rounded-[1.75rem] bg-forest/60 px-6 py-4 xl:px-8">
           <div className="flex items-center justify-between">
             <h2 className="text-base tracking-[0.24em] uppercase text-gold xl:text-lg">Entregados</h2>
             <span className="text-base text-paper/55">
@@ -236,15 +236,16 @@ export function TvBoard() {
           {recent.length === 0 ? (
             <p className="mt-4 text-lg text-paper/60">Aún no hay entregas confirmadas.</p>
           ) : (
-            <ul className="mt-4 flex gap-6 overflow-hidden xl:gap-8">
+            <ul className="mt-3 flex gap-6 overflow-hidden xl:gap-8">
               {recent.map((kid) => (
                 <li key={kid.request.id} className="flex w-32 shrink-0 flex-col items-center text-center xl:w-40">
                   <div className="rounded-full ring-[3px] ring-emerald-400/80">
-                    <StudentAvatar student={kid.student} size="xl" />
+                    <StudentAvatar student={kid.student} size="lg" />
                   </div>
-                  <p className="mt-3 w-full truncate font-serif text-xl leading-tight xl:text-2xl">
-                    {kid.student.firstName}
+                  <p className="mt-2 w-full font-serif text-lg leading-tight xl:text-xl">
+                    {kid.student.lastName}
                   </p>
+                  <p className="text-sm">{kid.student.firstName}</p>
                   <p className="text-sm text-paper/55 xl:text-base">{formatTime(kid.request.deliveredAt)}</p>
                 </li>
               ))}
@@ -264,14 +265,14 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
   const siblings = family.kids.length > 1;
 
   return (
-    <section className="tv-in relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] bg-paper text-ink">
-      <div className="relative z-10 shrink-0 px-8 pt-7 pb-5 xl:px-10 xl:pt-8 xl:pb-6">
+    <section className={`tv-in relative grid min-h-0 overflow-hidden rounded-[1.75rem] bg-paper text-ink ${siblings ? "grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]" : "grid-rows-[auto_minmax(120px,1fr)]"}`}>
+      <div className="relative z-10 min-h-0 overflow-y-auto px-5 py-4 xl:px-7">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide xl:text-base ${copy.pill}`}>
               {copy.label}
             </span>
-            <span className="text-sm text-muted xl:text-base">{copy.hint}</span>
+            {!siblings ? <span className="text-sm text-muted xl:text-base">{copy.hint}</span> : null}
           </div>
           {total > 1 ? (
             <span className="shrink-0 rounded-full bg-forest-deep/90 px-3 py-1 text-sm font-semibold tabular-nums text-paper">
@@ -280,27 +281,28 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
           ) : null}
         </div>
 
-        <div className={`mt-5 flex flex-wrap gap-6 xl:mt-6 ${siblings ? "xl:gap-10" : ""}`}>
+        <div className="mt-4 flex flex-col gap-3">
           {family.kids.map((kid) => (
-            <div key={kid.request.id} className="flex items-center gap-5">
-              <StudentAvatar student={kid.student} size={siblings ? "2xl" : "3xl"} />
+            <div key={kid.request.id} className="flex min-w-0 items-center gap-3">
+              <StudentAvatar student={kid.student} size={siblings ? "lg" : "2xl"} />
               <div className="min-w-0">
                 <p
                   className={`font-serif leading-none text-forest ${
-                    siblings ? "text-[clamp(2rem,3.2vw,3.5rem)]" : "text-[clamp(2.4rem,4vw,4.75rem)]"
+                    siblings ? "text-[clamp(1.3rem,1.8vw,2rem)]" : "text-[clamp(2rem,3vw,3.5rem)]"
                   }`}
                 >
-                  {kid.student.firstName}
+                  {kid.student.lastName}
                 </p>
-                <p className="mt-2 text-[clamp(1rem,1.4vw,1.4rem)] text-muted">
-                  {kid.student.lastName} · {studentGrade(kid.student, "es")}
+                <p className="mt-1 text-lg text-forest">{kid.student.firstName}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {studentGrade(kid.student, "es")}
                 </p>
               </div>
             </div>
           ))}
         </div>
 
-        <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3 text-[clamp(1rem,1.35vw,1.3rem)] xl:mt-6">
+        <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-3 text-base">
           <div>
             <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">
               Viene por {siblings ? "ellos" : "él/ella"}
@@ -314,7 +316,7 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
             <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">Llegó</dt>
             <dd className="mt-1 text-forest">{formatTime(family.arrivedAt)}</dd>
           </div>
-          {family.vehicle ? (
+          {family.vehicle && !siblings ? (
             <div>
               <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">Auto</dt>
               <dd className="mt-1 text-forest">

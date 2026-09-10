@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { parentName } from "@/lib/parent-home";
 import { Choice, Field } from "@/components/parent/picker-choice";
-import { studentName } from "@/lib/school";
+
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { ArrivalMethod, CreateTripInput, Guardian, Locale, PickupTrip, Snapshot } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export function ParentSetup({
   );
   const vehicles = snapshot.vehicles.filter((vehicle) => vehicle.ownerGuardianId === guardian.id);
 
-  const initialAuthorized = authorized.find((person) => `${person.firstName} ${person.lastName}` === initialTrip?.pickerName);
+  const initialAuthorized = authorized.find((person) => [`${person.lastName} ${person.firstName}`, `${person.firstName} ${person.lastName}`].includes(initialTrip?.pickerName ?? ""));
   const initialPickerId = initialTrip?.pickerKind === "self"
     ? `self:${guardian.id}`
     : initialAuthorized
@@ -60,7 +61,7 @@ export function ParentSetup({
     if (pickerId === `self:${guardian.id}`) {
       return {
         pickerKind: "self" as const,
-        pickerName: `${guardian.firstName} ${guardian.lastName}`,
+        pickerName: `${guardian.lastName} ${guardian.firstName}`,
         pickerRelationEs: guardian.relationEs,
         pickerRelationEn: guardian.relationEn,
       };
@@ -69,14 +70,14 @@ export function ParentSetup({
     if (!person) {
       return {
         pickerKind: "self" as const,
-        pickerName: `${guardian.firstName} ${guardian.lastName}`,
+        pickerName: `${guardian.lastName} ${guardian.firstName}`,
         pickerRelationEs: guardian.relationEs,
         pickerRelationEn: guardian.relationEn,
       };
     }
     return {
       pickerKind: "authorized" as const,
-      pickerName: `${person.firstName} ${person.lastName}`,
+      pickerName: `${person.lastName} ${person.firstName}`,
       pickerRelationEs: person.relationEs,
       pickerRelationEn: person.relationEn,
     };
@@ -93,9 +94,9 @@ export function ParentSetup({
       <div>
         <p className="text-sm text-muted">{t.pickupOf}</p>
         <h1 className="font-serif text-3xl text-forest">
-          {selected.map((child) => child.firstName).join(" y ")}
+          {selected.map((child) => parentName(child)).join(" y ")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{selected.map(studentName).join(" · ")}</p>
+        <p className="mt-1 text-sm text-muted">{selected.map(parentName).join(" · ")}</p>
       </div>
 
       <section>

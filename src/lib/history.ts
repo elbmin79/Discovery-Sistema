@@ -9,7 +9,7 @@ export function matchesHistoryStatus(row: HistoryRow, status: HistoryStatusFilte
 
 export function buildLateHistoryRow(snapshot: Snapshot, notice: LatePickup): ArchivedLatePickup {
   return { id: notice.id, jornada: jornadaOf(notice.createdAt), notice: structuredClone(notice),
-    studentNames: snapshot.students.filter((student) => notice.studentIds.includes(student.id)).map((student) => `${student.firstName} ${student.lastName}`),
+    studentNames: snapshot.students.filter((student) => notice.studentIds.includes(student.id)).map((student) => `${student.lastName} ${student.firstName}`),
     events: structuredClone(snapshot.events.filter((event) => event.lateId === notice.id)) };
 }
 
@@ -27,7 +27,7 @@ export function buildHistoryRow(snapshot: Snapshot, trip: PickupTrip, live = fal
     pickerKind: trip.pickerKind, method: trip.method, vehicleLabel: vehicle?.label,
     vehicleColor: vehicle?.color, plate: vehicle?.plate, tagId: vehicle?.tagId,
     vehiclePhoto: vehiclePhoto(vehicle), studentIds: students.map((item) => item.id),
-    studentNames: students.map((item) => `${item.firstName} ${item.lastName}`),
+    studentNames: students.map((item) => `${item.lastName} ${item.firstName}`),
     level: [...new Set(students.map((item) => item.level))].join(", "),
     zoneName: [...new Set(students.map((item) => snapshot.zones.find((zone) => zone.id === item.zoneId)?.nameEs).filter(Boolean))].join(", "),
     arrivalVia: trip.arrivalVia, departedVia: trip.departedVia, requestedAt: trip.createdAt,

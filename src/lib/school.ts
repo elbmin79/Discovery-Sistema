@@ -49,8 +49,9 @@ export const LEVEL_LABELS: Record<Level, { es: string; en: string; stage: "presc
 
 export const STATUS_ORDER: PickupStatus[] = ["on_the_way", "arrived", "delivered"];
 
-export function studentName(student: Student) {
-  return `${student.firstName} ${student.lastName}`;
+export function studentName(student?: Pick<Student, "firstName" | "lastName">) {
+  if (!student) return "";
+  return `${student.lastName} ${student.firstName}`.trim();
 }
 
 export function studentLastFirst(student: Student) {
@@ -141,6 +142,9 @@ export function initials(name: string) {
 }
 
 export function studentPhoto(student: Student) {
+  if (student.id.startsWith("s-sim")) {
+    return student.photoUrl ?? (student.gender === "f" ? "/students/s-sofia.png" : "/students/s-lucas.png");
+  }
   return student.photoUrl ?? `/students/${student.id}.png`;
 }
 

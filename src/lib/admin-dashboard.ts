@@ -193,7 +193,7 @@ export function toCsv(rows: AdminRow[], lates: LatePickup[] = []): string {
       : "";
     lines.push(
       [
-        `${row.student.firstName} ${row.student.lastName}`,
+        `${row.student.lastName} ${row.student.firstName}`,
         row.grade,
         row.zoneName,
         row.pickerName,
