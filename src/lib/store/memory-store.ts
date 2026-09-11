@@ -266,7 +266,9 @@ export class MemoryPickupStore {
 
   reset() {
     this.archiveDailyLates(true);
+    const keep = [...(this.data.pushSubscriptions ?? [])];
     this.data = createSeedSnapshot();
+    this.data.pushSubscriptions = keep;
     this.emit();
     return this.snapshot();
   }

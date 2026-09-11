@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     );
     const notice = snapshot.announcements[0];
     if (notice) {
-      void broadcastSchoolPush({
+      await broadcastSchoolPush({
         kind: "announcement",
         tag: `aviso-${notice.id}`,
         title: notice.title,

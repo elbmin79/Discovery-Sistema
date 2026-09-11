@@ -15,15 +15,16 @@ function vapidPrivateKey() {
 }
 
 function vapidSubject() {
-  return process.env.VAPID_SUBJECT?.trim() || "mailto:salida@discovery.demo";
+  return process.env.VAPID_SUBJECT?.trim() || "mailto:admin@example.com";
 }
 
-let configured = false;
+let configuredSubject: string | null = null;
 
 function ensureVapid() {
-  if (configured) return;
-  webpush.setVapidDetails(vapidSubject(), vapidPublicKey(), vapidPrivateKey());
-  configured = true;
+  const subject = vapidSubject();
+  if (configuredSubject === subject) return;
+  webpush.setVapidDetails(subject, vapidPublicKey(), vapidPrivateKey());
+  configuredSubject = subject;
 }
 
 export type PushPayload = {
@@ -62,8 +63,17 @@ export async function sendPushToSubscriptions(
           { TTL: 60 * 60 * 12, urgency: "high" },
         );
       } catch (error) {
-        const status = (error as { statusCode?: number }).statusCode;
+        const status = (error as { statusCode?: number; body?: string; message?: string }).statusCode;
         if (status === 404 || status === 410) expired.push(sub.endpoint);
+        else {
+          console.error(
+            "Fallo al enviar push",
+            status,
+            (error as { body?: string; message?: string }).body ||
+              (error as { message?: string }).message ||
+              error,
+          );
+        }
       }
     }),
   );
