@@ -3,10 +3,9 @@ import { test } from "node:test";
 import { MemoryPickupStore } from "../src/lib/store/memory-store";
 import { createSeedSnapshot, withDemoFamilyPlans } from "../src/lib/seed/demo-data";
 import { lateEligibleStudentIds, lateReplacementTrips, parentName, parentPickerName } from "../src/lib/parent-home";
-import { todayJornada } from "../src/lib/school";
+import { studentName, studentPhoto, todayJornada } from "../src/lib/school";
 import type { CreateLatePickupInput } from "../src/lib/types";
 import { existsSync } from "node:fs";
-import { studentName, studentPhoto } from "../src/lib/school";
 import { hydrateStudentSurnames } from "../src/lib/student-surnames";
 
 test("demo surnames upgrade saved students without resetting pickups or overwriting names", () => {
@@ -72,6 +71,17 @@ test("simulated children use available portraits including older persisted simul
     assert.ok(existsSync(`public${studentPhoto(student)}`));
     assert.ok(existsSync(`public${studentPhoto({ ...student, photoUrl: undefined })}`));
     assert.equal(studentName(student), `${student.lastName} ${student.firstName}`);
+  }
+});
+
+test("every seeded child resolves to the same stable bundled portrait on every surface", () => {
+  const students = createSeedSnapshot().students;
+  for (const student of students) {
+    const first = studentPhoto(student);
+    const second = studentPhoto(structuredClone(student));
+    assert.equal(first, second);
+    assert.match(first, /^\/students\//);
+    assert.ok(existsSync(`public${first}`), `${student.id} apunta a una foto inexistente: ${first}`);
   }
 });
 

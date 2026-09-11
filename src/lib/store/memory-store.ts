@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { hydrateStudentSurnames } from "../student-surnames";
 import { assertSnapshotIdentity, normalizeSnapshotIdentity } from "../snapshot-integrity";
 import {
@@ -85,7 +86,7 @@ function clone<T>(value: T): T {
 }
 
 function createId(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-3)}`;
+  return `${prefix}-${randomUUID()}`;
 }
 
 function createCode(used: Set<string>) {
@@ -97,7 +98,7 @@ function createCode(used: Set<string>) {
 }
 
 function createToken() {
-  return `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+  return randomUUID().replaceAll("-", "");
 }
 
 function generateFriendCode(lastName: string) {
