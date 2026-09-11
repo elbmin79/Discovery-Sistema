@@ -169,11 +169,23 @@ export function resolvePhotoSrc(photoPath?: string) {
 
 /**
  * Foto que debe ver el personal: primero la captura real de la llegada,
- * luego la foto genérica del vehículo y al final el dibujo de respaldo.
+ * luego el dibujo de respaldo del kiosco y al final la foto del vehículo registrado.
  */
 export function arrivalPicture(trip: { arrivalPhoto?: string }, vehicle?: Vehicle) {
-  if (isCapturedPhoto(trip.arrivalPhoto)) {
-    return { src: resolvePhotoSrc(trip.arrivalPhoto), captured: true, fallback: vehiclePhoto(vehicle) };
+  const captured = isCapturedPhoto(trip.arrivalPhoto);
+  if (captured) {
+    return {
+      src: resolvePhotoSrc(trip.arrivalPhoto),
+      captured: true,
+      fallback: vehiclePhoto(vehicle),
+    };
   }
-  return { src: vehiclePhoto(vehicle), captured: false, fallback: resolvePhotoSrc(trip.arrivalPhoto) };
+  if (trip.arrivalPhoto) {
+    return {
+      src: resolvePhotoSrc(trip.arrivalPhoto),
+      captured: false,
+      fallback: vehiclePhoto(vehicle),
+    };
+  }
+  return { src: vehiclePhoto(vehicle), captured: false, fallback: undefined };
 }

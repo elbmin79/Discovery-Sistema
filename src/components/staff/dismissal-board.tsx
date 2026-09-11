@@ -674,7 +674,14 @@ function Sheet({ children, onClose, wide }: { children: React.ReactNode; onClose
 function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Snapshot; onClose: () => void }) {
   const [broken, setBroken] = useState(0);
   const svg = fallbackArrivalPhoto(card.vehicleLabel, card.vehicle?.color);
-  const src = broken >= 2 ? svg : broken === 1 ? card.picture.fallback ?? svg : card.picture.src ?? card.picture.fallback ?? svg;
+  const src =
+    broken >= 2
+      ? svg
+      : broken === 1
+        ? card.picture.captured
+          ? svg
+          : card.picture.fallback ?? svg
+        : card.picture.src ?? card.picture.fallback ?? svg;
   const captured = card.picture.captured && broken === 0;
   const requester = snapshot.guardians.find((item) => item.id === card.trip.guardianId);
   const via =

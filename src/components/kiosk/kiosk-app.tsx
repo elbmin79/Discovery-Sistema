@@ -25,6 +25,28 @@ type AutoTarget = { kind: "tag"; target: TagTarget } | { kind: "qr"; trip: Picku
 
 const TAG_READ_MS = 2200;
 
+function captureFrame(source: HTMLVideoElement | null) {
+  if (!source || source.videoWidth <= 0) return undefined;
+  const scale = Math.min(1280 / source.videoWidth, 720 / source.videoHeight, 1);
+  const width = Math.round(source.videoWidth * scale);
+  const height = Math.round(source.videoHeight * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  context?.drawImage(source, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.7);
+}
+
+async function captureArrivalPhoto(videoRef: RefObject<HTMLVideoElement | null>) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const shot = captureFrame(videoRef.current);
+    if (shot) return shot;
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+  }
+  return undefined;
+}
+
 function hasOpenRequests(snapshot: Snapshot, tripId: string) {
   return snapshot.requests.some(
     (request) => request.tripId === tripId && request.status !== "cancelled" && request.status !== "delivered",
@@ -153,7 +175,7 @@ export function KioskApp() {
     const timer = window.setTimeout(async () => {
       if (cancelled) return;
       setAutoPhase("photo");
-      const shot = takePhoto();
+      const shot = await captureArrivalPhoto(videoRef);
       try {
         let arrived: PickupTrip | null = null;
         if (autoTarget.kind === "tag") {
@@ -197,20 +219,7 @@ export function KioskApp() {
   }, [step, autoTarget]);
 
   function takePhoto() {
-    if (videoRef.current && videoRef.current.videoWidth > 0) {
-      const source = videoRef.current;
-      const scale = Math.min(1280 / source.videoWidth, 720 / source.videoHeight, 1);
-      const width = Math.round(source.videoWidth * scale);
-      const height = Math.round(source.videoHeight * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext("2d");
-      context?.drawImage(source, 0, 0, width, height);
-      return canvas.toDataURL("image/jpeg", 0.7);
-    }
-    // Sin cámara: el servidor genera el dibujo de respaldo con el color del auto.
-    return undefined;
+    return captureFrame(videoRef.current);
   }
 
   function typeDigit(digit: string) {
