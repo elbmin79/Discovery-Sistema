@@ -235,12 +235,24 @@ export interface Snapshot {
   events: PickupEvent[];
   announcements: SchoolAnnouncement[];
   calendarEvents: SchoolCalendarEvent[];
+  /** Suscripciones Web Push (demo general, no por cuenta). */
+  pushSubscriptions?: PushSubscriptionRecord[];
   updatedAt: string;
   /** Simulador continuo de llegadas en /personal (compartido entre clientes). */
   simulation?: {
     running: boolean;
     nextAt?: string;
   };
+}
+
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  createdAt: string;
+  userAgent?: string;
 }
 
 export interface SchoolAnnouncement {

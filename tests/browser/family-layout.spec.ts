@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { createSeedSnapshot } from "../../src/lib/seed/demo-data";
+import { createSeedSnapshot, withDemoFamilyPlans } from "../../src/lib/seed/demo-data";
 
 test("family cards keep a consistent width and TV shows three children beside the car", async ({ page }) => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   snapshot.latePickups = [];
   const trip = snapshot.trips.find((item) => item.id === "t-marquez-today")!;
   trip.arrivedAt = new Date(Date.now() - 600_000).toISOString();
@@ -37,7 +37,7 @@ test("family cards keep a consistent width and TV shows three children beside th
 });
 
 test("mixed families rotate all children without hiding their surnames", async ({ page }) => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   const trip = snapshot.trips.find((item) => item.id === "t-marquez-today")!;
   snapshot.trips = [trip];
   trip.arrivedAt = new Date().toISOString();

@@ -153,6 +153,9 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
   if (!Array.isArray(snapshot.calendarEvents)) {
     snapshot.calendarEvents = [];
   }
+  if (!Array.isArray(snapshot.pushSubscriptions)) {
+    snapshot.pushSubscriptions = [];
+  }
   if (!snapshot.simulation) {
     snapshot.simulation = { running: false };
   }

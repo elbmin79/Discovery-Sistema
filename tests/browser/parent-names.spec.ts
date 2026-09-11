@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { createSeedSnapshot } from "../../src/lib/seed/demo-data";
+import { createSeedSnapshot, withDemoFamilyPlans } from "../../src/lib/seed/demo-data";
 
 test("familia keeps first-last names in plans, settings, selection and authorized pickers", async ({ page }) => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   snapshot.latePickups = [];
   await page.route("**/api/state", (route) => route.fulfill({ json: snapshot }));
   await page.addInitScript(() => sessionStorage.setItem("discovery-session", JSON.stringify({ role: "parent", guardianId: "g-roberto", username: "roberto", name: "Roberto Madrid" })));

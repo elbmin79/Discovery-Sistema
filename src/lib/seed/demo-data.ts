@@ -6,12 +6,6 @@ function minutesAgo(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-function todayAt(hour: number, minute: number) {
-  const date = new Date();
-  date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
-}
-
 function daysAheadJornada(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -611,221 +605,9 @@ export function createSeedSnapshot(): Snapshot {
     ],
     guestPasses: [],
     events: [],
-    latePickups: [
-      {
-        id: "lp-madrid",
-        guardianId: "g-roberto",
-        studentIds: ["s-sofia", "s-lucas"],
-        pickerKind: "self",
-        pickerName: "Madrid Roberto",
-        pickerRelationEs: "Papá",
-        pickerRelationEn: "Dad",
-        etaAt: todayAt(15, 5),
-        note: "Sale tarde del trabajo.",
-        createdAt: minutesAgo(6),
-        updatedAt: minutesAgo(6),
-        status: "announced",
-      },
-    ],
-    trips: [
-      {
-        id: "t-madrid-today",
-        code: "4170",
-        guardianId: "g-roberto",
-        pickerName: "Madrid Roberto",
-        pickerRelationEs: "Papá",
-        pickerRelationEn: "Dad",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-prius",
-        qrToken: "today-madrid",
-        createdAt: minutesAgo(1),
-      },
-      {
-        id: "t-marquez-today",
-        code: "6032",
-        guardianId: "g-benjamin",
-        pickerName: "Márquez Benjamín",
-        pickerRelationEs: "Papá",
-        pickerRelationEn: "Dad",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-kicks",
-        qrToken: "today-marquez",
-        createdAt: minutesAgo(1),
-      },
-      {
-        id: "t-lopez",
-        code: "2291",
-        guardianId: "g-laura",
-        pickerName: "López Laura",
-        pickerRelationEs: "Mamá",
-        pickerRelationEn: "Mom",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-crv",
-        qrToken: "pass-lopez",
-        createdAt: minutesAgo(8),
-        arrivedAt: minutesAgo(3),
-        arrivalPhoto: fallbackArrivalPhoto("Honda CR-V blanca", "Blanca"),
-      },
-      {
-        id: "t-soto",
-        code: "7740",
-        guardianId: "g-pedro",
-        pickerName: "Soto Pedro",
-        pickerRelationEs: "Papá",
-        pickerRelationEn: "Dad",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-tiguan",
-        qrToken: "pass-soto",
-        createdAt: minutesAgo(12),
-        arrivedAt: minutesAgo(4),
-        arrivalPhoto: fallbackArrivalPhoto("Volkswagen Tiguan azul", "Azul"),
-      },
-      {
-        id: "t-ruiz",
-        code: "1503",
-        guardianId: "g-ana",
-        pickerName: "Ruiz Ana",
-        pickerRelationEs: "Mamá",
-        pickerRelationEn: "Mom",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-sentra",
-        qrToken: "pass-ruiz",
-        createdAt: minutesAgo(18),
-        arrivedAt: minutesAgo(9),
-        arrivalPhoto: fallbackArrivalPhoto("Nissan Sentra rojo", "Rojo"),
-      },
-      {
-        id: "t-navarro",
-        code: "3388",
-        guardianId: "g-elena",
-        pickerName: "Navarro Elena",
-        pickerRelationEs: "Mamá",
-        pickerRelationEn: "Mom",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-corolla",
-        qrToken: "pass-navarro",
-        createdAt: minutesAgo(22),
-        arrivedAt: minutesAgo(14),
-        arrivalPhoto: fallbackArrivalPhoto("Toyota Corolla plata", "Plata"),
-      },
-      {
-        id: "t-garcia",
-        code: "9012",
-        guardianId: "g-miguel",
-        pickerName: "García Miguel",
-        pickerRelationEs: "Papá",
-        pickerRelationEn: "Dad",
-        pickerKind: "self",
-        method: "car",
-        vehicleId: "v-explorer",
-        qrToken: "pass-garcia",
-        createdAt: minutesAgo(40),
-        arrivedAt: minutesAgo(28),
-        arrivalVia: "tag",
-        arrivalPhoto: fallbackArrivalPhoto("Ford Explorer gris", "Gris"),
-        departedAt: minutesAgo(13),
-        departedVia: "tag",
-      },
-    ],
-    requests: [
-      {
-        id: "r-plan-sofia",
-        tripId: "t-madrid-today",
-        studentId: "s-sofia",
-        status: "on_the_way",
-        requestedAt: minutesAgo(1),
-      },
-      {
-        id: "r-plan-lucas",
-        tripId: "t-madrid-today",
-        studentId: "s-lucas",
-        status: "on_the_way",
-        requestedAt: minutesAgo(1),
-      },
-      {
-        id: "r-plan-emiliano",
-        tripId: "t-marquez-today",
-        studentId: "s-emiliano",
-        status: "on_the_way",
-        requestedAt: minutesAgo(1),
-      },
-      {
-        id: "r-plan-isabela",
-        tripId: "t-marquez-today",
-        studentId: "s-isabela",
-        status: "on_the_way",
-        requestedAt: minutesAgo(1),
-      },
-      {
-        id: "r-plan-paula",
-        tripId: "t-marquez-today",
-        studentId: "s-paula",
-        status: "on_the_way",
-        requestedAt: minutesAgo(1),
-      },
-      {
-        id: "r-mateo",
-        tripId: "t-lopez",
-        studentId: "s-mateo",
-        status: "arrived",
-        requestedAt: minutesAgo(8),
-        arrivedAt: minutesAgo(3),
-      },
-      {
-        id: "r-regina",
-        tripId: "t-soto",
-        studentId: "s-regina",
-        status: "arrived",
-        requestedAt: minutesAgo(12),
-        arrivedAt: minutesAgo(4),
-      },
-      {
-        id: "r-diego",
-        tripId: "t-ruiz",
-        studentId: "s-diego",
-        status: "delivered",
-        requestedAt: minutesAgo(18),
-        arrivedAt: minutesAgo(9),
-        deliveredAt: minutesAgo(2),
-        deliveredByStaffName: "Mtra. Ríos Alejandra",
-      },
-      {
-        id: "r-camila",
-        tripId: "t-navarro",
-        studentId: "s-camila",
-        status: "delivered",
-        requestedAt: minutesAgo(22),
-        arrivedAt: minutesAgo(14),
-        deliveredAt: minutesAgo(1),
-        deliveredByStaffName: "Mtro. Ortega Luis",
-      },
-      {
-        id: "r-iker",
-        tripId: "t-navarro",
-        studentId: "s-iker",
-        status: "delivered",
-        requestedAt: minutesAgo(22),
-        arrivedAt: minutesAgo(14),
-        deliveredAt: minutesAgo(1),
-        deliveredByStaffName: "Mtro. Ortega Luis",
-      },
-      {
-        id: "r-valentina",
-        tripId: "t-garcia",
-        studentId: "s-valentina",
-        status: "delivered",
-        requestedAt: minutesAgo(40),
-        arrivedAt: minutesAgo(28),
-        deliveredAt: minutesAgo(16),
-        deliveredByStaffName: "Mtra. Núñez Gabriela",
-      },
-    ],
+    latePickups: [],
+    trips: [],
+    requests: [],
     announcements: [
       {
         id: "an-welcome",
@@ -866,12 +648,57 @@ export function createSeedSnapshot(): Snapshot {
         authorName: "Dirección",
       },
     ],
+    pushSubscriptions: [],
     updatedAt: new Date().toISOString(),
     simulation: { running: false },
   };
   hydrateStudentSurnames(snapshot);
   snapshot.events = buildSeedEvents(snapshot);
   return snapshot;
+}
+
+/** Planes demo solo para tests; Nueva jornada arranca sin recogidas. */
+export function withDemoFamilyPlans(snapshot: Snapshot): Snapshot {
+  const next = structuredClone(snapshot);
+  const createdAt = minutesAgo(1);
+  next.latePickups = [];
+  next.trips = [
+    {
+      id: "t-madrid-today",
+      code: "4170",
+      guardianId: "g-roberto",
+      pickerName: "Madrid Roberto",
+      pickerRelationEs: "Papá",
+      pickerRelationEn: "Dad",
+      pickerKind: "self",
+      method: "car",
+      vehicleId: "v-prius",
+      qrToken: "today-madrid",
+      createdAt,
+    },
+    {
+      id: "t-marquez-today",
+      code: "6032",
+      guardianId: "g-benjamin",
+      pickerName: "Márquez Benjamín",
+      pickerRelationEs: "Papá",
+      pickerRelationEn: "Dad",
+      pickerKind: "self",
+      method: "car",
+      vehicleId: "v-kicks",
+      qrToken: "today-marquez",
+      createdAt,
+    },
+  ];
+  next.requests = [
+    { id: "r-plan-sofia", tripId: "t-madrid-today", studentId: "s-sofia", status: "on_the_way", requestedAt: createdAt },
+    { id: "r-plan-lucas", tripId: "t-madrid-today", studentId: "s-lucas", status: "on_the_way", requestedAt: createdAt },
+    { id: "r-plan-emiliano", tripId: "t-marquez-today", studentId: "s-emiliano", status: "on_the_way", requestedAt: createdAt },
+    { id: "r-plan-isabela", tripId: "t-marquez-today", studentId: "s-isabela", status: "on_the_way", requestedAt: createdAt },
+    { id: "r-plan-paula", tripId: "t-marquez-today", studentId: "s-paula", status: "on_the_way", requestedAt: createdAt },
+  ];
+  next.events = buildSeedEvents(next);
+  return next;
 }
 
 function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
