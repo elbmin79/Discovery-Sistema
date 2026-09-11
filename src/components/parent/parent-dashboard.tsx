@@ -63,7 +63,7 @@ export function ParentDashboard({
             <div key={child.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line/60 p-3">
               <StudentAvatar student={child} size="lg" />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#172c26]">{child.firstName} {child.lastName}</p>
+                <p className="break-words text-sm font-medium text-[#172c26]">{child.firstName} {child.lastName}</p>
                 <p className="mt-0.5 text-[10px] leading-tight text-muted">{LEVEL_LABELS[child.level][locale]}</p>
                 <p className="mt-1 text-[16px] font-semibold whitespace-nowrap tabular-nums tracking-tight text-[#172c26]">{child.dismissalTime}</p>
               </div>
@@ -114,6 +114,7 @@ export function ParentSchoolNews({
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
+          data-announcements-launcher
           onClick={onAvisos}
           className="relative flex min-h-[5.5rem] flex-col items-start justify-between rounded-xl border border-[#e7e5df] bg-white/50 p-3.5 text-left transition hover:bg-white"
         >

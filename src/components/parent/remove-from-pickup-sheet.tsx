@@ -119,7 +119,7 @@ function StudentToggle({
       }`}
     >
       <StudentAvatar student={student} size="sm" />
-      <p className="min-w-0 flex-1 truncate font-medium text-ink">{parentName(student)}</p>
+      <p className="min-w-0 flex-1 break-words font-medium text-ink">{parentName(student)}</p>
       <span
         className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs ${
           active ? "border-danger bg-danger text-paper" : "border-line"

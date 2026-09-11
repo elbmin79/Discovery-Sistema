@@ -1,3 +1,4 @@
+import { hydrateStudentSurnames } from "../student-surnames";
 import {
   applyStatusTimestamp,
   canAdvance,
@@ -173,7 +174,7 @@ export class MemoryPickupStore {
   }
 
   constructor(seed = createSeedSnapshot(), private historyLimit = 5000, private archiveEnabled = true) {
-    this.data = seed;
+    this.data = hydrateStudentSurnames(seed);
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
     }
@@ -573,6 +574,7 @@ export class MemoryPickupStore {
   addSimulatedArrival(notify = true) {
     const usedCodes = new Set(this.data.trips.map((trip) => trip.code));
     const lastName = randomOf(SIM_LAST_NAMES);
+    const secondLastName = randomOf(SIM_LAST_NAMES.filter((name) => name !== lastName));
     const siblingCount = 1 + Math.floor(Math.random() * 3);
     const students = Array.from({ length: siblingCount }, () => {
       const gender = Math.random() < 0.5 ? ("f" as const) : ("m" as const);
@@ -587,7 +589,7 @@ export class MemoryPickupStore {
       return {
         id: createId("s-sim"),
         firstName,
-        lastName,
+        lastName: `${lastName} ${secondLastName}`,
         level,
         group: Math.random() < 0.5 ? "Grupo A" : "Grupo B",
         zoneId: preschool ? "zone-preschool" : "zone-elementary",

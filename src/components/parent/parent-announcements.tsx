@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, Megaphone } from "lucide-react";
 import { formatTime } from "@/lib/school";
@@ -32,6 +32,11 @@ export function ParentAnnouncements({
   onOpen: (id: string) => void;
   onBack: () => void;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.closest(".overflow-y-auto")?.scrollTo(0, 0);
+    heading.current?.focus({ preventScroll: true });
+  }, [selectedId]);
   const { recent, previous } = useMemo(() => splitAnnouncements(snapshot), [snapshot]);
   const reads = new Set(guardian.readAnnouncementIds ?? []);
   const selected =
@@ -58,7 +63,7 @@ export function ParentAnnouncements({
         </button>
         <article className="rounded-3xl border border-line bg-paper p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold-deep">{t.announcements}</p>
-          <h1 className="mt-2 font-serif text-3xl text-forest">{selected.title}</h1>
+          <h1 ref={heading} tabIndex={-1} className="mt-2 font-serif text-3xl text-forest outline-none">{selected.title}</h1>
           {selected.subtitle ? <p className="mt-1 text-sm font-medium text-muted">{selected.subtitle}</p> : null}
           <p className="mt-2 text-xs text-muted">
             {formatTime(selected.createdAt, locale)}
@@ -82,7 +87,7 @@ export function ParentAnnouncements({
         {t.back}
       </button>
       <div>
-        <h1 className="font-serif text-3xl text-forest">{t.announcements}</h1>
+        <h1 ref={heading} tabIndex={-1} className="font-serif text-3xl text-forest outline-none">{t.announcements}</h1>
         <p className="mt-1 text-sm text-muted">{t.announcementsHint}</p>
       </div>
 

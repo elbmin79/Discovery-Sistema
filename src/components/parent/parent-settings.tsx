@@ -47,7 +47,7 @@ export function ParentSettings({
             <article key={child.id} className="flex items-center gap-4 rounded-3xl border border-line bg-paper p-4">
               <StudentAvatar student={child} size="lg" />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">{child.firstName} {child.lastName}</p>
+                <p className="break-words font-semibold">{child.firstName} {child.lastName}</p>
                 <label className="mt-1 inline-block text-sm font-medium text-forest">
                   {t.editPhoto}
                   <input

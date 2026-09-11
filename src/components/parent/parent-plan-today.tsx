@@ -81,19 +81,19 @@ export function ParentPlanToday({
       <section className="overflow-hidden rounded-[1.75rem] bg-forest text-paper shadow-[0_18px_45px_rgb(18_56_45/0.18)]">
         <div className="relative px-5 pb-5 pt-5">
           <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full border border-gold/20 bg-gold/10" />
-          <div className="relative flex items-start justify-between gap-4">
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase text-gold">
                 <CalendarDays className="h-4 w-4" />
                 {t.todayPlan}
               </p>
-              <p className="mt-3 font-serif text-5xl leading-none tabular-nums">{familyTime}</p>
+              <p className="mt-3 whitespace-nowrap font-serif text-4xl leading-none tabular-nums min-[400px]:text-5xl">{familyTime}</p>
               <p className="mt-2 text-sm text-cream">{t.familyPickupTime}</p>
             </div>
-            <div className="flex -space-x-3 pt-8">
+            <div className="flex flex-wrap -space-x-2 pt-2">
               {students.map((student) => (
                 <div key={student.id} className="rounded-full ring-2 ring-forest">
-                  <StudentAvatar student={student} size="lg" />
+                  <StudentAvatar student={student} size="sm" />
                 </div>
               ))}
             </div>
@@ -101,8 +101,8 @@ export function ParentPlanToday({
 
           <div className="relative mt-5 space-y-2 border-t border-paper/15 pt-4">
             {students.map((student) => (
-              <div key={student.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-semibold">{parentName(student)}</span>
+              <div key={student.id} className="flex min-w-0 flex-col gap-1 text-sm">
+                <span className="break-words font-semibold">{parentName(student)}</span>
                 <span className="text-cream">
                   {studentGrade(student, locale)} · <span className="tabular-nums">{student.dismissalTime}</span>
                 </span>
@@ -189,7 +189,7 @@ function Detail({ icon, label, value }: { icon: ReactNode; label: string; value:
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-muted">{label}</p>
-        <p className="truncate text-sm font-semibold text-ink">{value || "—"}</p>
+        <p className="break-words text-sm font-semibold text-ink">{value || "—"}</p>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { hydrateStudentSurnames } from "../student-surnames";
 import { LEVEL_LABELS, SCHOOL, todayJornada } from "../school";
 import type { PickupEvent, Snapshot } from "../types";
 
@@ -868,6 +869,7 @@ export function createSeedSnapshot(): Snapshot {
     updatedAt: new Date().toISOString(),
     simulation: { running: false },
   };
+  hydrateStudentSurnames(snapshot);
   snapshot.events = buildSeedEvents(snapshot);
   return snapshot;
 }

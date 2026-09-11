@@ -738,7 +738,7 @@ function AutoArrivePanel({
             <div key={student.id} className="flex items-center gap-4 rounded-2xl bg-forest-deep p-4">
               <StudentAvatar student={student} size="lg" />
               <div>
-                <p className="text-xl font-semibold">{studentName(student)}</p>
+                <p className="break-words text-xl font-semibold">{studentName(student)}</p>
                 <p className="text-cream">{studentGrade(student, "es")}</p>
               </div>
             </div>
@@ -820,7 +820,7 @@ function ReviewPanel({
               <div key={student.id} className="flex items-center gap-4 rounded-2xl bg-forest-deep p-4">
                 <StudentAvatar student={student} size="lg" />
                 <div>
-                  <p className="text-xl font-semibold">{studentName(student)}</p>
+                  <p className="break-words text-xl font-semibold">{studentName(student)}</p>
                   <p className="text-cream">{studentGrade(student, "es")}</p>
                   <p className="text-sm text-gold">{zone?.nameEs}</p>
                 </div>

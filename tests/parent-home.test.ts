@@ -7,13 +7,31 @@ import { todayJornada } from "../src/lib/school";
 import type { CreateLatePickupInput } from "../src/lib/types";
 import { existsSync } from "node:fs";
 import { studentName, studentPhoto } from "../src/lib/school";
+import { hydrateStudentSurnames } from "../src/lib/student-surnames";
+
+test("demo surnames upgrade saved students without resetting pickups or overwriting names", () => {
+  const snapshot = createSeedSnapshot();
+  assert.ok(snapshot.students.every((student) => student.lastName.split(" ").length >= 2));
+  const sofia = snapshot.students.find((student) => student.id === "s-sofia")!;
+  sofia.lastName = "Madrid";
+  const before = structuredClone(snapshot.trips);
+  hydrateStudentSurnames(snapshot);
+  assert.equal(sofia.lastName, "Madrid Herrera");
+  assert.deepEqual(snapshot.trips, before);
+  const upgraded = structuredClone(snapshot);
+  hydrateStudentSurnames(snapshot);
+  assert.deepEqual(snapshot, upgraded);
+  sofia.lastName = "De la Torre Hernández";
+  hydrateStudentSurnames(snapshot);
+  assert.equal(sofia.lastName, "De la Torre Hernández");
+});
 
 test("family names are first-last while school displays remain last-first", () => {
   const snapshot = createSeedSnapshot();
   const student = snapshot.students.find((student) => student.id === "s-sofia")!;
   const trip = snapshot.trips.find((trip) => trip.id === "t-madrid-today")!;
-  assert.equal(parentName(student), "Sofía Madrid");
-  assert.equal(studentName(student), "Madrid Sofía");
+  assert.equal(parentName(student), "Sofía Madrid Herrera");
+  assert.equal(studentName(student), "Madrid Herrera Sofía");
   assert.equal(parentPickerName(snapshot, trip), "Roberto Madrid");
   assert.equal(trip.pickerName, "Madrid Roberto");
   for (const pickerName of ["Madrid Rosa", "Rosa Madrid"]) {

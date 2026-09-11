@@ -15,8 +15,8 @@ test("family sees, edits, scans and completes today's prepared plan", async ({ p
   await expect(page.getByText("2:30 p.m.", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Papá · Roberto Madrid", { exact: true })).toBeVisible();
   await expect(page.getByText("DSC-0417", { exact: true })).toBeVisible();
-  await expect(page.getByText("Sofía Madrid", { exact: true })).toBeVisible();
-  await expect(page.getByText("Lucas Madrid", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sofía Madrid Herrera", { exact: true })).toBeVisible();
+  await expect(page.getByText("Lucas Madrid Herrera", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   await page.getByRole("button", { name: "Cambiar el plan de hoy" }).click();
@@ -59,7 +59,7 @@ test("today plan is fully translated to English", async ({ page }) => {
   await expect(page.getByText("Today's plan", { exact: true })).toBeVisible();
   await expect(page.getByText("All set", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Change today's plan" })).toBeVisible();
-  await expect(page.getByText("Emiliano Márquez", { exact: true })).toBeVisible();
-  await expect(page.getByText("Isabela Márquez", { exact: true })).toBeVisible();
-  await expect(page.getByText("Paula Márquez", { exact: true })).toBeVisible();
+  await expect(page.getByText("Emiliano Márquez Espinoza", { exact: true })).toBeVisible();
+  await expect(page.getByText("Isabela Márquez Espinoza", { exact: true })).toBeVisible();
+  await expect(page.getByText("Paula Márquez Espinoza", { exact: true })).toBeVisible();
 });

@@ -513,7 +513,7 @@ function NotifiedList({ cards, onOpen }: { cards: FamilyCard[]; onOpen: (card: F
                 ))}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-serif text-base leading-tight text-forest">
+                <p className="break-words font-serif text-base leading-tight text-forest">
                   {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
                 </p>
                 <p className="truncate text-xs text-muted">
@@ -592,8 +592,8 @@ function FamilyCardView({
             <div key={kid.request.id} className="flex items-center gap-3.5">
               <StudentAvatar student={kid.student} size="lg" />
               <div className="min-w-0 flex-1">
-                <p className="font-serif text-xl leading-tight text-forest">{kid.student.lastName}</p>
-                <p className="text-sm text-forest">{kid.student.firstName}</p>
+                <p className="break-words font-serif text-xl leading-tight text-forest">{kid.student.lastName}</p>
+                <p className="break-words text-sm text-forest">{kid.student.firstName}</p>
                 <p className="mt-0.5 text-xs text-muted">{studentGrade(kid.student, "es")}</p>
               </div>
             </div>
@@ -691,7 +691,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs tracking-[0.18em] uppercase text-gold-deep">Solicitud {card.trip.code}</p>
-          <h2 className="mt-1 font-serif text-2xl text-forest">
+          <h2 className="break-words mt-1 font-serif text-2xl text-forest">
             {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
           </h2>
         </div>
@@ -741,7 +741,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
             <div key={kid.request.id} className="flex items-center gap-3 rounded-2xl bg-cream px-4 py-3">
               <StudentAvatar student={kid.student} size="md" />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{studentName(kid.student)}</p>
+                <p className="break-words font-medium">{studentName(kid.student)}</p>
                 <p className="text-xs text-muted">{studentGrade(kid.student, "es")}</p>
               </div>
               {auth ? (
@@ -836,7 +836,7 @@ function NotifiedSheet({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs tracking-[0.18em] uppercase text-forest">Entregado · {formatTime(card.deliveredAt)}</p>
-          <h2 className="mt-1 font-serif text-2xl text-forest">
+          <h2 className="break-words mt-1 font-serif text-2xl text-forest">
             {card.kids.map((kid) => studentName(kid.student)).join(" y ")}
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -859,7 +859,7 @@ function NotifiedSheet({
           <div key={kid.request.id} className="flex items-center gap-3 rounded-2xl bg-cream px-4 py-3">
             <StudentAvatar student={kid.student} size="md" />
             <div className="min-w-0 flex-1">
-              <p className="font-medium">{studentName(kid.student)}</p>
+              <p className="break-words font-medium">{studentName(kid.student)}</p>
               <p className="text-xs text-muted">{studentGrade(kid.student, "es")}</p>
             </div>
             <p className="text-sm text-muted">{formatTime(kid.request.deliveredAt)}</p>

@@ -1,3 +1,4 @@
+import { hydrateStudentSurnames } from "../student-surnames";
 import { createSeedSnapshot } from "@/lib/seed/demo-data";
 import { getSupabaseAdmin, isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/admin";
 import type { ArchivedLatePickup, HistoryRow, Snapshot } from "@/lib/types";
@@ -34,7 +35,7 @@ export async function readSnapshot(): Promise<Snapshot> {
     throw new Error("Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.");
   }
   if (!isSupabaseConfigured()) {
-    return getMemoryStore().snapshot();
+    return hydrateStudentSurnames(getMemoryStore().snapshot());
   }
   return (await loadRow()).snapshot;
 }
@@ -160,7 +161,7 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
       guardian.readAnnouncementIds = [];
     }
   }
-  return snapshot;
+  return hydrateStudentSurnames(snapshot);
 }
 
 async function saveVersioned(snapshot: Snapshot, version: number, archiveRows: HistoryRow[] = [], lateRows: ArchivedLatePickup[] = []) {
