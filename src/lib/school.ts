@@ -67,6 +67,21 @@ export function studentGrade(student: Student, locale: Locale) {
   return student.group ? `${level} · ${student.group}` : level;
 }
 
+export function dismissalMinutes(value: string) {
+  const match = value.match(/(\d{1,2}):(\d{2})\s*([ap])/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  const hour = (Number(match[1]) % 12) + (match[3].toLowerCase() === "p" ? 12 : 0);
+  return hour * 60 + Number(match[2]);
+}
+
+export function byDismissalTime<T extends { dismissalTime: string }>(left: T, right: T) {
+  return dismissalMinutes(left.dismissalTime) - dismissalMinutes(right.dismissalTime);
+}
+
+export function sortByDismissalTime<T extends { dismissalTime: string }>(items: T[]) {
+  return [...items].sort(byDismissalTime);
+}
+
 export function findStudent(snapshot: Snapshot, id: string) {
   return snapshot.students.find((student) => student.id === id);
 }
@@ -102,7 +117,7 @@ export function friendKids(snapshot: Snapshot, guardian: Guardian) {
       if (student && !guardian.studentIds.includes(student.id)) result.push({ student, owner });
     }
   }
-  return result;
+  return result.sort((left, right) => byDismissalTime(left.student, right.student));
 }
 
 /** Solicitudes de amigos sobre los hijos de este tutor que siguen abiertas. */

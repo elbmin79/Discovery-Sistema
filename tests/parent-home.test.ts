@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { MemoryPickupStore } from "../src/lib/store/memory-store";
 import { createSeedSnapshot, withDemoFamilyPlans } from "../src/lib/seed/demo-data";
 import { lateEligibleStudentIds, lateReplacementTrips, parentName, parentPickerName } from "../src/lib/parent-home";
-import { studentName, studentPhoto, todayJornada } from "../src/lib/school";
+import { byDismissalTime, studentName, studentPhoto, todayJornada } from "../src/lib/school";
 import type { CreateLatePickupInput } from "../src/lib/types";
 import { existsSync } from "node:fs";
 import { hydrateStudentSurnames } from "../src/lib/student-surnames";
@@ -213,6 +213,16 @@ test("yesterday's plan and notice do not prevent today's new plan or notice", ()
   const snapshot = current.createTrip({ ...input, method: "car", vehicleId: guardian.defaultVehicleId });
   assert.ok(snapshot.trips.some((item) => item.id !== trip.id && item.guardianId === guardian.id));
   assert.throws(() => current.arriveByCode(trip.code));
+});
+
+test("family kid lists sort by pickup time earliest first", () => {
+  const { store } = setup();
+  const guardian = store.snapshot().guardians.find((item) => item.id === "g-roberto")!;
+  const kids = store.snapshot().students
+    .filter((student) => guardian.studentIds.includes(student.id))
+    .sort(byDismissalTime);
+  assert.deepEqual(kids.map((kid) => kid.firstName), ["Lucas", "Sofía"]);
+  assert.deepEqual(kids.map((kid) => kid.dismissalTime), ["2:30 p.m.", "2:45 p.m."]);
 });
 
 test("friend children need approved pickup authorization for late notices", () => {

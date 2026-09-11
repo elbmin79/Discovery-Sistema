@@ -4,7 +4,7 @@ import { useState } from "react";
 import { parentName } from "@/lib/parent-home";
 import { ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { greeting, studentGrade } from "@/lib/school";
+import { byDismissalTime, greeting, studentGrade } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, Locale, Student } from "@/lib/types";
 
@@ -54,7 +54,7 @@ export function ParentHome({
     <div className="flex min-h-full flex-col">
       {onBack ? <button type="button" onClick={onBack} className="mb-5 self-start text-sm font-medium text-forest">← {t.back}</button> : null}
       <p className="text-sm text-muted">{greeting(locale)},</p>
-      <h1 className="font-serif text-4xl text-forest">{guardian.firstName}</h1>
+      <h1 className="text-3xl text-forest">{guardian.firstName}</h1>
       <p className="mt-6 text-xs font-semibold tracking-[0.16em] uppercase text-gold-deep">
         {t.children}
       </p>
@@ -159,6 +159,7 @@ function FriendPicker({
   for (const { student, owner } of friendsChildren) {
     const entry = families.get(owner.id) ?? { owner, kids: [] };
     entry.kids.push(student);
+    entry.kids.sort(byDismissalTime);
     families.set(owner.id, entry);
   }
   const current = familyId ? families.get(familyId) : undefined;

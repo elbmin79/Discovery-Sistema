@@ -43,7 +43,7 @@ export function ParentCalendar({
         {t.back}
       </button>
       <div>
-        <h1 className="font-serif text-3xl text-forest">{t.calendarTitle}</h1>
+        <h1 className="text-3xl text-forest">{t.calendarTitle}</h1>
         <p className="mt-1 text-sm text-muted">{t.calendarHint}</p>
       </div>
 
@@ -120,7 +120,7 @@ export function ParentCalendar({
       </section>
 
       <section className="rounded-3xl border border-line bg-paper p-4">
-        <h2 className="font-serif text-xl text-forest">{t.calendarDayTitle}</h2>
+        <h2 className="text-2xl text-forest">{t.calendarDayTitle}</h2>
         {dayEvents.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t.calendarDayEmpty}</p>
         ) : (

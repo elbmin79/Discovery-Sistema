@@ -26,7 +26,7 @@ import { useSession } from "@/hooks/use-session";
 import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import { canRemoveFromTrip } from "@/lib/pickup-machine";
 import { unreadAnnouncements } from "@/lib/school-comms";
-import { formatTime, friendKids, jornadaOf, todayJornada } from "@/lib/school";
+import { byDismissalTime, formatTime, friendKids, jornadaOf, todayJornada } from "@/lib/school";
 import type { CreateTripInput, Snapshot } from "@/lib/types";
 
 function activeTripForGuardian(snapshot: Snapshot, guardianId: string, jornada: string) {
@@ -82,7 +82,10 @@ export function ParentApp() {
 
   const guardian = snapshot?.guardians.find((item) => item.id === session?.guardianId);
   const children = useMemo(
-    () => snapshot?.students.filter((student) => guardian?.studentIds.includes(student.id)) ?? [],
+    () =>
+      snapshot?.students
+        .filter((student) => guardian?.studentIds.includes(student.id))
+        .sort(byDismissalTime) ?? [],
     [snapshot, guardian],
   );
   const friendsChildren = useMemo(
@@ -266,7 +269,7 @@ export function ParentApp() {
           <button
           type="button"
           onClick={toggle}
-          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold tracking-wide text-forest"
+          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold text-forest"
         >
           <Globe className="h-3.5 w-3.5" />
           {t.language}
@@ -275,7 +278,7 @@ export function ParentApp() {
         </div>
       </header>
 
-      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
+      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
         {notice && step === "home" && tab === "home" ? <div role="status" className="pickup-toast sticky top-3 z-30 mb-4 flex items-center gap-3 overflow-hidden rounded-2xl bg-forest p-4 text-sm text-paper shadow-lg"><span className="pickup-toast-check flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper/15"><Check className="h-5 w-5" /></span><span>{t[notice]}</span><span aria-hidden className="pickup-toast-timer absolute inset-x-0 bottom-0 h-1 origin-left bg-gold" /></div> : null}
         {error && step === "home" ? <p role="alert" className="mb-4 text-sm text-danger">{error}</p> : null}
         {session && snapshot && guardian && tab !== "settings" ? (
@@ -299,6 +302,7 @@ export function ParentApp() {
                   "{names}",
                   (snapshot?.students ?? [])
                     .filter((student) => activeLate.studentIds.includes(student.id))
+                    .sort(byDismissalTime)
                     .map((student) => parentName(student))
                     .join(", "),
                 )
@@ -515,7 +519,7 @@ export function ParentApp() {
               setTab("home");
               setStep("home");
             }}
-            className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-semibold ${
               tab === "home" ? "text-forest" : "text-muted"
             }`}
           >
@@ -533,7 +537,7 @@ export function ParentApp() {
               setTab("settings");
               setStep("home");
             }}
-            className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-semibold ${
               tab === "settings" ? "text-forest" : "text-muted"
             }`}
           >

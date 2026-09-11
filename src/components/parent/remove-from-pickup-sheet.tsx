@@ -4,6 +4,7 @@ import { useState } from "react";
 import { parentName } from "@/lib/parent-home";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { canRemoveFromTrip } from "@/lib/pickup-machine";
+import { byDismissalTime } from "@/lib/school";
 
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { PickupRequest, Snapshot, Student } from "@/lib/types";
@@ -25,7 +26,15 @@ export function RemoveFromPickupSheet({
   onClose: () => void;
   onConfirm: (studentIds: string[], note?: string) => void;
 }) {
-  const removable = requests.filter((request) => canRemoveFromTrip(request.status));
+  const removable = requests
+    .filter((request) => canRemoveFromTrip(request.status))
+    .slice()
+    .sort((left, right) => {
+      const leftStudent = snapshot.students.find((item) => item.id === left.studentId);
+      const rightStudent = snapshot.students.find((item) => item.id === right.studentId);
+      if (!leftStudent || !rightStudent) return 0;
+      return byDismissalTime(leftStudent, rightStudent);
+    });
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
@@ -43,7 +52,7 @@ export function RemoveFromPickupSheet({
         aria-labelledby="remove-pickup-title"
         className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[1.75rem] bg-paper p-5 shadow-xl"
       >
-        <h2 id="remove-pickup-title" className="font-serif text-2xl text-forest">
+        <h2 id="remove-pickup-title" className="text-2xl text-forest">
           {t.removeFromPickupTitle}
         </h2>
         <p className="mt-1 text-sm text-muted">{t.removeFromPickupHint}</p>

@@ -15,6 +15,14 @@
   --line: #d9cfc0;
   --danger: #8f3a32;
   --arrived: #c4a15a;
+  --font-system:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "SF Pro Display",
+    "Helvetica Neue",
+    system-ui,
+    sans-serif;
 }
 
 * {
@@ -42,8 +50,8 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-danger: var(--danger);
-  --font-sans: var(--font-sans-body);
-  --font-serif: var(--font-serif-display);
+  --font-sans: var(--font-system);
+  --font-serif: var(--font-system);
 }
 
 html,
@@ -54,13 +62,18 @@ body {
 }
 
 body {
-  font-family: var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-system);
+  letter-spacing: -0.016em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
 h2,
 .font-serif {
-  font-family: var(--font-serif-display), ui-serif, Georgia, serif;
+  font-family: var(--font-system);
+  font-weight: 600;
+  letter-spacing: -0.022em;
 }
 
 button,
@@ -352,4 +365,49 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .pickup-toast, .pickup-toast-check, .pickup-toast-timer { animation: none; }
+}
+
+.familia-app {
+  font-size: 16px;
+  line-height: 1.38;
+}
+
+.familia-app .text-xs {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.familia-app .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.38;
+}
+
+.familia-app .text-base {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.familia-app .text-lg {
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
+.familia-app .text-xl {
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.familia-app .text-2xl {
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+
+.familia-app .text-3xl {
+  font-size: 1.75rem;
+  line-height: 1.12;
+}
+
+.familia-app .text-4xl {
+  font-size: 1.9375rem;
+  line-height: 1.08;
 }

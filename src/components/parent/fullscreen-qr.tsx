@@ -27,7 +27,7 @@ export function FullscreenQr({ qr, trip, t, onClose }: { qr: string; trip: Picku
         />
       ) : null}
       <p className="mt-8 text-xs tracking-[0.22em] uppercase text-gold">{t.codeLabel}</p>
-      <p className="mt-3 font-serif text-6xl tracking-[0.22em]">{trip.code.split("").join(" ")}</p>
+      <p className="mt-3 text-6xl font-semibold tracking-[0.16em]">{trip.code.split("").join(" ")}</p>
       <p className="mt-8 text-sm text-cream">{t.tapToClose}</p>
     </button>,
     document.body,
