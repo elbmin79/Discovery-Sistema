@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, ChevronDown } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
@@ -40,6 +40,8 @@ export function ParentSettings({
         </h1>
         <p className="mt-2 text-sm text-muted">{t.settingsIntro}</p>
       </div>
+
+      <PushNotificationsSection t={t} />
 
       <section>
         <h2 className="text-sm font-semibold tracking-[0.14em] uppercase text-gold-deep">{t.children}</h2>
@@ -89,8 +91,6 @@ export function ParentSettings({
         onClose={() => setEditor("none")}
       />
 
-      <PushNotificationsSection t={t} />
-
       <button type="button" onClick={onLogout} className="text-sm font-medium text-danger">
         {t.logout}
       </button>
@@ -99,11 +99,16 @@ export function ParentSettings({
 }
 
 function PushNotificationsSection({ t }: { t: Dictionary }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const push = usePushNotifications();
+  const { refresh } = push;
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return (
-    <section>
+    <section className="rounded-3xl border border-line bg-paper p-4">
       <button
         type="button"
         onClick={() => {
@@ -113,7 +118,7 @@ function PushNotificationsSection({ t }: { t: Dictionary }) {
             return next;
           });
         }}
-        className="flex w-full items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 text-left"
+        className="flex w-full items-center justify-between text-left"
       >
         <span className="flex min-w-0 items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-forest/10 text-forest">
@@ -127,25 +132,34 @@ function PushNotificationsSection({ t }: { t: Dictionary }) {
         <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? (
-        <div className="mt-3 space-y-3 rounded-2xl border border-line bg-cream/50 p-4">
+        <div className="mt-4 space-y-3 border-t border-line pt-4">
           <p className="text-sm leading-relaxed text-muted">{t.pushBody}</p>
           {push.subscribed ? (
-            <p className="rounded-xl bg-forest/10 px-3 py-2 text-sm font-medium text-forest">{t.pushOn}</p>
+            <p className="rounded-xl bg-forest/10 px-3 py-2.5 text-sm font-medium text-forest">{t.pushOn}</p>
           ) : (
             <button
               type="button"
-              disabled={push.busy || !push.supported}
+              disabled={push.busy || push.permission === "unsupported"}
               onClick={() => void push.enable()}
-              className="min-h-11 w-full rounded-full bg-forest px-4 text-sm font-semibold text-paper disabled:opacity-50"
+              className="min-h-12 w-full rounded-full bg-forest px-4 text-sm font-semibold text-paper disabled:opacity-50"
             >
               {push.busy ? t.pushEnabling : t.pushEnable}
             </button>
           )}
-          {!push.supported ? <p className="text-xs text-muted">{t.pushUnsupported}</p> : null}
+          {push.permission === "unsupported" ? <p className="text-xs text-muted">{t.pushUnsupported}</p> : null}
           {push.permission === "denied" ? <p className="text-xs text-danger">{t.pushDenied}</p> : null}
           {push.error ? <p className="text-xs text-danger">{push.error}</p> : null}
           <p className="text-[11px] leading-relaxed text-muted">{t.pushIosHint}</p>
         </div>
+      ) : !push.subscribed ? (
+        <button
+          type="button"
+          disabled={push.busy || push.permission === "unsupported"}
+          onClick={() => void push.enable()}
+          className="mt-3 min-h-11 w-full rounded-full bg-forest px-4 text-sm font-semibold text-paper disabled:opacity-50"
+        >
+          {push.busy ? t.pushEnabling : t.pushEnable}
+        </button>
       ) : null}
     </section>
   );

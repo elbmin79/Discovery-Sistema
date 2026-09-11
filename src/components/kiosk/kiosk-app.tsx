@@ -25,8 +25,40 @@ type AutoTarget = { kind: "tag"; target: TagTarget } | { kind: "qr"; trip: Picku
 
 const TAG_READ_MS = 2200;
 
+/** Rechaza frames negros/verdes/uniformes típicos de cámara aún sin imagen real. */
+function frameLooksLive(source: HTMLVideoElement) {
+  const probe = document.createElement("canvas");
+  const size = 32;
+  probe.width = size;
+  probe.height = size;
+  const context = probe.getContext("2d", { willReadFrequently: true });
+  if (!context) return false;
+  context.drawImage(source, 0, 0, size, size);
+  const { data } = context.getImageData(0, 0, size, size);
+  let sum = 0;
+  let sumSq = 0;
+  let greenish = 0;
+  const pixels = size * size;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    sum += luma;
+    sumSq += luma * luma;
+    if (g > r + 25 && g > b + 25) greenish += 1;
+  }
+  const mean = sum / pixels;
+  const variance = sumSq / pixels - mean * mean;
+  if (mean < 8 || mean > 248) return false;
+  if (variance < 80) return false;
+  if (greenish / pixels > 0.55 && variance < 400) return false;
+  return true;
+}
+
 function captureFrame(source: HTMLVideoElement | null) {
-  if (!source || source.videoWidth <= 0) return undefined;
+  if (!source || source.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || source.videoWidth <= 0) return undefined;
+  if (!frameLooksLive(source)) return undefined;
   const scale = Math.min(1280 / source.videoWidth, 720 / source.videoHeight, 1);
   const width = Math.round(source.videoWidth * scale);
   const height = Math.round(source.videoHeight * scale);
@@ -38,11 +70,24 @@ function captureFrame(source: HTMLVideoElement | null) {
   return canvas.toDataURL("image/jpeg", 0.7);
 }
 
+async function waitForLiveFrame(source: HTMLVideoElement | null, timeoutMs = 3500) {
+  if (!source) return false;
+  const started = performance.now();
+  while (performance.now() - started < timeoutMs) {
+    if (source.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && source.videoWidth > 0 && frameLooksLive(source)) {
+      return true;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+  }
+  return false;
+}
+
 async function captureArrivalPhoto(videoRef: RefObject<HTMLVideoElement | null>) {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  await waitForLiveFrame(videoRef.current);
+  for (let attempt = 0; attempt < 16; attempt += 1) {
     const shot = captureFrame(videoRef.current);
     if (shot) return shot;
-    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    await new Promise((resolve) => window.setTimeout(resolve, 150));
   }
   return undefined;
 }
@@ -152,6 +197,7 @@ export function KioskApp() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+          await waitForLiveFrame(videoRef.current);
         }
         setCameraError(null);
       } catch {
@@ -218,10 +264,6 @@ export function KioskApp() {
     };
   }, [step, autoTarget]);
 
-  function takePhoto() {
-    return captureFrame(videoRef.current);
-  }
-
   function typeDigit(digit: string) {
     setError(null);
     setCode((current) => (current.length >= 4 ? current : current + digit));
@@ -271,7 +313,7 @@ export function KioskApp() {
     if (!trip) return;
     setBusy(true);
     try {
-      const shot = takePhoto();
+      const shot = await captureArrivalPhoto(videoRef);
       await postJson("/api/trips/arrive", {
         code: trip.code,
         photo: shot,

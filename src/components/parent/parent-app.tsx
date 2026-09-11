@@ -104,7 +104,7 @@ export function ParentApp() {
   const tripArrived = Boolean(trip?.arrivedAt || activeTripRequests.some((request) => request.status !== "on_the_way"));
   const showNav = Boolean(session && guardian && (step === "home" || step === "calendario"));
   const unread = snapshot && guardian ? unreadAnnouncements(snapshot, guardian) : [];
-  const appBadge = useAppBadge(unread.length, Boolean(guardian));
+  useAppBadge(unread.length, Boolean(guardian));
 
   async function showAnnouncements() {
     if (announcementOpening.current || announcementOrigin) return;
@@ -311,7 +311,19 @@ export function ParentApp() {
         ) : null}
 
         {!session ? (
-          <ParentLogin t={t} onSignedIn={setSession} />
+          <ParentLogin
+            t={t}
+            onSignedIn={(next) => {
+              setTab("home");
+              setStep("home");
+              setSelected([]);
+              setError(null);
+              setNotice(null);
+              setOpenAnnouncementId(null);
+              setAnnouncementOrigin(null);
+              setSession(next);
+            }}
+          />
         ) : syncError && !snapshot ? (
           <SystemStatus kind="error" context="familia" detail={syncError} onRetry={retry} />
         ) : !snapshot ? (
@@ -335,7 +347,11 @@ export function ParentApp() {
             guardian={guardian}
             locale={locale}
             t={t}
-            onLogout={clearSession}
+            onLogout={() => {
+              setTab("home");
+              setStep("home");
+              clearSession();
+            }}
           />
         ) : step === "late" ? (
           <ParentLate
@@ -491,7 +507,13 @@ export function ParentApp() {
           <button
             type="button"
             onClick={() => {
+              if (tab === "home" && step === "home") {
+                contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+              }
               setTab("home");
+              setStep("home");
             }}
             className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
               tab === "home" ? "text-forest" : "text-muted"
@@ -502,7 +524,15 @@ export function ParentApp() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("settings")}
+            onClick={() => {
+              if (tab === "settings") {
+                contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+              }
+              setTab("settings");
+              setStep("home");
+            }}
             className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
               tab === "settings" ? "text-forest" : "text-muted"
             }`}
@@ -516,8 +546,6 @@ export function ParentApp() {
       {announcementOrigin && snapshot && guardian ? (
         <AnnouncementWindow origin={announcementOrigin} label={t.announcements} closeLabel={t.back} onClose={() => setAnnouncementOrigin(null)}>
           <ParentAnnouncements snapshot={snapshot} guardian={guardian} locale={locale} t={t} selectedId={openAnnouncementId} onOpen={(id) => void openAnnouncement(id)} onBack={() => openAnnouncementId ? setOpenAnnouncementId(null) : setAnnouncementOrigin(null)} />
-          {appBadge.canEnable ? <button type="button" onClick={() => void appBadge.enable()} className="mt-4 min-h-11 w-full rounded-2xl border border-line bg-paper p-3 text-sm font-medium text-forest">{locale === "es" ? "Activar contador en el icono de la app" : "Enable the app icon badge"}</button> : null}
-          {appBadge.denied ? <p className="mt-3 text-xs text-muted">{locale === "es" ? "Puedes permitir notificaciones desde los ajustes del dispositivo para ver el contador en el icono." : "Allow notifications in your device settings to see the app icon badge."}</p> : null}
         </AnnouncementWindow>
       ) : null}
     </PhoneShell>
