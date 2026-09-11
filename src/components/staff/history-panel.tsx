@@ -132,7 +132,14 @@ export function HistorySheet({ row, onClose }: { row: HistoryRow; onClose: () =>
   }, [onClose]);
   const captured = isCapturedPhoto(row.photoPath) && failed === 0;
   const svg = fallbackArrivalPhoto(row.vehicleLabel ?? "Auto", row.vehicleColor);
-  const src = failed >= 2 ? svg : failed === 1 ? row.vehiclePhoto ?? svg : (captured ? resolvePhotoSrc(row.photoPath) : row.vehiclePhoto) ?? svg;
+  const src =
+    failed >= 2
+      ? svg
+      : failed === 1
+        ? isCapturedPhoto(row.photoPath)
+          ? svg
+          : row.vehiclePhoto ?? svg
+        : (isCapturedPhoto(row.photoPath) ? resolvePhotoSrc(row.photoPath) : row.vehiclePhoto) ?? svg;
   return <div className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 p-4 md:items-center" onClick={onClose}><div role="dialog" aria-modal="true" aria-labelledby="history-detail-title" className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-paper p-6" onClick={(event) => event.stopPropagation()}>
     <div className="flex justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-gold-deep">Solicitud {row.code} · {row.jornada}</p><h2 id="history-detail-title" className="mt-1 font-serif text-2xl text-forest">{row.studentNames.join(" y ")}</h2></div><button ref={close} onClick={onClose} aria-label="Cerrar" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line"><X size={18} /></button></div>
     <div className="relative mt-4 overflow-hidden rounded-2xl"><Image src={src} alt="Auto en la entrada" width={960} height={540} unoptimized onError={() => setFailed((value) => Math.min(value + 1, 2))} className="h-52 w-full object-cover md:h-64" /><span className="absolute left-3 top-3 rounded-full bg-forest-deep/90 px-3 py-1 text-xs text-paper">{captured ? `Foto de llegada · ${time(row.arrivedAt)}` : "Foto de referencia del auto"}</span></div>

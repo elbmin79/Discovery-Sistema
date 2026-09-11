@@ -276,7 +276,15 @@ function Spotlight({ family, position, total }: { family: TvFamily; position: nu
   const surnames = [...new Set(family.kids.map((kid) => kid.student.lastName))];
   const sharedName = surnames.length === 1 ? surnames[0] : null;
   const picture = arrivalPicture(family.trip, family.vehicle);
-  const photo = broken >= 2 ? fallbackArrivalPhoto(family.vehicle?.label ?? "Auto", family.vehicle?.color) : broken === 1 ? picture.fallback ?? fallbackArrivalPhoto("Auto") : picture.src ?? picture.fallback;
+  const svg = fallbackArrivalPhoto(family.vehicle?.label ?? "Auto", family.vehicle?.color);
+  const photo =
+    broken >= 2
+      ? svg
+      : broken === 1
+        ? picture.captured
+          ? svg
+          : picture.fallback ?? svg
+        : picture.src ?? picture.fallback ?? svg;
 
   return (
     <section className="tv-in relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] bg-paper text-ink">
