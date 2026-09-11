@@ -1,4 +1,5 @@
 import { hydrateStudentSurnames } from "../student-surnames";
+import { assertSnapshotIdentity, normalizeSnapshotIdentity } from "../snapshot-integrity";
 import { createSeedSnapshot } from "@/lib/seed/demo-data";
 import { getSupabaseAdmin, isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/admin";
 import type { ArchivedLatePickup, HistoryRow, Snapshot } from "@/lib/types";
@@ -42,6 +43,7 @@ export async function readSnapshot(): Promise<Snapshot> {
 
 export async function saveSnapshot(snapshot: Snapshot) {
   if (!isSupabaseConfigured()) return;
+  assertSnapshotIdentity(snapshot);
   const row = await loadRow();
   const saved = await saveVersioned(snapshot, row.version);
   if (!saved) {
@@ -164,7 +166,7 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
       guardian.readAnnouncementIds = [];
     }
   }
-  return hydrateStudentSurnames(snapshot);
+  return hydrateStudentSurnames(normalizeSnapshotIdentity(snapshot));
 }
 
 async function saveVersioned(snapshot: Snapshot, version: number, archiveRows: HistoryRow[] = [], lateRows: ArchivedLatePickup[] = []) {

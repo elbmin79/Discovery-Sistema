@@ -162,7 +162,7 @@ export function createSeedSnapshot(): Snapshot {
         gender: "m",
       },
       {
-        id: "s-renata",
+        id: "s-renata-castro",
         firstName: "Renata",
         lastName: "Castro",
         level: "grade-3",

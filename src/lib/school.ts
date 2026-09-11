@@ -141,11 +141,54 @@ export function initials(name: string) {
     .join("");
 }
 
-export function studentPhoto(student: Student) {
-  if (student.id.startsWith("s-sim")) {
-    return student.photoUrl ?? (student.gender === "f" ? "/students/s-sofia.png" : "/students/s-lucas.png");
+const STUDENT_PORTRAITS = {
+  f: [
+    "/students/s-sofia.png",
+    "/students/s-regina.png",
+    "/students/s-emilia.png",
+    "/students/s-valentina.png",
+    "/students/s-camila.png",
+    "/students/s-renata.png",
+    "/students/s-amanda.png",
+    "/students/s-olivia.png",
+    "/students/s-isabela.png",
+    "/students/s-paula.png",
+  ],
+  m: [
+    "/students/s-lucas.png",
+    "/students/s-mateo.png",
+    "/students/s-diego.png",
+    "/students/s-santiago.png",
+    "/students/s-joaquin.png",
+    "/students/s-iker.png",
+    "/students/s-leon.png",
+    "/students/s-bruno.png",
+    "/students/s-emiliano.png",
+  ],
+} as const;
+
+const BUNDLED_STUDENT_PORTRAITS = new Set<string>([
+  ...STUDENT_PORTRAITS.f,
+  ...STUDENT_PORTRAITS.m,
+]);
+
+function stablePortraitIndex(studentId: string, portraitCount: number) {
+  let hash = 0;
+  for (const character of studentId) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
   }
-  return student.photoUrl ?? `/students/${student.id}.png`;
+  return hash % portraitCount;
+}
+
+export function studentFallbackPhoto(student: Pick<Student, "id" | "gender">) {
+  const dedicatedPortrait = `/students/${student.id}.png`;
+  if (BUNDLED_STUDENT_PORTRAITS.has(dedicatedPortrait)) return dedicatedPortrait;
+  const portraits = STUDENT_PORTRAITS[student.gender];
+  return portraits[stablePortraitIndex(student.id, portraits.length)];
+}
+
+export function studentPhoto(student: Student) {
+  return student.photoUrl ?? studentFallbackPhoto(student);
 }
 
 export function vehiclePhoto(vehicle?: Vehicle) {

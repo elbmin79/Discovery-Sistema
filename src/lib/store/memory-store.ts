@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { hydrateStudentSurnames } from "../student-surnames";
+import { assertSnapshotIdentity, normalizeSnapshotIdentity } from "../snapshot-integrity";
 import {
   applyStatusTimestamp,
   canAdvance,
@@ -84,7 +86,7 @@ function clone<T>(value: T): T {
 }
 
 function createId(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-3)}`;
+  return `${prefix}-${randomUUID()}`;
 }
 
 function createCode(used: Set<string>) {
@@ -96,7 +98,7 @@ function createCode(used: Set<string>) {
 }
 
 function createToken() {
-  return `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+  return randomUUID().replaceAll("-", "");
 }
 
 function generateFriendCode(lastName: string) {
@@ -175,13 +177,20 @@ export class MemoryPickupStore {
   }
 
   constructor(seed = createSeedSnapshot(), private historyLimit = 5000, private archiveEnabled = true) {
-    this.data = hydrateStudentSurnames(seed);
+    this.data = seed;
     if (!Array.isArray(this.data.events)) {
       this.data.events = [];
     }
     if (!Array.isArray(this.data.latePickups)) {
       this.data.latePickups = [];
     }
+    if (!Array.isArray(this.data.announcements)) {
+      this.data.announcements = [];
+    }
+    if (!Array.isArray(this.data.calendarEvents)) {
+      this.data.calendarEvents = [];
+    }
+    this.data = hydrateStudentSurnames(normalizeSnapshotIdentity(this.data));
     this.hydrateDefaults();
   }
 
@@ -254,6 +263,7 @@ export class MemoryPickupStore {
   }
 
   snapshot() {
+    assertSnapshotIdentity(this.data);
     return clone(this.data);
   }
 

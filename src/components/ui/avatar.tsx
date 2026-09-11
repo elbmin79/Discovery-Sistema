@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { initials, studentPhoto } from "@/lib/school";
+import { initials, studentFallbackPhoto, studentPhoto } from "@/lib/school";
 import type { Student } from "@/lib/types";
 
 const SIZES = {
@@ -18,22 +18,36 @@ export function Avatar({
   name,
   accent,
   photoUrl,
+  fallbackPhotoUrl,
   size = "md",
 }: {
   name: string;
   accent?: string;
   photoUrl?: string;
+  fallbackPhotoUrl?: string;
   size?: keyof typeof SIZES;
 }) {
-  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+  const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
+  const visiblePhoto = [photoUrl, fallbackPhotoUrl].find(
+    (candidate) => candidate && !failedPhotos.includes(candidate),
+  );
   return (
     <div
       className={`relative shrink-0 overflow-hidden rounded-full ${SIZES[size]}`}
       style={{ background: accent ?? "#1B4D3E" }}
       aria-hidden
     >
-      {photoUrl && failedPhoto !== photoUrl ? (
-        <Image src={photoUrl} alt="" fill unoptimized onError={() => setFailedPhoto(photoUrl)} className="object-cover" />
+      {visiblePhoto ? (
+        <Image
+          src={visiblePhoto}
+          alt=""
+          fill
+          unoptimized
+          onError={() => setFailedPhotos((current) => (
+            current.includes(visiblePhoto) ? current : [...current, visiblePhoto]
+          ))}
+          className="object-cover"
+        />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-semibold text-paper">
           {initials(name)}
@@ -55,6 +69,7 @@ export function StudentAvatar({
       name={`${student.lastName} ${student.firstName}`}
       accent={student.accent}
       photoUrl={studentPhoto(student)}
+      fallbackPhotoUrl={studentFallbackPhoto(student)}
       size={size}
     />
   );
