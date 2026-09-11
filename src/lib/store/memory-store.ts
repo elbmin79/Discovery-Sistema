@@ -1071,34 +1071,8 @@ export class MemoryPickupStore {
   cancelTrip(tripId: string, notify = true) {
     const siblings = this.data.requests.filter((item) => item.tripId === tripId);
     if (siblings.length === 0) throw new Error("No encontramos esa solicitud.");
-    const active = siblings.filter((item) => item.status !== "cancelled");
-    if (active.length === 0 || !active.every((item) => canCancel(item.status))) {
+    if (!siblings.every((item) => canCancel(item.status))) {
       throw new Error("Esta solicitud ya no se puede cancelar.");
-    }
-    const trip = this.data.trips.find((item) => item.id === tripId);
-    if (!trip) throw new Error("No encontramos esa solicitud.");
-    if (active.some((item) => item.status === "arrived")) {
-      const now = new Date().toISOString();
-      const actorName = this.guardianName(tripId);
-      trip.cancelledAt = now;
-      this.data.guestPasses = this.data.guestPasses.filter((item) => item.tripId !== tripId);
-      for (const request of active) {
-        const fromStatus = request.status;
-        request.status = "cancelled";
-        this.logEvent({
-          type: "cancelled",
-          tripId,
-          requestId: request.id,
-          studentId: request.studentId,
-          actorRole: "parent",
-          actorName,
-          fromStatus,
-          toStatus: "cancelled",
-          note: "La familia canceló después de llegar al kiosco",
-        }, now);
-      }
-      if (notify) this.emit();
-      return this.snapshot();
     }
     this.data.trips = this.data.trips.filter((item) => item.id !== tripId);
     this.data.requests = this.data.requests.filter((item) => item.tripId !== tripId);
