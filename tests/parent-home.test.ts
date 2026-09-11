@@ -69,18 +69,13 @@ test("delivered pickups cannot be deleted by cancellation", () => {
 });
 
 for (const arrivalVia of ["qr", "tag"] as const) {
-  test(`an accepted ${arrivalVia} pickup can be cancelled with an audit record`, () => {
+  test(`an accepted ${arrivalVia} pickup cannot be cancelled`, () => {
     const { store, trip } = setup();
     if (arrivalVia === "tag") store.arriveByTag("DSC-0417");
     else store.arriveByCode(trip.qrToken, { via: "qr" });
-    const after = store.cancelTrip(trip.id);
-    assert.equal(after.trips.some((item) => item.id === trip.id), false);
-    assert.equal(after.requests.some((item) => item.tripId === trip.id), false);
-    const history = store.historyRows().find((row) => row.tripId === trip.id)!;
-    assert.equal(history.status, "cancelled");
-    assert.equal(history.arrivalVia, arrivalVia);
-    assert.ok(history.detail?.requests.every((request) => request.status === "cancelled"));
-    assert.ok(history.detail?.events.some((event) => event.type === "cancelled" && event.actorName === "Roberto Madrid"));
+    const before = store.snapshot();
+    assert.throws(() => store.cancelTrip(trip.id));
+    assert.deepEqual(store.snapshot(), before);
   });
 }
 
