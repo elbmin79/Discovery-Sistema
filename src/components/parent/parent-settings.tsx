@@ -41,8 +41,6 @@ export function ParentSettings({
         <p className="mt-2 text-sm text-muted">{t.settingsIntro}</p>
       </div>
 
-      <PushNotificationsSection t={t} />
-
       <section>
         <h2 className="text-sm font-semibold tracking-[0.14em] uppercase text-gold-deep">{t.children}</h2>
         <div className="mt-3 space-y-3">
@@ -91,6 +89,8 @@ export function ParentSettings({
         onClose={() => setEditor("none")}
       />
 
+      <PushNotificationsSection t={t} />
+
       <button type="button" onClick={onLogout} className="text-sm font-medium text-danger">
         {t.logout}
       </button>
@@ -99,7 +99,7 @@ export function ParentSettings({
 }
 
 function PushNotificationsSection({ t }: { t: Dictionary }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const push = usePushNotifications();
   const { refresh } = push;
 
@@ -151,15 +151,6 @@ function PushNotificationsSection({ t }: { t: Dictionary }) {
           {push.error ? <p className="text-xs text-danger">{push.error}</p> : null}
           <p className="text-[11px] leading-relaxed text-muted">{t.pushIosHint}</p>
         </div>
-      ) : !push.subscribed ? (
-        <button
-          type="button"
-          disabled={push.busy || push.permission === "unsupported"}
-          onClick={() => void push.enable()}
-          className="mt-3 min-h-11 w-full rounded-full bg-forest px-4 text-sm font-semibold text-paper disabled:opacity-50"
-        >
-          {push.busy ? t.pushEnabling : t.pushEnable}
-        </button>
       ) : null}
     </section>
   );

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const event = [...snapshot.calendarEvents].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
     if (event) {
       const when = event.time ? `${event.date} · ${event.time}` : event.date;
-      void broadcastSchoolPush({
+      await broadcastSchoolPush({
         kind: "calendar",
         tag: `evento-${event.id}`,
         title: event.title,
