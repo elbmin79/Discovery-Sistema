@@ -168,9 +168,10 @@ function AdminDashboard({ staffName }: { staffName: string }) {
     );
   }
   return <div className="flex min-h-dvh flex-col bg-cream">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3 md:px-6">
+    <header className="admin-header-bar grid grid-cols-1 items-center gap-3 border-b border-line bg-paper px-4 py-3 lg:px-6">
       <div className="flex items-center gap-4"><Link href="/" className="rounded-lg"><BrandRow /></Link><div className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-gold-deep" /><h1 className="font-serif text-2xl text-forest">Admin Dashboard</h1></div></div>
-      <div className="flex flex-wrap items-center justify-end gap-3"><SchoolBrandToggle compact /><button onClick={() => void exportRange()} disabled={!valid || !page?.total || exporting} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"><Download className="h-4 w-4" />{exporting ? "Exportando…" : "Exportar CSV"}</button><Link href="/personal" className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest">Volver al tablero</Link></div>
+      <div className="justify-self-center"><SchoolBrandToggle compact /></div>
+      <div className="flex flex-wrap items-center justify-end gap-3 justify-self-end"><button onClick={() => void exportRange()} disabled={!valid || !page?.total || exporting} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"><Download className="h-4 w-4" />{exporting ? "Exportando…" : "Exportar CSV"}</button><Link href="/personal" className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest">Volver al tablero</Link></div>
     </header>
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
       <div className="mb-4 flex flex-wrap gap-2">

@@ -310,6 +310,12 @@ a {
     radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--forest) 12%, transparent), transparent 40%);
 }
 
+@media (min-width: 64rem) {
+  .admin-header-bar {
+    grid-template-columns: 1fr auto 1fr;
+  }
+}
+
 @keyframes sim-blink {
   0%,
   100% {

@@ -12,7 +12,7 @@ export function SchoolBrandToggle({ compact = false }: { compact?: boolean }) {
   const { brand, setBrand, busy } = useBrand();
 
   return (
-    <div className={`flex flex-col ${compact ? "items-end gap-1" : "items-center gap-2"}`}>
+    <div className={`flex flex-col items-center ${compact ? "gap-1" : "gap-2"}`}>
       <p className={`font-semibold tracking-[0.14em] text-muted uppercase ${compact ? "text-[10px]" : "text-xs"}`}>
         Escuela
       </p>
