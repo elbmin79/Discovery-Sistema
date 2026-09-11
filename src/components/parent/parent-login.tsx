@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { QuickAccountSelect } from "@/components/ui/quick-account-select";
 import { FAMILY_ACCOUNTS } from "@/lib/auth/accounts";
+import { useBrand } from "@/hooks/use-brand";
 import { postJson } from "@/hooks/use-snapshot";
 import type { DemoSession } from "@/lib/types";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -20,6 +21,7 @@ export function ParentLogin({
   const [quickUsername, setQuickUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { profile } = useBrand();
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -108,7 +110,7 @@ export function ParentLogin({
       </div>
 
       <footer className="mt-auto shrink-0 pb-3 pt-2 text-center text-[10px] leading-4 text-muted/70">
-        <p>© 2026 Discovery · All rights reserved</p>
+        <p>© 2026 {profile.shortName} · All rights reserved</p>
         <p>
           Digital solution by{" "}
           <a

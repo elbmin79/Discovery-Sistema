@@ -103,7 +103,7 @@ export function ErrorPlayground() {
       </header>
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:grid-cols-2 md:px-6">
-        <section className="rounded-[1.75rem] border border-line bg-paper p-4 shadow-[0_12px_36px_rgb(18_56_45/0.06)]">
+        <section className="rounded-[1.75rem] border border-line bg-paper p-4 shadow-[0_12px_36px_color-mix(in_srgb,var(--forest)_6%,transparent)]">
           <div className="flex flex-wrap gap-2">
             {KINDS.map((item) => (
               <button
@@ -142,7 +142,7 @@ export function ErrorPlayground() {
           </div>
         </section>
 
-        <section className="rounded-[1.75rem] border border-line bg-paper p-4 shadow-[0_12px_36px_rgb(18_56_45/0.06)]">
+        <section className="rounded-[1.75rem] border border-line bg-paper p-4 shadow-[0_12px_36px_color-mix(in_srgb,var(--forest)_6%,transparent)]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-serif text-xl text-forest">Carrusel de mensajes</h2>

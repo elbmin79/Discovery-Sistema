@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBrand } from "@/hooks/use-brand";
+import { withSchoolName } from "@/lib/school-brand";
 
 export type SystemStatusKind = "loading" | "error" | "stuck" | "empty";
 export type SystemStatusContext =
@@ -18,7 +20,7 @@ export const SYSTEM_STATUS_COPY: Record<
 > = {
   familia: {
     loading: [
-      { title: "Preparando tu pase…", body: "Como cada tarde en la fila de Discovery." },
+      { title: "Preparando tu pase…", body: "Como cada tarde en la fila de {school}." },
       { title: "Acomodando la salida…", body: "Ya casi tienes listo el plan de hoy." },
       { title: "Un momento…", body: "Estamos sincronizando con la escuela." },
     ],
@@ -108,7 +110,7 @@ export const SYSTEM_STATUS_COPY: Record<
   general: {
     loading: [
       { title: "Cargando…", body: "Preparando la salida escolar." },
-      { title: "Un momento…", body: "Como en la fila de Discovery." },
+      { title: "Un momento…", body: "Como en la fila de {school}." },
     ],
     error: [
       { title: "Algo se trabó", body: "Intenta de nuevo en un momento." },
@@ -145,6 +147,7 @@ export function SystemStatus({
 }) {
   const pool = SYSTEM_STATUS_COPY[context][kind];
   const [index, setIndex] = useState(0);
+  const { profile } = useBrand();
 
   useEffect(() => {
     if (pool.length < 2) return;
@@ -155,8 +158,8 @@ export function SystemStatus({
   }, [pool.length]);
 
   const message = pool[index] ?? pool[0];
-  const heading = title ?? message.title;
-  const subtitle = body ?? message.body;
+  const heading = withSchoolName(title ?? message.title, profile.shortName);
+  const subtitle = withSchoolName(body ?? message.body, profile.shortName);
 
   return (
     <div
@@ -196,13 +199,13 @@ export function SystemStatus({
 function StatusScene({ kind, compact }: { kind: SystemStatusKind; compact: boolean }) {
   const size = compact ? "h-24 w-44" : "h-36 w-64";
   return (
-    <div className={`relative overflow-hidden rounded-[1.75rem] border border-line bg-paper shadow-[0_12px_36px_rgb(18_56_45/0.08)] ${size}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgb(196_161_90/0.18),transparent_45%),radial-gradient(circle_at_80%_0%,rgb(27_77_62/0.12),transparent_40%)]" />
+    <div className={`relative overflow-hidden rounded-[1.75rem] border border-line bg-paper shadow-[0_12px_36px_color-mix(in_srgb,var(--forest)_8%,transparent)] ${size}`}>
+      <div className="status-scene-glow absolute inset-0" />
       <svg viewBox="0 0 260 140" className="absolute inset-0 h-full w-full" aria-hidden>
         <rect x="0" y="98" width="260" height="42" fill="#E8DFD0" />
         <path d="M0 98 H260" stroke="#D9CFC0" strokeWidth="2" />
-        <rect x="18" y="42" width="72" height="56" rx="6" fill="#1B4D3E" />
-        <polygon points="14,42 54,18 94,42" fill="#12382D" />
+        <rect x="18" y="42" width="72" height="56" rx="6" fill="var(--forest)" />
+        <polygon points="14,42 54,18 94,42" fill="var(--forest-deep)" />
         <rect x="30" y="58" width="14" height="14" rx="2" fill="#C4A15A" className={kind === "loading" ? "status-window" : undefined} />
         <rect x="52" y="58" width="14" height="14" rx="2" fill="#C4A15A" className={kind === "loading" ? "status-window status-window-delay" : undefined} />
         <rect x="40" y="78" width="16" height="20" rx="2" fill="#F6F1E8" />
@@ -216,15 +219,15 @@ function StatusScene({ kind, compact }: { kind: SystemStatusKind; compact: boole
         ) : null}
         <g className={kind === "loading" ? "status-lane" : kind === "stuck" ? "status-lane-stuck" : "status-lane-error"}>
           <CarSvg x={kind === "empty" ? 150 : 40} y={100} />
-          {kind !== "empty" ? <CarSvg x={120} y={100} tint="#2D6B56" /> : null}
+          {kind !== "empty" ? <CarSvg x={120} y={100} tint="var(--forest-soft)" /> : null}
           {kind === "loading" ? <CarSvg x={200} y={100} tint="#A4843D" /> : null}
         </g>
         {kind === "loading" ? (
           <g className="status-kids">
-            <circle cx="168" cy="88" r="4.5" fill="#1B4D3E" />
+            <circle cx="168" cy="88" r="4.5" fill="var(--forest)" />
             <rect x="165" y="92" width="6" height="8" rx="2" fill="#C4A15A" />
-            <circle cx="182" cy="88" r="4.5" fill="#1B4D3E" />
-            <rect x="179" y="92" width="6" height="8" rx="2" fill="#2D6B56" />
+            <circle cx="182" cy="88" r="4.5" fill="var(--forest)" />
+            <rect x="179" y="92" width="6" height="8" rx="2" fill="var(--forest-soft)" />
           </g>
         ) : null}
       </svg>
@@ -239,13 +242,13 @@ function StatusScene({ kind, compact }: { kind: SystemStatusKind; compact: boole
   );
 }
 
-function CarSvg({ x, y, tint = "#1B4D3E" }: { x: number; y: number; tint?: string }) {
+function CarSvg({ x, y, tint = "var(--forest)" }: { x: number; y: number; tint?: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
       <rect x="0" y="0" width="36" height="14" rx="4" fill={tint} />
       <rect x="8" y="-8" width="18" height="10" rx="3" fill={tint} opacity="0.85" />
-      <circle cx="10" cy="14" r="3.5" fill="#1C241F" />
-      <circle cx="26" cy="14" r="3.5" fill="#1C241F" />
+      <circle cx="10" cy="14" r="3.5" fill="var(--ink)" />
+      <circle cx="26" cy="14" r="3.5" fill="var(--ink)" />
       <rect x="11" y="-5" width="5" height="5" rx="1" fill="#F6F1E8" />
       <rect x="18" y="-5" width="5" height="5" rx="1" fill="#F6F1E8" />
     </g>

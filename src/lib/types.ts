@@ -216,11 +216,14 @@ export interface PickupEvent {
   note?: string;
 }
 
+export type SchoolBrandId = "discovery" | "altius";
+
 export interface Snapshot {
   school: {
     name: string;
     city: string;
     address: string;
+    brand?: SchoolBrandId;
   };
   zones: ExitZone[];
   students: Student[];

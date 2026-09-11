@@ -716,7 +716,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
         <div className="relative mt-4 overflow-hidden rounded-2xl">
           <Image src={src} alt="Auto en la entrada" width={960} height={540} unoptimized onError={() => setBroken((value) => Math.min(value + 1, 2))} className="h-52 w-full object-cover md:h-64" />
           <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-forest-deep/80 px-2.5 py-1 text-xs font-semibold text-paper">
-            <span className={`h-2 w-2 rounded-full ${captured ? "bg-emerald-400" : "bg-gold"}`} />
+            <span className={`h-2 w-2 rounded-full ${captured ? "bg-forest-soft" : "bg-gold"}`} />
             {captured ? `Foto de llegada · ${formatTime(card.arrivedAt)}` : "Foto de referencia del auto"}
           </span>
         </div>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { BrandProvider } from "@/hooks/use-brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,9 +31,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className="h-full antialiased">
+    <html lang="es" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full bg-cream text-ink" suppressHydrationWarning>
-        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("salida-brand")==="altius")document.documentElement.dataset.brand="altius"}catch(e){}`,
+          }}
+        />
+        <BrandProvider>{children}</BrandProvider>
       </body>
     </html>
   );

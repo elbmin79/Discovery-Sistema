@@ -4,7 +4,9 @@ import Image from "next/image";
 import { ArrowRight, CalendarDays, ChevronRight, Clock3, Megaphone, Phone } from "lucide-react";
 import { LEVEL_LABELS, SCHOOL, SCHOOL_TIMEZONE } from "@/lib/school";
 import { StudentAvatar } from "@/components/ui/avatar";
+import { useBrand } from "@/hooks/use-brand";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { withSchoolName } from "@/lib/school-brand";
 import type { Guardian, Locale, Student } from "@/lib/types";
 
 export function SchoolContact({ t }: { t: Dictionary }) {
@@ -42,40 +44,41 @@ export function ParentDashboard({
   onAvisos: () => void;
   onCalendar: () => void;
 }) {
+  const { profile } = useBrand();
   return (
     <div className="flex flex-col gap-3 pb-1">
       <header className="relative grid min-h-24 grid-cols-[minmax(0,1fr)_96px] items-center gap-1 pt-2 min-[400px]:grid-cols-[minmax(0,1fr)_112px]">
         <div className="relative z-10">
           <p className="mb-1.5 text-xs font-medium text-muted">{now.toLocaleDateString(locale === "es" ? "es-MX" : "en-US", { timeZone: SCHOOL_TIMEZONE, weekday: "long", month: "long", day: "numeric" })}</p>
-          <h1 className="text-[31px] leading-[1.08] tracking-[-0.028em] text-[#102e27] min-[400px]:text-[33px]">{t.homeHello.replace("{name}", guardian.firstName)}</h1>
-          <p className="mt-1 text-sm leading-snug text-[#565b50]">{t.homeWelcome}</p>
+          <h1 className="text-[31px] leading-[1.08] tracking-[-0.028em] text-forest-deep min-[400px]:text-[33px]">{t.homeHello.replace("{name}", guardian.firstName)}</h1>
+          <p className="mt-1 text-sm leading-snug text-muted">{t.homeWelcome}</p>
         </div>
         <Image src="/illustrations/school-welcome.png" alt="" width={240} height={240} sizes="120px" className="w-full self-end object-contain pb-1 mix-blend-multiply" priority />
       </header>
 
       <section aria-label={t.dismissal}>
         <div className="mb-2.5 flex items-center gap-3">
-          <h2 className="shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-[#102e27]">{t.homeChildrenToday}</h2>
-          <span className="h-px flex-1 bg-[#dcdcd4]" />
+          <h2 className="shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-forest-deep">{t.homeChildrenToday}</h2>
+          <span className="h-px flex-1 bg-line" />
         </div>
         <div className="flex flex-col gap-2">
           {childrenList.map((child) => (
             <div key={child.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line/60 px-3 py-2.5">
               <StudentAvatar student={child} size="lg" />
               <div className="min-w-0">
-                <p className="break-words text-sm font-medium text-[#172c26]">{child.firstName} {child.lastName}</p>
+                <p className="break-words text-sm font-medium text-ink">{child.firstName} {child.lastName}</p>
                 <p className="mt-0.5 text-xs leading-tight text-muted">{LEVEL_LABELS[child.level][locale]}</p>
-                <p className="mt-0.5 text-base font-semibold whitespace-nowrap tabular-nums tracking-tight text-[#172c26]">{child.dismissalTime}</p>
+                <p className="mt-0.5 text-base font-semibold whitespace-nowrap tabular-nums tracking-tight text-ink">{child.dismissalTime}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section aria-label={t.homeToday} className="relative overflow-hidden rounded-xl border border-[#e7e5df] bg-white/50 p-3.5">
-        <p className="flex items-center gap-2 text-xs text-[#5b7766]"><span className="h-1.5 w-1.5 rounded-full bg-[#adb9ac]" />{t.homeNoPlan}</p>
+      <section aria-label={withSchoolName(t.homeToday, profile.shortName)} className="relative overflow-hidden rounded-xl border border-[#e7e5df] bg-white/50 p-3.5">
+        <p className="flex items-center gap-2 text-xs text-muted"><span className="h-1.5 w-1.5 rounded-full bg-muted" />{t.homeNoPlan}</p>
         <div className="relative mt-2 pr-14 min-[400px]:pr-16">
-          <h2 className="text-[25px] leading-[1.15] tracking-[-0.028em] text-[#102e27]">{t.homePickupTitle}</h2>
+          <h2 className="text-[25px] leading-[1.15] tracking-[-0.028em] text-forest-deep">{t.homePickupTitle}</h2>
           <p className="mt-1 text-sm leading-snug text-muted">{t.homePickupHint}</p>
           <Image src="/illustrations/pickup-pass.png" alt="" width={160} height={160} sizes="80px" className="absolute -top-3 -right-2 h-16 w-16 object-contain" />
         </div>
@@ -108,8 +111,8 @@ export function ParentSchoolNews({
   return (
     <section aria-label={t.homeSchoolNews}>
       <div className="mb-2.5 flex items-center gap-3">
-        <h2 className="shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-[#102e27]">{t.homeSchoolNews}</h2>
-        <span className="h-px flex-1 bg-[#dcdcd4]" />
+        <h2 className="shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-forest-deep">{t.homeSchoolNews}</h2>
+        <span className="h-px flex-1 bg-line" />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button
