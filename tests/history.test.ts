@@ -4,7 +4,7 @@ import { MemoryPickupStore, AUTO_CLOSE_MS } from "../src/lib/store/memory-store"
 import { createSeedSnapshot, withDemoFamilyPlans } from "../src/lib/seed/demo-data";
 import { buildHistoryRow, buildLiveHistoryRows, historyPage, validJornada } from "../src/lib/history";
 import { buildAdminRows } from "../src/lib/admin-dashboard";
-import { jornadaOf } from "../src/lib/school";
+import { arrivalPictureFromSources, jornadaOf } from "../src/lib/school";
 import { retentionCutoff } from "../src/lib/store/history-maintenance";
 import { sessionCookie, serverSession } from "../src/lib/auth/server-session";
 
@@ -86,6 +86,25 @@ test("history preserves local jornada, live status, range summaries and paginati
   assert.equal(page.summary.delivered, 1);
   assert.equal(page.summary.averageWait, 4);
   assert.equal(page.days[0].jornada, "2026-09-02");
+});
+
+test("arrival pictures prioritize simulated and captured photos before registered vehicles", () => {
+  const simulated = "data:image/svg+xml;charset=utf-8,%3Csvg%3E%3C/svg%3E";
+  assert.deepEqual(arrivalPictureFromSources(simulated, "/cars/v-sim.png"), {
+    src: simulated,
+    captured: false,
+    fallback: "/cars/v-sim.png",
+  });
+  assert.deepEqual(arrivalPictureFromSources("2026-09-10/trip/photo.jpg", "/cars/v-prius.jpg"), {
+    src: "/api/photos/2026-09-10/trip/photo.jpg",
+    captured: true,
+    fallback: "/cars/v-prius.jpg",
+  });
+  assert.deepEqual(arrivalPictureFromSources(undefined, "/cars/v-prius.jpg"), {
+    src: "/cars/v-prius.jpg",
+    captured: false,
+    fallback: undefined,
+  });
 });
 
 test("daily rollover keeps late notices even without a pickup and applies 90-day retention", () => {
