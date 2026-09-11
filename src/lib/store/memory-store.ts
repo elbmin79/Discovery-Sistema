@@ -14,8 +14,8 @@ import {
 import { createSeedSnapshot, fallbackArrivalPhoto } from "../seed/demo-data";
 import { buildHistoryRow, buildLateHistoryRow } from "../history";
 import type { ArchivedLatePickup, HistoryRow } from "../types";
-import { lateEligibleStudentIds, lateReplacementTrips } from "../parent-home";
-import { jornadaOf, todayJornada } from "../school";
+import { lateEligibleStudentIds, lateReplacementTrips, normalizeParentNames } from "../parent-home";
+import { jornadaOf, personName, todayJornada } from "../school";
 import { isCalendarEventColor } from "../school-comms";
 import type {
   ArrivalMethod,
@@ -190,7 +190,7 @@ export class MemoryPickupStore {
     if (!Array.isArray(this.data.calendarEvents)) {
       this.data.calendarEvents = [];
     }
-    this.data = hydrateStudentSurnames(normalizeSnapshotIdentity(this.data));
+    this.data = normalizeParentNames(hydrateStudentSurnames(normalizeSnapshotIdentity(this.data)));
     this.hydrateDefaults();
   }
 
@@ -238,7 +238,7 @@ export class MemoryPickupStore {
   }
 
   private guardianLabel(guardian: Guardian) {
-    return `${guardian.lastName} ${guardian.firstName}`;
+    return personName(guardian);
   }
 
   private ownerOf(studentId: string) {
@@ -508,7 +508,7 @@ export class MemoryPickupStore {
       const tripId = createId("t");
       const code = createCode(usedCodes);
       usedCodes.add(code);
-      const pickerName = `${guardian.lastName} ${guardian.firstName}`;
+      const pickerName = personName(guardian);
 
       this.data.trips.unshift({
         id: tripId,
@@ -652,7 +652,7 @@ export class MemoryPickupStore {
     const arrivedAt = new Date().toISOString();
     const tripId = createId("t-sim");
     const code = createCode(usedCodes);
-    const pickerName = `${guardian.lastName} ${guardian.firstName}`;
+    const pickerName = personName(guardian);
 
     this.data.trips.unshift({
       id: tripId,
@@ -1071,8 +1071,34 @@ export class MemoryPickupStore {
   cancelTrip(tripId: string, notify = true) {
     const siblings = this.data.requests.filter((item) => item.tripId === tripId);
     if (siblings.length === 0) throw new Error("No encontramos esa solicitud.");
-    if (!siblings.every((item) => canCancel(item.status))) {
+    const active = siblings.filter((item) => item.status !== "cancelled");
+    if (active.length === 0 || !active.every((item) => canCancel(item.status))) {
       throw new Error("Esta solicitud ya no se puede cancelar.");
+    }
+    const trip = this.data.trips.find((item) => item.id === tripId);
+    if (!trip) throw new Error("No encontramos esa solicitud.");
+    if (active.some((item) => item.status === "arrived")) {
+      const now = new Date().toISOString();
+      const actorName = this.guardianName(tripId);
+      trip.cancelledAt = now;
+      this.data.guestPasses = this.data.guestPasses.filter((item) => item.tripId !== tripId);
+      for (const request of active) {
+        const fromStatus = request.status;
+        request.status = "cancelled";
+        this.logEvent({
+          type: "cancelled",
+          tripId,
+          requestId: request.id,
+          studentId: request.studentId,
+          actorRole: "parent",
+          actorName,
+          fromStatus,
+          toStatus: "cancelled",
+          note: "La familia canceló después de llegar al kiosco",
+        }, now);
+      }
+      if (notify) this.emit();
+      return this.snapshot();
     }
     this.data.trips = this.data.trips.filter((item) => item.id !== tripId);
     this.data.requests = this.data.requests.filter((item) => item.tripId !== tripId);
@@ -1260,12 +1286,12 @@ export class MemoryPickupStore {
   private guardianName(tripId: string) {
     const trip = this.data.trips.find((item) => item.id === tripId);
     const guardian = trip && this.data.guardians.find((item) => item.id === trip.guardianId);
-    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
+    return guardian ? personName(guardian) : undefined;
   }
 
   private guardianNameById(guardianId: string) {
     const guardian = this.data.guardians.find((item) => item.id === guardianId);
-    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
+    return guardian ? personName(guardian) : undefined;
   }
 
   private findActiveLate(id: string) {
@@ -1349,7 +1375,7 @@ export class MemoryPickupStore {
     });
 
     this.logEvent(
-      { type: "late_announced", lateId: id, actorRole: "parent", actorName: `${guardian.lastName} ${guardian.firstName}` },
+      { type: "late_announced", lateId: id, actorRole: "parent", actorName: personName(guardian) },
       now,
     );
     this.emit();

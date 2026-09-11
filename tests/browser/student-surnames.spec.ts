@@ -33,9 +33,12 @@ test("long compound surnames remain readable across parent, guest, staff, admin 
   await page.goto("/personal");
   await expectUnclipped(page.locator("article").getByText(surname, { exact: true }).first());
   await page.screenshot({ path: "test-results/surnames-staff.png", fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1024, height: 844 });
   await page.goto("/admin");
-  await expectUnclipped(page.getByText(`${surname} Sofía`, { exact: true }).last());
+  await expectUnclipped(page.getByText(`${surname} Sofía`, { exact: true }).filter({ visible: true }));
+  await expect(page.getByRole("columnheader", { name: "Familia", exact: true })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Aviso", exact: true })).toHaveCount(0);
+  await expect(page.getByText(surname, { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/kiosco");
   await page.getByRole("button", { name: "QR o código", exact: true }).click();

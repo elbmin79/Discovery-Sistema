@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { parentName } from "@/lib/parent-home";
+import { personName } from "@/lib/school";
 import { Choice, Field } from "@/components/parent/picker-choice";
 
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -61,7 +62,7 @@ export function ParentSetup({
     if (pickerId === `self:${guardian.id}`) {
       return {
         pickerKind: "self" as const,
-        pickerName: `${guardian.lastName} ${guardian.firstName}`,
+        pickerName: personName(guardian),
         pickerRelationEs: guardian.relationEs,
         pickerRelationEn: guardian.relationEn,
       };
@@ -70,14 +71,14 @@ export function ParentSetup({
     if (!person) {
       return {
         pickerKind: "self" as const,
-        pickerName: `${guardian.lastName} ${guardian.firstName}`,
+        pickerName: personName(guardian),
         pickerRelationEs: guardian.relationEs,
         pickerRelationEn: guardian.relationEn,
       };
     }
     return {
       pickerKind: "authorized" as const,
-      pickerName: `${person.lastName} ${person.firstName}`,
+      pickerName: personName(person),
       pickerRelationEs: person.relationEs,
       pickerRelationEn: person.relationEn,
     };

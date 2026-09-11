@@ -66,7 +66,7 @@ export function ParentTracker({
     typeof window !== "undefined" ? `${window.location.origin}/pase/${trip.qrToken}` : "";
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
   // Con tag en el auto no hace falta QR: el lector de la entrada reconoce a la familia.
-  const useTag = trip.pickerKind === "self" && trip.method === "car" && Boolean(vehicle?.tagId);
+  const useTag = trip.arrivalVia === "tag" && trip.pickerKind === "self" && trip.method === "car" && Boolean(vehicle?.tagId);
   const names = joinKidNames(students.map((student) => parentName(student)));
 
   if (allDelivered) {
@@ -298,7 +298,7 @@ function TagPass({ vehicle, arrived, t }: { vehicle: Vehicle; arrived: boolean; 
     <section className="rounded-3xl bg-forest px-5 py-5 text-paper">
       <p className="flex items-center gap-2 text-xs tracking-[0.18em] uppercase text-gold">
         <RadioTower className="h-4 w-4" />
-        {t.tagTitle}
+        {arrived ? t.tagArrivedTitle : t.tagTitle}
       </p>
       <div className="mt-4 flex items-center gap-4">
         <div className="flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl border border-gold/50 bg-forest-deep">
@@ -314,7 +314,7 @@ function TagPass({ vehicle, arrived, t }: { vehicle: Vehicle; arrived: boolean; 
           </p>
         </div>
       </div>
-      <p className="mt-4 text-sm text-cream">{t.tagHint}</p>
+      <p className="mt-4 text-sm text-cream">{arrived ? t.tagArrivedHint : t.tagHint}</p>
     </section>
   );
 }
@@ -338,7 +338,7 @@ function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
         onClick={() => setExpanded(true)}
         className="w-full rounded-3xl bg-forest px-5 py-5 text-left text-paper"
       >
-        <p className="text-xs tracking-[0.18em] uppercase text-gold">{t.codeTitle}</p>
+        <p className="text-xs tracking-[0.18em] uppercase text-gold">{trip.arrivedAt ? t.codeArrivedTitle : t.codeTitle}</p>
         <div className="mt-4 flex items-center gap-4">
           {qr ? (
             <Image
@@ -358,7 +358,7 @@ function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
             <p className="mt-2 text-xs text-cream">Toca para ampliar</p>
           </div>
         </div>
-        <p className="mt-4 text-sm text-cream">{t.codeHint}</p>
+        <p className="mt-4 text-sm text-cream">{trip.arrivedAt ? t.codeArrivedHint : t.codeHint}</p>
       </button>
 
       {expanded ? <FullscreenQr qr={qr} trip={trip} t={t} onClose={() => setExpanded(false)} /> : null}

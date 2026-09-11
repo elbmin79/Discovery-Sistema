@@ -35,7 +35,7 @@ function dashboardRows(records: HistoryRow[], snapshot: Snapshot): AdminRow[] {
   return records.flatMap((row) => row.studentIds.map((id, index) => {
     const student: Student = snapshot.students.find((item) => item.id === id) ?? { id, firstName: row.studentNames[index] ?? "Alumno", lastName: "", level: "grade-1", group: "", zoneId: "", dismissalTime: "", accent: "#1B4D3E", gender: "m" };
     const request = row.detail?.requests.find((item) => item.studentId === id);
-    return { requestId: request?.id ?? row.tripId + id, tripId: row.tripId, student, grade: studentGrade(student, "es"), zoneName: row.zoneName ?? "", pickerName: row.pickerName, pickerRelation: row.pickerRelation, vehicleLabel: row.vehicleLabel ?? "Auto", method: row.method, requestedAt: row.requestedAt, arrivedAt: row.arrivedAt, deliveredAt: request?.deliveredAt ?? row.deliveredAt, departedAt: row.departedAt, arrivalVia: row.arrivalVia, departedVia: row.departedVia, status: request?.status ?? row.status, deliveredBy: request?.deliveredByStaffName ?? row.deliveredBy, waitMinutes: row.waitMinutes };
+    return { requestId: request?.id ?? row.tripId + id, tripId: row.tripId, student, grade: studentGrade(student, "es"), zoneName: row.zoneName ?? "", familyName: student.lastName.trim(), pickerName: row.pickerName, pickerRelation: row.pickerRelation, vehicleLabel: row.vehicleLabel ?? "Auto", method: row.method, requestedAt: row.requestedAt, arrivedAt: row.arrivedAt, deliveredAt: request?.deliveredAt ?? row.deliveredAt, departedAt: row.departedAt, arrivalVia: row.arrivalVia, departedVia: row.departedVia, status: request?.status ?? row.status, deliveredBy: request?.deliveredByStaffName ?? row.deliveredBy, waitMinutes: row.waitMinutes };
   }));
 }
 
@@ -224,7 +224,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
       ) : !filtered.length ? (
         <SystemStatus kind="empty" context="admin" compact className="mt-6" />
       ) : <>
-        <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-line bg-paper md:block"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-xs uppercase tracking-[0.12em] text-muted">{["Alumno", "Familia", "Aviso", "Llegada", "Entrega", "Salida", "Estado", "Entregó", ""].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label || (range === "today" ? <LiveIndicator /> : null)}</th>)}</tr></thead><tbody>{filtered.map((row) => <RowDesktop key={row.requestId} row={row} snapshot={catalog} expanded={false} onToggle={() => setSelected(page.rows.find((item) => item.tripId === row.tripId) ?? null)} />)}</tbody></table></div>
+        <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-line bg-paper md:block"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-xs uppercase tracking-[0.12em] text-muted">{["Alumno", "Familia", "Llegada", "Entrega", "Salida", "Estado", "Entregó", ""].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label || (range === "today" ? <LiveIndicator /> : null)}</th>)}</tr></thead><tbody>{filtered.map((row) => <RowDesktop key={row.requestId} row={row} snapshot={catalog} expanded={false} onToggle={() => setSelected(page.rows.find((item) => item.tripId === row.tripId) ?? null)} />)}</tbody></table></div>
         <div className="mt-4 space-y-3 md:hidden">{range === "today" && <div className="flex justify-end px-4"><LiveIndicator /></div>}{filtered.map((row) => <RowMobile key={row.requestId} row={row} snapshot={catalog} expanded={false} onToggle={() => setSelected(page.rows.find((item) => item.tripId === row.tripId) ?? null)} />)}</div>
       </>}
       {page && page.total > PICKUPS_PAGE_SIZE && <nav aria-label="Páginas de recogidas" className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={!offset} onClick={() => setOffset(Math.max(0, offset - PICKUPS_PAGE_SIZE))} className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-forest disabled:opacity-40">Anterior</button><span className="text-sm text-muted">{offset + 1}–{Math.min(offset + PICKUPS_PAGE_SIZE, page.total)} de {page.total}</span><button type="button" disabled={offset + PICKUPS_PAGE_SIZE >= page.total} onClick={() => setOffset(offset + PICKUPS_PAGE_SIZE)} className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-forest disabled:opacity-40">Siguiente</button></nav>}
@@ -500,12 +500,8 @@ function RowDesktop({
           </div>
         </td>
         <td className="px-4 py-3">
-          <p className="font-medium text-ink">{row.pickerName}</p>
-          <p className="text-xs text-muted">
-            {row.pickerRelation} · {row.vehicleLabel}
-          </p>
+          <p className="font-medium text-ink">{row.familyName}</p>
         </td>
-        <td className="px-4 py-3 text-muted">{formatTime(row.requestedAt)}</td>
         <td className="px-4 py-3 text-muted">
           {formatTime(row.arrivedAt)}
           {row.arrivalVia ? <span className="block text-[11px]">{ARRIVAL_LABELS[row.arrivalVia]}</span> : null}
@@ -552,13 +548,12 @@ function RowMobile({
             {studentGrade(row.student, "es")} · {row.zoneName}
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            {row.pickerName} ({row.pickerRelation}) · {row.vehicleLabel}
+            {row.familyName}
           </p>
         </div>
         <StatusBadge status={row.status} /><button aria-label={"Información de " + row.student.firstName} onClick={(event) => { event.stopPropagation(); onToggle(); }} className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line text-forest"><Info size={18} /></button>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-y-1 text-sm text-muted">
-        <span>Aviso: {formatTime(row.requestedAt)}</span>
         <span>Llegada: {formatTime(row.arrivedAt)}</span>
         <span>Entrega: {formatTime(row.deliveredAt)}</span>
         <span>Salida: {formatTime(row.departedAt)}</span>

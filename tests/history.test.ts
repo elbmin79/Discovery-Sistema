@@ -251,3 +251,13 @@ test("inert plans stay out of school-facing dashboard and live history", () => {
   assert.equal(buildAdminRows(snapshot).some((row) => inertTripIds.has(row.tripId)), false);
   assert.equal(buildLiveHistoryRows(snapshot).some((row) => inertTripIds.has(row.tripId)), false);
 });
+
+test("admin family cells use only both student surnames", () => {
+  const seed = withDemoFamilyPlans(createSeedSnapshot());
+  const store = new MemoryPickupStore(seed);
+  const trip = store.snapshot().trips.find((item) => item.id === "t-madrid-today")!;
+  store.arriveByCode(trip.code, { via: "qr" });
+  const rows = buildAdminRows(store.snapshot()).filter((row) => row.tripId === trip.id);
+  assert.deepEqual([...new Set(rows.map((row) => row.familyName))], ["Madrid Herrera"]);
+  assert.ok(rows.every((row) => !row.familyName.includes("Roberto")));
+});

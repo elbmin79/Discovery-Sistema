@@ -11,7 +11,7 @@ import { postJson, useSnapshot } from "@/hooks/use-snapshot";
 import { lateCountdownLabel, lateIsOverdue } from "@/lib/admin-dashboard";
 import { DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
 import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
-import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade, studentName } from "@/lib/school";
+import { arrivalPicture, findStudent, findVehicle, formatTime, personName, studentGrade, studentName } from "@/lib/school";
 import type {
   DemoSession,
   Guardian,
@@ -737,7 +737,7 @@ function InfoSheet({ card, snapshot, onClose }: { card: FamilyCard; snapshot: Sn
           {card.vehicle?.tagId ? <span className="block font-mono text-xs text-muted">Tag {card.vehicle.tagId}</span> : null}
         </Field>
         <Field label="Solicitó desde la app">
-          {requester ? `${requester.lastName} ${requester.firstName}` : card.trip.pickerName}
+          {requester ? personName(requester) : card.trip.pickerName}
         </Field>
       </dl>
 

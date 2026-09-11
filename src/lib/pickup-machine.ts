@@ -24,7 +24,7 @@ export function canUndo(status: PickupStatus) {
 }
 
 export function canCancel(status: PickupStatus) {
-  return status === "on_the_way";
+  return status === "on_the_way" || status === "arrived";
 }
 
 export function canRemoveFromTrip(status: PickupStatus) {

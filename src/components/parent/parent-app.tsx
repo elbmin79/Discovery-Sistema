@@ -263,7 +263,6 @@ export function ParentApp() {
       <header className="z-20 flex shrink-0 items-center justify-between gap-2 border-b border-line bg-paper px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3">
         <Link href="/" className="min-w-0 rounded-lg"><BrandRow /></Link>
         <div className="flex shrink-0 items-center gap-2">
-        {guardian ? <button type="button" onClick={() => void showAnnouncements()} aria-label={t.announcements} className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-forest shadow-sm transition active:scale-90"><Megaphone className="h-5 w-5" strokeWidth={1.7} />{unread.length > 0 ? <span data-announcement-badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11px] font-semibold tabular-nums text-white ring-2 ring-cream">{unread.length > 99 ? "99+" : unread.length}</span> : null}</button> : null}
           <button
           type="button"
           onClick={toggle}
@@ -272,6 +271,7 @@ export function ParentApp() {
           <Globe className="h-3.5 w-3.5" />
           {t.language}
         </button>
+        {guardian ? <button type="button" onClick={() => void showAnnouncements()} aria-label={t.announcements} className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-forest shadow-sm transition active:scale-90"><Megaphone className="h-5 w-5" strokeWidth={1.7} />{unread.length > 0 ? <span data-announcement-badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11px] font-semibold tabular-nums text-white ring-2 ring-cream">{unread.length > 99 ? "99+" : unread.length}</span> : null}</button> : null}
         </div>
       </header>
 
