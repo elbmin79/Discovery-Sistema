@@ -32,7 +32,7 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
-  kind?: "announcement" | "calendar";
+  kind?: "announcement" | "calendar" | "friend_request" | "friend_delivered";
 };
 
 export async function sendPushToSubscriptions(

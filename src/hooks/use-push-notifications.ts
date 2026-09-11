@@ -15,6 +15,27 @@ function pushSupported() {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
+async function postSubscription(
+  action: "subscribe" | "unsubscribe",
+  subscription: { endpoint?: string; keys?: PushSubscriptionJSON["keys"] },
+) {
+  await fetch("/api/push/subscribe", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action,
+      subscription: {
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+      },
+    }),
+  }).then(async (response) => {
+    const data = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(data.error || "No se pudo actualizar la suscripción.");
+  });
+}
+
 export function usePushNotifications() {
   const [supported] = useState(() => pushSupported());
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
@@ -65,31 +86,44 @@ export function usePushNotifications() {
         if (!response.ok) throw new Error(data.error || "No se pudo obtener la clave push.");
         return data.publicKey!;
       });
+      const existing = await registration.pushManager.getSubscription();
       const subscription =
-        (await registration.pushManager.getSubscription()) ??
+        existing ??
         (await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapid),
         }));
       const json = subscription.toJSON();
-      await fetch("/api/push/subscribe", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "subscribe",
-          subscription: {
-            endpoint: json.endpoint,
-            keys: json.keys,
-          },
-        }),
-      }).then(async (response) => {
-        const data = (await response.json()) as { error?: string };
-        if (!response.ok) throw new Error(data.error || "No se pudo guardar la suscripción.");
-      });
+      await postSubscription("subscribe", json);
       setSubscribed(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudieron activar las notificaciones.");
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  }, [refresh]);
+
+  const reset = useCallback(async () => {
+    if (!pushSupported()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const sub = await registration?.pushManager.getSubscription();
+      if (sub) {
+        const json = sub.toJSON();
+        try {
+          await postSubscription("unsubscribe", json);
+        } catch {
+          /* igual quitamos la suscripción local */
+        }
+        await sub.unsubscribe();
+      }
+      setSubscribed(false);
+      setPermission(Notification.permission);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudieron desactivar las notificaciones.");
     } finally {
       setBusy(false);
       await refresh();
@@ -104,6 +138,7 @@ export function usePushNotifications() {
     error,
     checked,
     enable,
+    reset,
     refresh,
   };
 }

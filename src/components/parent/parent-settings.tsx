@@ -135,7 +135,18 @@ function PushNotificationsSection({ t }: { t: Dictionary }) {
         <div className="mt-4 space-y-3 border-t border-line pt-4">
           <p className="text-sm leading-relaxed text-muted">{t.pushBody}</p>
           {push.subscribed ? (
-            <p className="rounded-xl bg-forest/10 px-3 py-2.5 text-sm font-medium text-forest">{t.pushOn}</p>
+            <>
+              <p className="rounded-xl bg-forest/10 px-3 py-2.5 text-sm font-medium text-forest">{t.pushOn}</p>
+              <button
+                type="button"
+                disabled={push.busy}
+                onClick={() => void push.reset()}
+                className="min-h-11 w-full rounded-full border border-line bg-paper px-4 text-sm font-semibold text-forest disabled:opacity-50"
+              >
+                {push.busy ? t.pushResetting : t.pushReset}
+              </button>
+              <p className="text-[11px] leading-relaxed text-muted">{t.pushResetHint}</p>
+            </>
           ) : (
             <button
               type="button"
