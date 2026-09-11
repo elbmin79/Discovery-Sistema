@@ -9,7 +9,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   let data = {
-    title: "Discovery",
+    title: "Salida Discovery",
     body: "Tienes una actualización de la escuela.",
     url: "/familia",
     tag: "discovery",

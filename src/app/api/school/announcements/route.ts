@@ -27,11 +27,12 @@ export async function POST(request: Request) {
     );
     const notice = snapshot.announcements[0];
     if (notice) {
+      const detail = (notice.subtitle || notice.body).trim();
       await broadcastSchoolPush({
         kind: "announcement",
         tag: `aviso-${notice.id}`,
-        title: notice.title,
-        body: notice.subtitle || notice.body.slice(0, 120),
+        title: `Nuevo Aviso: ${notice.title}`,
+        body: detail.slice(0, 140) || "Abre la app para leer el comunicado.",
         url: "/familia",
       });
     }
