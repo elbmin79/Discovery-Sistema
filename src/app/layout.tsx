@@ -22,6 +22,14 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/favicon-d.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/brand/favicon-d.png", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.svg"],
+  },
 };
 
 export const viewport: Viewport = {

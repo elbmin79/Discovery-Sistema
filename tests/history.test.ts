@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MemoryPickupStore, AUTO_CLOSE_MS } from "../src/lib/store/memory-store";
-import { createSeedSnapshot } from "../src/lib/seed/demo-data";
+import { createSeedSnapshot, withDemoFamilyPlans } from "../src/lib/seed/demo-data";
 import { buildHistoryRow, buildLiveHistoryRows, historyPage, validJornada } from "../src/lib/history";
 import { buildAdminRows } from "../src/lib/admin-dashboard";
 import { jornadaOf } from "../src/lib/school";
@@ -23,7 +23,7 @@ function setup() {
 }
 
 test("database backfill retains every record beyond the memory-only 5000 row cap", () => {
-  const seed = createSeedSnapshot();
+  const seed = withDemoFamilyPlans(createSeedSnapshot());
   const trip = seed.trips[0];
   const request = seed.requests.find((item) => item.tripId === trip.id)!;
   seed.trips = Array.from({ length: 5001 }, (_, index) => ({ ...trip, id: `bulk-${index}`, cancelledAt: new Date().toISOString() }));
@@ -156,20 +156,17 @@ test("server sessions cannot be forged by browser role changes", () => {
   assert.equal(serverSession(new Request("http://localhost", { headers: { cookie: `${key}=${modified}.${signature}` } })), null);
 });
 
-test("demo families start with an inert plan for all their children", () => {
+test("nueva jornada starts without active pickups or late notices", () => {
   const snapshot = createSeedSnapshot();
-  for (const guardianId of ["g-roberto", "g-benjamin"]) {
-    const guardian = snapshot.guardians.find((item) => item.id === guardianId)!;
-    const trip = snapshot.trips.find((item) => item.guardianId === guardianId)!;
-    const requests = snapshot.requests.filter((item) => item.tripId === trip.id);
-    assert.deepEqual(new Set(requests.map((item) => item.studentId)), new Set(guardian.studentIds));
-    assert.ok(requests.every((item) => item.status === "on_the_way"));
-    assert.equal(trip.vehicleId, guardian.defaultVehicleId);
-  }
+  assert.equal(snapshot.trips.length, 0);
+  assert.equal(snapshot.requests.length, 0);
+  assert.equal(snapshot.latePickups.length, 0);
+  assert.equal(buildAdminRows(snapshot).length, 0);
+  assert.equal(buildLiveHistoryRows(snapshot).length, 0);
 });
 
 test("today plan can change before arrival without replacing its pass", () => {
-  const seed = createSeedSnapshot();
+  const seed = withDemoFamilyPlans(createSeedSnapshot());
   const store = new MemoryPickupStore(seed);
   const trip = seed.trips.find((item) => item.id === "t-madrid-today")!;
   const token = trip.qrToken;
@@ -193,7 +190,7 @@ test("today plan can change before arrival without replacing its pass", () => {
 });
 
 test("today plan cannot change after arrival", () => {
-  const seed = createSeedSnapshot();
+  const seed = withDemoFamilyPlans(createSeedSnapshot());
   const store = new MemoryPickupStore(seed);
   const trip = seed.trips.find((item) => item.id === "t-madrid-today")!;
   store.arriveByCode(trip.code);
@@ -204,7 +201,7 @@ test("today plan cannot change after arrival", () => {
 });
 
 test("inert plans stay out of school-facing dashboard and live history", () => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   const inertTripIds = new Set(snapshot.trips.filter((trip) => !trip.arrivedAt).map((trip) => trip.id));
   assert.ok(inertTripIds.has("t-madrid-today"));
   assert.equal(buildAdminRows(snapshot).some((row) => inertTripIds.has(row.tripId)), false);

@@ -36,8 +36,8 @@ export function hydrateStudentSurnames(snapshot: Snapshot) {
       const family = snapshot.guardians.find((guardian) => guardian.studentIds.includes(student.id));
       const key = family?.id ?? student.lastName;
       const index = [...key].reduce((sum, letter) => sum + letter.charCodeAt(0), 0);
-      const names = ["Herrera", "Mendoza", "Castillo", "Salazar", "Cervantes"];
-      student.lastName += " " + names[index % names.length];
+      const names = ["Herrera", "Mendoza", "Castillo", "Salazar", "Cervantes", "Espinoza", "Aguilar"];
+      student.lastName = `${student.lastName} ${names[index % names.length]}`.trim();
     }
   }
   return snapshot;

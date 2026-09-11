@@ -1,26 +1,23 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Snapshot } from "../../src/lib/types";
+import { createMadridPlan, createMarquezPlan } from "./helpers";
 
 async function login(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await page.request.post("/api/demo/reset")).ok()).toBeTruthy();
+  const trip = await createMadridPlan(page.request);
   await page.goto("/familia");
   await page.getByLabel("Usuario").fill("roberto");
   await page.getByLabel("Contraseña").fill("madrid");
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(page.getByText("Plan de hoy", { exact: true })).toBeVisible();
-  const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
-  for (const notice of snapshot.latePickups.filter((late) => late.guardianId === "g-roberto" && late.status === "announced")) {
-    expect((await page.request.post(`/api/late/${notice.id}`, { data: { action: "cancel" } })).ok()).toBeTruthy();
-  }
-  await page.reload();
-  await expect(page.getByText("Plan de hoy", { exact: true })).toBeVisible();
+  return trip;
 }
 
 test("cancel a plan, see the home and school contact, then create a new pickup", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await login(page);
+  const trip = await login(page);
   await page.getByRole("button", { name: "Cancelar recogida de hoy", exact: true }).click();
   await expect(page.getByText(/Se cancelará el pase de/)).toContainText("Sofía");
   await page.getByRole("button", { name: "Conservar plan" }).click();
@@ -30,12 +27,12 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
   await expect(page.getByRole("status")).toHaveText("Recogida de hoy cancelada");
   await expect(page.getByRole("status")).toHaveCount(0, { timeout: 6000 });
   const cancelled: Snapshot = await (await page.request.get("/api/state")).json();
-  expect(cancelled.trips.some((trip) => trip.id === "t-madrid-today")).toBe(false);
-  expect(cancelled.requests.some((request) => request.tripId === "t-madrid-today")).toBe(false);
+  expect(cancelled.trips.some((item) => item.id === trip.id)).toBe(false);
+  expect(cancelled.requests.some((request) => request.tripId === trip.id)).toBe(false);
   await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   await expect(page.getByText("De la escuela", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Contactar a la escuela/ })).toHaveAttribute("href", "tel:+526868378517");
-  expect((await page.request.post("/api/trips/arrive", { data: { code: "4170" } })).ok()).toBe(false);
+  expect((await page.request.post("/api/trips/arrive", { data: { code: trip.code } })).ok()).toBe(false);
   await expect(page.locator('img[src*="school-welcome"]')).toBeVisible();
   await expect(page.locator('img[src*="pickup-pass"]')).toBeVisible();
   await expect(page.locator('img[src*="students/s-sofia.png"]')).toHaveCount(1);
@@ -71,7 +68,7 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
 });
 
 test("late notice replaces the plan, persists, appears to the office, and can be updated and cancelled", async ({ page, browser }) => {
-  await login(page);
+  const trip = await login(page);
   await page.getByRole("button", { name: "¿Llegarás tarde? Avisar al colegio", exact: true }).click();
   await expect(page.getByRole("note")).toContainText("Sofía");
   await expect(page.getByRole("note")).toContainText("Lucas");
@@ -82,7 +79,7 @@ test("late notice replaces the plan, persists, appears to the office, and can be
   await expect(page.getByRole("status")).toBeInViewport();
   await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toBeVisible();
   const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
-  expect(snapshot.trips.some((trip) => trip.id === "t-madrid-today")).toBe(false);
+  expect(snapshot.trips.some((item) => item.id === trip.id)).toBe(false);
   const late = snapshot.latePickups.find((notice) => notice.guardianId === "g-roberto" && notice.status === "announced")!;
   expect(late.studentIds).toHaveLength(2);
   const officeContext = await browser.newContext();
@@ -114,37 +111,38 @@ test("late notice replaces the plan, persists, appears to the office, and can be
 });
 
 test("failed cancellation retains the plan and concurrent arrival prevents late replacement", async ({ page }) => {
-  await login(page);
-  await page.route("**/api/trips/t-madrid-today/cancel", (route) => route.fulfill({
+  const trip = await login(page);
+  await page.route(`**/api/trips/${trip.id}/cancel`, (route) => route.fulfill({
     status: 400, contentType: "application/json", body: JSON.stringify({ error: "No se pudo guardar el cambio." }),
   }));
   await page.getByRole("button", { name: "Cancelar recogida de hoy", exact: true }).click();
   await page.getByRole("button", { name: "Sí, cancelar recogida" }).click();
   await expect(page.getByText("No se pudo guardar el cambio.")).toBeVisible();
   await expect(page.getByText("Plan de hoy", { exact: true })).toBeVisible();
-  await page.unroute("**/api/trips/t-madrid-today/cancel");
+  await page.unroute(`**/api/trips/${trip.id}/cancel`);
   await page.getByRole("button", { name: "¿Llegarás tarde? Avisar al colegio", exact: true }).click();
   await page.getByRole("button", { name: "+30", exact: true }).click();
   await page.route("**/api/late", async (route) => {
-    expect((await page.request.post("/api/trips/arrive", { data: { code: "4170" } })).ok()).toBeTruthy();
+    expect((await page.request.post("/api/trips/arrive", { data: { code: trip.code } })).ok()).toBeTruthy();
     await route.continue();
   });
   await page.getByRole("button", { name: "Avisar al colegio", exact: true }).click();
   await expect(page.getByText("La recogida ya llegó al kiosco. Contacta a la oficina.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Contactar a la escuela/ })).toHaveAttribute("href", "tel:+526868378517");
   const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
-  expect(snapshot.trips.find((trip) => trip.id === "t-madrid-today")?.arrivedAt).toBeTruthy();
+  expect(snapshot.trips.find((item) => item.id === trip.id)?.arrivedAt).toBeTruthy();
   expect(snapshot.latePickups.some((late) => late.guardianId === "g-roberto" && late.status === "announced")).toBe(false);
 });
 
 test("API requires a parent session and rejects another guardian's cancellation", async ({ page, playwright }) => {
-  await login(page);
+  const trip = await login(page);
+  await createMarquezPlan(page.request);
   const anonymous = await playwright.request.newContext({ baseURL: "http://localhost:3105" });
-  expect((await anonymous.post("/api/trips/t-madrid-today/cancel")).status()).toBe(401);
+  expect((await anonymous.post(`/api/trips/${trip.id}/cancel`)).status()).toBe(401);
   expect((await anonymous.post("/api/late", { data: { guardianId: "g-roberto" } })).status()).toBe(401);
   await anonymous.dispose();
   const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
-  const other = snapshot.trips.find((trip) => trip.guardianId === "g-benjamin")!;
+  const other = snapshot.trips.find((item) => item.guardianId === "g-benjamin")!;
   expect((await page.request.post(`/api/trips/${other.id}/cancel`)).ok()).toBe(false);
   expect((await page.request.post("/api/late", { data: { guardianId: "g-benjamin" } })).status()).toBe(403);
 });

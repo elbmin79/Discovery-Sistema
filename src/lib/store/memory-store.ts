@@ -30,6 +30,7 @@ import type {
   PickupEvent,
   PickupStatus,
   PickupTrip,
+  PushSubscriptionRecord,
   Snapshot,
   UpdateTripInput,
   Vehicle,
@@ -216,6 +217,9 @@ export class MemoryPickupStore {
     }
     if (!Array.isArray(this.data.calendarEvents)) {
       this.data.calendarEvents = [];
+    }
+    if (!Array.isArray(this.data.pushSubscriptions)) {
+      this.data.pushSubscriptions = [];
     }
     for (const guardian of this.data.guardians) {
       if (!Array.isArray(guardian.readAnnouncementIds)) {
@@ -574,45 +578,47 @@ export class MemoryPickupStore {
   addSimulatedArrival(notify = true) {
     const usedCodes = new Set(this.data.trips.map((trip) => trip.code));
     const lastName = randomOf(SIM_LAST_NAMES);
-    const secondLastName = randomOf(SIM_LAST_NAMES.filter((name) => name !== lastName));
-    const siblingCount = 1 + Math.floor(Math.random() * 3);
-    const students = Array.from({ length: siblingCount }, () => {
-      const gender = Math.random() < 0.5 ? ("f" as const) : ("m" as const);
-      const firstName = randomOf(gender === "f" ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M);
-      const level = randomOf(SIM_LEVELS);
-      const preschool =
-        level === "toddlers-b" ||
-        level === "toddlers-a" ||
-        level === "primary" ||
-        level === "pre-kinder" ||
-        level === "kindergarten";
-      return {
-        id: createId("s-sim"),
-        firstName,
-        lastName: `${lastName} ${secondLastName}`,
-        level,
-        group: Math.random() < 0.5 ? "Grupo A" : "Grupo B",
-        zoneId: preschool ? "zone-preschool" : "zone-elementary",
-        dismissalTime: preschool ? "1:30 p.m." : "2:30 p.m.",
-        accent: randomOf(SIM_ACCENTS),
-        gender,
-        photoUrl: `/students/${randomOf(gender === "f" ? ["s-sofia", "s-regina", "s-emilia", "s-isabela"] : ["s-lucas", "s-mateo", "s-diego", "s-emiliano"])}.png`,
-      };
-    });
-
-    const isMom = Math.random() < 0.5;
-    const guardian = {
-      id: createId("g-sim"),
-      firstName: randomOf(isMom ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M),
-      lastName,
-      relationEs: isMom ? "Mamá" : "Papá",
-      relationEn: isMom ? "Mom" : "Dad",
-      studentIds: students.map((student) => student.id),
-      phone: `686${String(Math.floor(1000000 + Math.random() * 9000000)).slice(0, 7)}`,
-      friendCode: generateFriendCode(lastName),
-      friendIds: [] as string[],
-      defaultVehicleId: undefined as string | undefined,
+  const secondPool = SIM_LAST_NAMES.filter((name) => name !== lastName);
+  const secondLastName = randomOf(secondPool.length ? secondPool : SIM_LAST_NAMES);
+  const siblingCount = 1 + Math.floor(Math.random() * 3);
+  const familyLastName = `${lastName} ${secondLastName}`;
+  const students = Array.from({ length: siblingCount }, () => {
+    const gender = Math.random() < 0.5 ? ("f" as const) : ("m" as const);
+    const firstName = randomOf(gender === "f" ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M);
+    const level = randomOf(SIM_LEVELS);
+    const preschool =
+      level === "toddlers-b" ||
+      level === "toddlers-a" ||
+      level === "primary" ||
+      level === "pre-kinder" ||
+      level === "kindergarten";
+    return {
+      id: createId("s-sim"),
+      firstName,
+      lastName: familyLastName,
+      level,
+      group: Math.random() < 0.5 ? "Grupo A" : "Grupo B",
+      zoneId: preschool ? "zone-preschool" : "zone-elementary",
+      dismissalTime: preschool ? "1:30 p.m." : "2:30 p.m.",
+      accent: randomOf(SIM_ACCENTS),
+      gender,
+      photoUrl: `/students/${randomOf(gender === "f" ? ["s-sofia", "s-regina", "s-emilia", "s-isabela"] : ["s-lucas", "s-mateo", "s-diego", "s-emiliano"])}.png`,
     };
+  });
+
+  const isMom = Math.random() < 0.5;
+  const guardian = {
+    id: createId("g-sim"),
+    firstName: randomOf(isMom ? SIM_FIRST_NAMES_F : SIM_FIRST_NAMES_M),
+    lastName: familyLastName,
+    relationEs: isMom ? "Mamá" : "Papá",
+    relationEn: isMom ? "Mom" : "Dad",
+    studentIds: students.map((student) => student.id),
+    phone: `686${String(Math.floor(1000000 + Math.random() * 9000000)).slice(0, 7)}`,
+    friendCode: generateFriendCode(lastName),
+    friendIds: [] as string[],
+    defaultVehicleId: undefined as string | undefined,
+  };
 
     const car = randomOf(SIM_VEHICLES);
     const vehicle = {
@@ -1528,6 +1534,22 @@ export class MemoryPickupStore {
       throw new Error("No encontramos ese evento.");
     }
     this.data.calendarEvents = this.data.calendarEvents.filter((item) => item.id !== id);
+    this.emit();
+    return this.snapshot();
+  }
+
+  upsertPushSubscription(record: PushSubscriptionRecord) {
+    const list = [...(this.data.pushSubscriptions ?? [])].filter((item) => item.endpoint !== record.endpoint);
+    list.unshift(record);
+    this.data.pushSubscriptions = list.slice(0, 200);
+    this.emit();
+    return this.snapshot();
+  }
+
+  removePushEndpoints(endpoints: string[]) {
+    if (!endpoints.length) return this.snapshot();
+    const drop = new Set(endpoints);
+    this.data.pushSubscriptions = (this.data.pushSubscriptions ?? []).filter((item) => !drop.has(item.endpoint));
     this.emit();
     return this.snapshot();
   }

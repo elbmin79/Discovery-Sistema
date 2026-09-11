@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MemoryPickupStore } from "../src/lib/store/memory-store";
-import { createSeedSnapshot } from "../src/lib/seed/demo-data";
+import { createSeedSnapshot, withDemoFamilyPlans } from "../src/lib/seed/demo-data";
 import { lateEligibleStudentIds, lateReplacementTrips, parentName, parentPickerName } from "../src/lib/parent-home";
 import { todayJornada } from "../src/lib/school";
 import type { CreateLatePickupInput } from "../src/lib/types";
@@ -27,7 +27,7 @@ test("demo surnames upgrade saved students without resetting pickups or overwrit
 });
 
 test("family names are first-last while school displays remain last-first", () => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   const student = snapshot.students.find((student) => student.id === "s-sofia")!;
   const trip = snapshot.trips.find((trip) => trip.id === "t-madrid-today")!;
   assert.equal(parentName(student), "Sofía Madrid Herrera");
@@ -76,7 +76,7 @@ test("simulated children use available portraits including older persisted simul
 });
 
 function setup() {
-  const seed = createSeedSnapshot();
+  const seed = withDemoFamilyPlans(createSeedSnapshot());
   seed.latePickups = [];
   const store = new MemoryPickupStore(seed);
   const snapshot = store.snapshot();

@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from "@playwright/test";
-import { createSeedSnapshot } from "../../src/lib/seed/demo-data";
+import { createSeedSnapshot, withDemoFamilyPlans } from "../../src/lib/seed/demo-data";
 import { buildHistoryRow, historyPage } from "../../src/lib/history";
 import { todayJornada } from "../../src/lib/school";
 
@@ -10,7 +10,7 @@ async function expectUnclipped(name: Locator) {
 }
 
 test("long compound surnames remain readable across parent, guest, staff, admin and kiosk screens", async ({ page }) => {
-  const snapshot = createSeedSnapshot();
+  const snapshot = withDemoFamilyPlans(createSeedSnapshot());
   snapshot.latePickups = [];
   const surname = "Fernández de la Torre Hernández";
   for (const student of snapshot.students.filter((student) => ["s-sofia", "s-lucas"].includes(student.id))) student.lastName = surname;

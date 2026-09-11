@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { postJson } from "@/hooks/use-snapshot";
 import { friendsOf } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -88,10 +89,65 @@ export function ParentSettings({
         onClose={() => setEditor("none")}
       />
 
+      <PushNotificationsSection t={t} />
+
       <button type="button" onClick={onLogout} className="text-sm font-medium text-danger">
         {t.logout}
       </button>
     </div>
+  );
+}
+
+function PushNotificationsSection({ t }: { t: Dictionary }) {
+  const [open, setOpen] = useState(false);
+  const push = usePushNotifications();
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((value) => {
+            const next = !value;
+            if (next) void push.refresh();
+            return next;
+          });
+        }}
+        className="flex w-full items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 text-left"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-forest/10 text-forest">
+            <Bell className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-forest">{t.pushTitle}</span>
+            <span className="mt-0.5 block text-xs text-muted">{t.pushHint}</span>
+          </span>
+        </span>
+        <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div className="mt-3 space-y-3 rounded-2xl border border-line bg-cream/50 p-4">
+          <p className="text-sm leading-relaxed text-muted">{t.pushBody}</p>
+          {push.subscribed ? (
+            <p className="rounded-xl bg-forest/10 px-3 py-2 text-sm font-medium text-forest">{t.pushOn}</p>
+          ) : (
+            <button
+              type="button"
+              disabled={push.busy || !push.supported}
+              onClick={() => void push.enable()}
+              className="min-h-11 w-full rounded-full bg-forest px-4 text-sm font-semibold text-paper disabled:opacity-50"
+            >
+              {push.busy ? t.pushEnabling : t.pushEnable}
+            </button>
+          )}
+          {!push.supported ? <p className="text-xs text-muted">{t.pushUnsupported}</p> : null}
+          {push.permission === "denied" ? <p className="text-xs text-danger">{t.pushDenied}</p> : null}
+          {push.error ? <p className="text-xs text-danger">{push.error}</p> : null}
+          <p className="text-[11px] leading-relaxed text-muted">{t.pushIosHint}</p>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

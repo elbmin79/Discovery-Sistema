@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import type { Snapshot } from "../../src/lib/types";
+import { createMadridPlan, createMarquezPlan } from "./helpers";
 
 test("family sees, edits, scans and completes today's prepared plan", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await page.request.post("/api/demo/reset")).ok()).toBeTruthy();
+  const prepared = await createMadridPlan(page.request);
   await page.goto("/familia");
   await page.getByLabel("Usuario").fill("roberto");
   await page.getByLabel("Contraseña").fill("madrid");
@@ -35,8 +37,8 @@ test("family sees, edits, scans and completes today's prepared plan", async ({ p
   await expect(page.getByRole("button", { name: "Cerrar código QR" })).toHaveCount(0);
 
   const before: Snapshot = await (await page.request.get("/api/state")).json();
-  const trip = before.trips.find((item) => item.id === "t-madrid-today")!;
-  expect(trip.code).toBe("4170");
+  const trip = before.trips.find((item) => item.id === prepared.id)!;
+  expect(trip.code).toBe(prepared.code);
   expect((await page.request.post("/api/trips/arrive", { data: { code: trip.code } })).ok()).toBeTruthy();
   await expect(page.getByText("Tu pase de hoy", { exact: true })).toBeVisible({ timeout: 5000 });
   await expect(page.getByText("En la fila", { exact: true }).first()).toBeVisible();
@@ -51,6 +53,8 @@ test("family sees, edits, scans and completes today's prepared plan", async ({ p
 
 test("today plan is fully translated to English", async ({ page }) => {
   expect((await page.request.post("/api/demo/reset")).ok()).toBeTruthy();
+  await createMarquezPlan(page.request);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/familia");
   await page.getByLabel("Usuario").fill("benjamin");
   await page.getByLabel("Contraseña").fill("marquez");
