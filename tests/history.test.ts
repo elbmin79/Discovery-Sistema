@@ -7,6 +7,7 @@ import { buildAdminRows } from "../src/lib/admin-dashboard";
 import { arrivalPictureFromSources, jornadaOf } from "../src/lib/school";
 import { retentionCutoff } from "../src/lib/store/history-maintenance";
 import { sessionCookie, serverSession } from "../src/lib/auth/server-session";
+import { assertSnapshotIdentity } from "../src/lib/snapshot-integrity";
 
 function setup() {
   const seed = createSeedSnapshot();
@@ -105,6 +106,30 @@ test("arrival pictures prioritize simulated and captured photos before registere
     captured: false,
     fallback: undefined,
   });
+});
+
+test("student identities stay unique across families and repair the legacy Renata collision", () => {
+  const seed = createSeedSnapshot();
+  assert.doesNotThrow(() => assertSnapshotIdentity(seed));
+  assert.equal(new Set(seed.students.map((student) => student.id)).size, seed.students.length);
+  const castro = seed.students.find((student) => student.id === "s-renata-castro")!;
+  castro.id = "s-renata";
+
+  const normalized = new MemoryPickupStore(seed).snapshot();
+  const jose = normalized.guardians.find((guardian) => guardian.id === "g-jose")!;
+  const children = normalized.students.filter((student) => jose.studentIds.includes(student.id));
+  assert.deepEqual(children.map((student) => `${student.firstName} ${student.lastName}`), ["Renata Vázquez Vega", "Thiago Vázquez Vega"]);
+  assert.ok(normalized.students.some((student) => student.id === "s-renata-castro" && student.lastName === "Castro Salazar"));
+});
+
+test("unknown duplicate students and cross-family ownership fail closed", () => {
+  const duplicate = createSeedSnapshot();
+  duplicate.students[1].id = duplicate.students[0].id;
+  assert.throws(() => new MemoryPickupStore(duplicate), /IDs duplicados de alumnos/);
+
+  const shared = createSeedSnapshot();
+  shared.guardians[1].studentIds.push(shared.guardians[0].studentIds[0]);
+  assert.throws(() => new MemoryPickupStore(shared), /asignado a más de una familia/);
 });
 
 test("daily rollover keeps late notices even without a pickup and applies 90-day retention", () => {

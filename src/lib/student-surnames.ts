@@ -12,7 +12,7 @@ const DEMO_SURNAMES: Record<string, readonly [string, string]> = {
   "s-joaquin:Fernández": ["Fernández", "Ramos"],
   "s-camila:Navarro": ["Navarro", "Cervantes"],
   "s-iker:Navarro": ["Navarro", "Cervantes"],
-  "s-renata:Castro": ["Castro", "Salazar"],
+  "s-renata-castro:Castro": ["Castro", "Salazar"],
   "s-leon:Morales": ["Morales", "Fuentes"],
   "s-amanda:Herrera": ["Herrera", "Carrillo"],
   "s-bruno:Peña": ["Peña", "Delgado"],
