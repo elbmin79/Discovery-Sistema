@@ -97,7 +97,7 @@ export function GuestPass({ token }: { token: string }) {
           student ? (
             <div key={student.id} className="flex items-center gap-3 rounded-2xl bg-paper px-4 py-3">
               <StudentAvatar student={student} />
-              <p className="font-medium">{studentName(student)}</p>
+              <p className="break-words font-medium">{studentName(student)}</p>
             </div>
           ) : null,
         )}

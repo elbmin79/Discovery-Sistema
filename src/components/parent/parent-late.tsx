@@ -190,7 +190,7 @@ export function ParentLate({
                 }`}
               >
                 <StudentAvatar student={child} size="sm" />
-                <p className="min-w-0 flex-1 truncate font-medium text-ink">{parentName(child)}</p>
+                <p className="min-w-0 flex-1 break-words font-medium text-ink">{parentName(child)}</p>
                 <span
                   className={`flex h-6 w-6 items-center justify-center rounded-full border ${
                     active ? "border-forest bg-forest text-paper" : "border-line"

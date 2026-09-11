@@ -35,3 +35,24 @@ test("family cards keep a consistent width and TV shows three children beside th
   }
   expect(await page.locator('img[src*="students/"]').evaluateAll((images) => images.every((image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
 });
+
+test("mixed families rotate all children without hiding their surnames", async ({ page }) => {
+  const snapshot = createSeedSnapshot();
+  const trip = snapshot.trips.find((item) => item.id === "t-marquez-today")!;
+  snapshot.trips = [trip];
+  trip.arrivedAt = new Date().toISOString();
+  const template = snapshot.requests.find((request) => request.tripId === trip.id)!;
+  snapshot.requests = ["s-emiliano", "s-isabela", "s-sofia", "s-lucas"].map((studentId, index) => ({ ...template, id: `mixed-${index}`, studentId, status: "arrived", arrivedAt: trip.arrivedAt }));
+  await page.route("**/api/state", (route) => route.fulfill({ json: snapshot }));
+  await page.clock.install();
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/pantalla");
+  const spotlight = page.locator("section.tv-in");
+  await expect(spotlight.getByText("Emiliano", { exact: true })).toBeInViewport();
+  await expect(spotlight.getByText("Márquez Espinoza", { exact: true }).first()).toBeInViewport();
+  await page.clock.runFor(3600);
+  await expect(spotlight.getByText("Sofía", { exact: true })).toBeInViewport();
+  await expect(spotlight.getByText("Lucas", { exact: true })).toBeInViewport();
+  await expect(spotlight.getByText("Madrid Herrera", { exact: true }).first()).toBeInViewport();
+  await page.screenshot({ path: "test-results/family-tv-mixed.png", animations: "disabled" });
+});

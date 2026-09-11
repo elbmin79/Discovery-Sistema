@@ -9,7 +9,7 @@ import { StudentAvatar } from "@/components/ui/avatar";
 import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { DELIVERED_VISIBLE_MS as PICKUP_DELIVERED_VISIBLE_MS } from "@/lib/pickup-machine";
-import { studentName, arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
+import { arrivalPicture, findStudent, findVehicle, formatTime, studentGrade } from "@/lib/school";
 import type { PickupRequest, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
 import { fallbackArrivalPhoto } from "@/lib/seed/demo-data";
 
@@ -105,6 +105,7 @@ export function TvBoard() {
   const total = families.length;
   const safeIndex = total ? index % total : 0;
   const current = total ? families[safeIndex] : undefined;
+  const rotationMs = Math.max(ROTATE_MS, Math.ceil((current?.kids.length ?? 1) / (current ? kidsPerPage(current) : 3)) * 3500);
 
   useEffect(() => {
     const ids = families.map((family) => family.trip.id);
@@ -115,9 +116,9 @@ export function TvBoard() {
 
   useEffect(() => {
     if (total <= 1) return;
-    const id = window.setTimeout(() => setIndex((value) => (value + 1) % total), ROTATE_MS);
+    const id = window.setTimeout(() => setIndex((value) => (value + 1) % total), rotationMs);
     return () => window.clearTimeout(id);
-  }, [index, total]);
+  }, [index, total, rotationMs]);
 
   const upNext = useMemo(() => {
     if (total <= 1) return [];
@@ -157,7 +158,7 @@ export function TvBoard() {
   return (
     <div
       className="group/tv flex h-dvh flex-col overflow-hidden bg-forest-deep text-paper"
-      style={{ "--tv-rotate": `${ROTATE_MS}ms` } as React.CSSProperties}
+      style={{ "--tv-rotate": `${rotationMs}ms` } as React.CSSProperties}
     >
       <header className="flex items-center justify-between px-8 pt-6 pb-4 xl:px-12">
         <Link href="/" className="rounded-lg">
@@ -196,7 +197,7 @@ export function TvBoard() {
                   )} alumnos`}
             </p>
             <ul className="mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-              {upNext.slice(0, 5).map((family) => (
+              {upNext.slice(0, 3).map((family) => (
                 <li key={family.trip.id} className="flex items-center gap-4 rounded-2xl bg-paper/8 px-4 py-3.5">
                   <div className="flex -space-x-3">
                     {family.kids.slice(0, 2).map((kid) => (
@@ -206,8 +207,8 @@ export function TvBoard() {
                     ))}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 font-serif text-xl leading-tight xl:text-2xl">
-                      {family.kids.map((kid) => studentName(kid.student)).join(" y ")}
+                    <p className="break-words font-serif text-lg leading-tight xl:text-xl">
+                      {[...new Set(family.kids.map((kid) => kid.student.lastName))].join(" / ")}<span className="mt-1 block font-sans text-sm text-paper/80">{family.kids.map((kid) => kid.student.firstName).join(", ")}</span>
                     </p>
                     <p className="mt-0.5 truncate text-base text-paper/60">
                       {family.trip.pickerName} · {formatTime(family.arrivedAt)}
@@ -216,8 +217,8 @@ export function TvBoard() {
                   <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${STAGE_COPY[family.stage].dot}`} />
                 </li>
               ))}
-              {upNext.length > 5 ? (
-                <li className="px-3 text-base text-paper/55">+{upNext.length - 5} familias más</li>
+              {upNext.length > 3 ? (
+                <li className="px-3 text-base text-paper/55">+{upNext.length - 3} familias más</li>
               ) : null}
               {total === 1 ? (
                 <li className="px-3 text-base text-paper/55">Solo una familia en la fila.</li>
@@ -240,12 +241,12 @@ export function TvBoard() {
               {recent.map((kid) => (
                 <li key={kid.request.id} className="flex w-32 shrink-0 flex-col items-center text-center xl:w-40">
                   <div className="rounded-full ring-[3px] ring-emerald-400/80">
-                    <StudentAvatar student={kid.student} size="lg" />
+                    <StudentAvatar student={kid.student} size="md" />
                   </div>
-                  <p className="mt-2 w-full font-serif text-lg leading-tight xl:text-xl">
+                  <p className="break-words mt-2 w-full font-serif text-lg leading-tight xl:text-xl">
                     {kid.student.lastName}
                   </p>
-                  <p className="text-sm">{kid.student.firstName}</p>
+                  <p className="break-words text-sm">{kid.student.firstName}</p>
                   <p className="text-sm text-paper/55 xl:text-base">{formatTime(kid.request.deliveredAt)}</p>
                 </li>
               ))}
@@ -257,110 +258,65 @@ export function TvBoard() {
   );
 }
 
+function kidsPerPage(family: TvFamily) {
+  return new Set(family.kids.map((kid) => kid.student.lastName)).size === 1 ? 3 : 2;
+}
+
 function Spotlight({ family, position, total }: { family: TvFamily; position: number; total: number }) {
   const [broken, setBroken] = useState(0);
-  const copy = STAGE_COPY[family.stage];
+  const [page, setPage] = useState(0);
+  const perPage = kidsPerPage(family);
+  const pages = Math.ceil(family.kids.length / perPage);
+  useEffect(() => {
+    if (pages < 2) return;
+    const timer = window.setInterval(() => setPage((value) => (value + 1) % pages), 3500);
+    return () => window.clearInterval(timer);
+  }, [pages]);
+  const kids = family.kids.slice((page % pages) * perPage, (page % pages) * perPage + perPage);
+  const surnames = [...new Set(family.kids.map((kid) => kid.student.lastName))];
+  const sharedName = surnames.length === 1 ? surnames[0] : null;
   const picture = arrivalPicture(family.trip, family.vehicle);
   const photo = broken >= 2 ? fallbackArrivalPhoto(family.vehicle?.label ?? "Auto", family.vehicle?.color) : broken === 1 ? picture.fallback ?? fallbackArrivalPhoto("Auto") : picture.src ?? picture.fallback;
-  const siblings = family.kids.length > 1;
 
   return (
-    <section className={`tv-in relative grid min-h-0 overflow-hidden rounded-[1.75rem] bg-paper text-ink ${siblings ? "grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]" : "grid-rows-[auto_minmax(120px,1fr)]"}`}>
-      <div className="relative z-10 min-h-0 overflow-y-auto px-5 py-4 xl:px-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide xl:text-base ${copy.pill}`}>
-              {copy.label}
-            </span>
-            {!siblings ? <span className="text-sm text-muted xl:text-base">{copy.hint}</span> : null}
-          </div>
-          {total > 1 ? (
-            <span className="shrink-0 rounded-full bg-forest-deep/90 px-3 py-1 text-sm font-semibold tabular-nums text-paper">
-              {position} / {total}
-            </span>
-          ) : null}
+    <section className="tv-in relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] bg-paper text-ink">
+      <header className="shrink-0 border-b border-line px-5 py-4 xl:px-7">
+        <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-widest text-gold-deep">
+          <span>Una recogida · {family.kids.length} {family.kids.length === 1 ? "alumno" : "alumnos"}</span>
+          <span className="shrink-0 rounded-full bg-forest px-3 py-1 text-paper">{position} / {total}</span>
         </div>
-
-        <div className="mt-4 flex flex-col gap-3">
-          {family.kids.map((kid) => (
-            <div key={kid.request.id} className="flex min-w-0 items-center gap-3">
-              <StudentAvatar student={kid.student} size={siblings ? "lg" : "2xl"} />
-              <div className="min-w-0">
-                <p
-                  className={`font-serif leading-none text-forest ${
-                    siblings ? "text-[clamp(1.3rem,1.8vw,2rem)]" : "text-[clamp(2rem,3vw,3.5rem)]"
-                  }`}
-                >
-                  {kid.student.lastName}
-                </p>
-                <p className="mt-1 text-lg text-forest">{kid.student.firstName}</p>
-                <p className="mt-1 text-sm text-muted">
-                  {studentGrade(kid.student, "es")}
-                </p>
+        <h1 className="break-words font-serif text-[clamp(1.65rem,2.6vw,2.6rem)] leading-tight text-forest">{sharedName ?? "Familias que salen juntas"}</h1>
+      </header>
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <div className="flex min-h-0 flex-col justify-center gap-2 p-3 xl:gap-3 xl:p-5">
+          {kids.map((kid) => (
+            <div key={kid.request.id} className="flex min-w-0 items-center gap-3 rounded-2xl bg-cream/80 p-2 xl:p-3">
+              <StudentAvatar student={kid.student} size="lg" />
+              <div className="min-w-0 flex-1">
+                {!sharedName ? <p className="break-words font-serif text-lg leading-tight text-forest">{kid.student.lastName}</p> : null}
+                <p className="break-words font-serif text-[clamp(1.15rem,2vw,1.9rem)] leading-tight text-forest">{kid.student.firstName}</p>
+                <p className="mt-1 text-xs leading-snug text-muted xl:text-sm">{studentGrade(kid.student, "es")}</p>
               </div>
             </div>
           ))}
+          {pages > 1 ? <p className="text-center text-xs text-muted">Alumnos {page * perPage + 1}–{Math.min(page * perPage + perPage, family.kids.length)} de {family.kids.length}</p> : null}
         </div>
-
-        <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-3 text-base">
-          <div>
-            <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">
-              Viene por {siblings ? "ellos" : "él/ella"}
-            </dt>
-            <dd className="mt-1 text-forest">
-              {family.trip.pickerName}
-              <span className="text-muted"> · {family.trip.pickerRelationEs}</span>
-            </dd>
+        <div className="flex min-h-0 flex-col border-l border-line bg-cream/60">
+          <div className="relative min-h-0 flex-1">
+            {photo ? <Image src={photo} alt={family.vehicle?.label ?? "Auto en la entrada"} fill unoptimized onError={() => setBroken((value) => Math.min(value + 1, 2))} className="object-contain p-3 xl:p-5" /> : null}
           </div>
-          <div>
-            <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">Llegó</dt>
-            <dd className="mt-1 text-forest">{formatTime(family.arrivedAt)}</dd>
+          <div className="shrink-0 px-4 pb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gold-deep">{picture.captured && broken === 0 ? "Foto de llegada" : "Auto en la fila"}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-forest xl:text-base">{family.vehicle?.label ?? "Auto"}</p>
+            {family.vehicle?.plate ? <p className="mt-1 text-xs tabular-nums text-muted">{family.vehicle.plate}</p> : null}
           </div>
-          {family.vehicle && !siblings ? (
-            <div>
-              <dt className="text-xs tracking-[0.2em] uppercase text-gold-deep">Auto</dt>
-              <dd className="mt-1 text-forest">
-                {family.vehicle.label}
-                {family.vehicle.plate ? <span className="text-muted"> · {family.vehicle.plate}</span> : null}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
-      </div>
-
-      <div className="relative min-h-0 flex-1 bg-ink/5">
-        {photo ? (
-          <Image
-            src={photo}
-            alt={family.vehicle?.label ?? "Auto en la entrada"}
-            fill
-            unoptimized
-            onError={() => setBroken((value) => Math.min(value + 1, 2))}
-            className="object-contain object-center p-4 xl:p-6"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-muted">Sin foto del auto</div>
-        )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-deep/80 via-forest-deep/30 to-transparent px-6 pb-6 pt-20">
-          <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gold xl:text-sm">
-            {picture.captured && broken === 0 ? (
-              <>
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Foto de llegada · {formatTime(family.arrivedAt)}
-              </>
-            ) : (
-              "En la puerta"
-            )}
-          </p>
-          <p className="font-serif text-2xl text-paper xl:text-3xl">
-            {family.vehicle?.label ?? "Llegó a pie"}
-          </p>
         </div>
       </div>
-
-      <div className="absolute inset-x-0 bottom-0 z-20 h-1.5 bg-line">
-        {total > 1 ? <div className="tv-progress h-full bg-gold" /> : <div className="h-full w-full bg-gold/40" />}
-      </div>
+      <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-line bg-forest px-5 py-3 text-paper xl:px-7">
+        <p className="min-w-0 break-words text-sm"><span className="text-gold">{family.trip.pickerRelationEs}</span> · {family.trip.pickerName}</p>
+        <span className="shrink-0 text-sm tabular-nums text-cream">{formatTime(family.arrivedAt)}</span>
+      </footer>
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-gold/20">{total > 1 ? <div className="tv-progress h-full bg-gold" /> : null}</div>
     </section>
   );
 }

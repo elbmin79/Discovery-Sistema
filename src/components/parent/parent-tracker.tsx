@@ -110,7 +110,7 @@ export function ParentTracker({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-ink">{parentName(student)}</p>
+                      <p className="break-words font-semibold text-ink">{parentName(student)}</p>
                       <p className="text-sm text-muted">{studentGrade(student, locale)}</p>
                     </div>
                     <StatusBadge

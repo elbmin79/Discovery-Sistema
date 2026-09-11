@@ -439,7 +439,7 @@ function LateCard({
           ))}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-serif text-base leading-tight text-forest">
+          <p className="break-words font-serif text-base leading-tight text-forest">
             {students.map(studentLastFirst).join(" · ") || "Alumnos"}
           </p>
           <span className={`mt-1 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${chipTone}`}>
@@ -493,7 +493,7 @@ function RowDesktop({
           <div className="flex items-center gap-3">
             <StudentAvatar student={row.student} size="sm" />
             <div>
-              <p className="font-medium text-ink">{studentName(row.student)}</p>
+              <p className="break-words font-medium text-ink">{studentName(row.student)}</p>
               <p className="text-xs text-muted">{studentGrade(row.student, "es")}</p>
             </div>
           </div>
@@ -546,7 +546,7 @@ function RowMobile({
       <div className="flex items-center gap-3">
         <StudentAvatar student={row.student} size="md" />
         <div className="min-w-0 flex-1">
-          <p className="font-serif text-lg text-forest">{studentName(row.student)}</p>
+          <p className="break-words font-serif text-lg text-forest">{studentName(row.student)}</p>
           <p className="text-xs text-muted">
             {studentGrade(row.student, "es")} · {row.zoneName}
           </p>

@@ -281,7 +281,7 @@ function KidRow({
     >
       <StudentAvatar student={child} size="lg" />
       <div className="min-w-0 flex-1">
-        <p className="text-lg font-semibold text-ink">{parentName(child)}</p>
+        <p className="break-words text-lg font-semibold text-ink">{parentName(child)}</p>
         <p className="text-sm text-muted">{detail}</p>
       </div>
       {removable ? (

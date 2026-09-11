@@ -96,7 +96,7 @@ export function ParentSetup({
         <h1 className="font-serif text-3xl text-forest">
           {selected.map((child) => parentName(child)).join(" y ")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{selected.map(parentName).join(" · ")}</p>
+
       </div>
 
       <section>
