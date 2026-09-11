@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -25,7 +25,7 @@ export function usePushNotifications() {
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     if (!pushSupported()) {
       setPermission("unsupported");
       setSubscribed(false);
@@ -42,9 +42,9 @@ export function usePushNotifications() {
     } finally {
       setChecked(true);
     }
-  }
+  }, []);
 
-  async function enable() {
+  const enable = useCallback(async () => {
     if (!pushSupported()) {
       setError("Este dispositivo no admite notificaciones push.");
       return;
@@ -94,7 +94,7 @@ export function usePushNotifications() {
       setBusy(false);
       await refresh();
     }
-  }
+  }, [refresh]);
 
   return {
     supported,
