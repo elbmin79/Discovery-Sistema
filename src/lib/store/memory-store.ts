@@ -911,10 +911,18 @@ export class MemoryPickupStore {
             ? previous === "denied"
               ? "La familia cambió su respuesta a Sí"
               : "La familia confirmó la recogida"
-            : "La familia dijo que NO",
+            : "La familia no autorizó; se quitó al alumno de la recogida",
       },
       now,
     );
+
+    if (decision === "denied") {
+      return this.removeStudentsFromTrip(
+        request.tripId,
+        [request.studentId],
+        "La familia no autorizó la recogida",
+      );
+    }
 
     this.emit();
     return this.snapshot();

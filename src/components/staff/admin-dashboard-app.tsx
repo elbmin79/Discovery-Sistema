@@ -18,6 +18,7 @@ import { HistorySheet, historyCsv } from "./history-panel";
 
 const LATE_PAGE_EXPANDED = 3;
 const LATE_PAGE_COLLAPSED = 6;
+const PICKUPS_PAGE_SIZE = 15;
 
 type LateCarouselItem = { id: string; notice: LatePickup; jornada?: string };
 type AdminSection = "pickups" | "school";
@@ -101,7 +102,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
   useEffect(() => { const timer = setInterval(() => setNowMs(Date.now()), 15000); return () => clearInterval(timer); }, []);
 
   const fetchPage = useCallback(async (start: number, signal?: AbortSignal): Promise<HistoryPage> => {
-    const response = await fetch('/api/history?from=' + from + '&to=' + to + '&limit=200&offset=' + start + '&status=' + statusFilter + '&zone=' + encodeURIComponent(catalog?.zones.find((zone) => zone.id === zoneId)?.nameEs ?? ''), { cache: "no-store", signal });
+    const response = await fetch('/api/history?from=' + from + '&to=' + to + '&limit=' + PICKUPS_PAGE_SIZE + '&offset=' + start + '&status=' + statusFilter + '&zone=' + encodeURIComponent(catalog?.zones.find((zone) => zone.id === zoneId)?.nameEs ?? ''), { cache: "no-store", signal });
     if (!response.ok) throw new Error("No se pudieron cargar las recogidas.");
     return response.json();
   }, [from, to, statusFilter, catalog, zoneId]);
@@ -148,7 +149,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
   }
   async function exportRange() {
     setExporting(true);
-    try { const records = new Map<string, HistoryRow>(); for (let start = 0; ; start += 200) { const result = await fetchPage(start); result.rows.forEach((row) => records.set(row.tripId, row)); if (start + result.rows.length >= result.total || !result.rows.length) break; }
+    try { const records = new Map<string, HistoryRow>(); for (let start = 0; ; start += PICKUPS_PAGE_SIZE) { const result = await fetchPage(start); result.rows.forEach((row) => records.set(row.tripId, row)); if (start + result.rows.length >= result.total || !result.rows.length) break; }
       const selectedRows = [...records.values()].filter((row) => !zoneId || row.studentIds.some((id) => catalog?.students.some((student) => student.id === id && student.zoneId === zoneId)));
       const url = URL.createObjectURL(new Blob(["\uFEFF", historyCsv(selectedRows)], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = 'recogidas-' + from + '-' + to + '.csv'; link.click(); URL.revokeObjectURL(url);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo exportar."); } finally { setExporting(false); }
@@ -226,7 +227,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
         <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-line bg-paper md:block"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-xs uppercase tracking-[0.12em] text-muted">{["Alumno", "Familia", "Aviso", "Llegada", "Entrega", "Salida", "Estado", "Entregó", ""].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label || (range === "today" ? <LiveIndicator /> : null)}</th>)}</tr></thead><tbody>{filtered.map((row) => <RowDesktop key={row.requestId} row={row} snapshot={catalog} expanded={false} onToggle={() => setSelected(page.rows.find((item) => item.tripId === row.tripId) ?? null)} />)}</tbody></table></div>
         <div className="mt-4 space-y-3 md:hidden">{range === "today" && <div className="flex justify-end px-4"><LiveIndicator /></div>}{filtered.map((row) => <RowMobile key={row.requestId} row={row} snapshot={catalog} expanded={false} onToggle={() => setSelected(page.rows.find((item) => item.tripId === row.tripId) ?? null)} />)}</div>
       </>}
-      {page && page.total > 200 && <nav aria-label="Páginas de recogidas" className="mt-4 flex items-center justify-between"><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 200))} className="min-h-11 px-4">Anterior</button><span>{offset + 1}–{Math.min(offset + 200, page.total)} de {page.total}</span><button disabled={offset + 200 >= page.total} onClick={() => setOffset(offset + 200)} className="min-h-11 px-4">Siguiente</button></nav>}
+      {page && page.total > PICKUPS_PAGE_SIZE && <nav aria-label="Páginas de recogidas" className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={!offset} onClick={() => setOffset(Math.max(0, offset - PICKUPS_PAGE_SIZE))} className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-forest disabled:opacity-40">Anterior</button><span className="text-sm text-muted">{offset + 1}–{Math.min(offset + PICKUPS_PAGE_SIZE, page.total)} de {page.total}</span><button type="button" disabled={offset + PICKUPS_PAGE_SIZE >= page.total} onClick={() => setOffset(offset + PICKUPS_PAGE_SIZE)} className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-forest disabled:opacity-40">Siguiente</button></nav>}
       </>
       )}
     </main>

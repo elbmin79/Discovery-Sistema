@@ -137,11 +137,9 @@ function AuthorizationCard({
             {t.authNo}
           </button>
         </div>
-      ) : (
+      ) : status === "approved" ? (
         <div className="mt-3 flex items-center justify-between gap-3">
-          <p className={`text-sm ${status === "denied" ? "text-danger" : "text-forest"}`}>
-            {status === "denied" ? t.authDeniedYou : t.authApprovedYou}
-          </p>
+          <p className="text-sm text-forest">{t.authApprovedYou}</p>
           <button
             type="button"
             onClick={() => setEditing(true)}
@@ -150,7 +148,7 @@ function AuthorizationCard({
             {t.authChange}
           </button>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
