@@ -49,6 +49,10 @@ export const LEVEL_LABELS: Record<Level, { es: string; en: string; stage: "presc
 
 export const STATUS_ORDER: PickupStatus[] = ["on_the_way", "arrived", "delivered"];
 
+export function personName(person?: { firstName: string; lastName: string }) {
+  return person ? `${person.firstName} ${person.lastName}`.trim() : "";
+}
+
 export function studentName(student?: Pick<Student, "firstName" | "lastName">) {
   if (!student) return "";
   return `${student.lastName} ${student.firstName}`.trim();

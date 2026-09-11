@@ -32,11 +32,17 @@ test("family names are first-last while school displays remain last-first", () =
   assert.equal(parentName(student), "Sofía Madrid Herrera");
   assert.equal(studentName(student), "Madrid Herrera Sofía");
   assert.equal(parentPickerName(snapshot, trip), "Roberto Madrid");
-  assert.equal(trip.pickerName, "Madrid Roberto");
+  assert.equal(trip.pickerName, "Roberto Madrid");
   for (const pickerName of ["Madrid Rosa", "Rosa Madrid"]) {
     assert.equal(parentPickerName(snapshot, { ...trip, pickerKind: "authorized", pickerName }), "Rosa Madrid");
   }
   assert.equal(parentPickerName(snapshot, { ...trip, pickerKind: "guest", pickerName: "María del Carmen Ruiz" }), "María del Carmen Ruiz");
+  assert.equal(parentName({ firstName: "Ana María", lastName: "López García" }), "Ana María López García");
+  snapshot.trips[0].pickerName = "Madrid Roberto";
+  snapshot.events.push({ id: "legacy-parent", at: new Date().toISOString(), type: "trip_changed", actorRole: "parent", actorName: "Madrid Roberto" });
+  const normalized = new MemoryPickupStore(snapshot).snapshot();
+  assert.equal(normalized.trips[0].pickerName, "Roberto Madrid");
+  assert.equal(normalized.events.find((event) => event.id === "legacy-parent")?.actorName, "Roberto Madrid");
 });
 
 test("cancelled pickups leave no records or usable guest passes", () => {
@@ -61,6 +67,22 @@ test("delivered pickups cannot be deleted by cancellation", () => {
   assert.throws(() => store.cancelTrip(trip.id));
   assert.deepEqual(store.snapshot(), before);
 });
+
+for (const arrivalVia of ["qr", "tag"] as const) {
+  test(`an accepted ${arrivalVia} pickup can be cancelled with an audit record`, () => {
+    const { store, trip } = setup();
+    if (arrivalVia === "tag") store.arriveByTag("DSC-0417");
+    else store.arriveByCode(trip.qrToken, { via: "qr" });
+    const after = store.cancelTrip(trip.id);
+    assert.equal(after.trips.some((item) => item.id === trip.id), false);
+    assert.equal(after.requests.some((item) => item.tripId === trip.id), false);
+    const history = store.historyRows().find((row) => row.tripId === trip.id)!;
+    assert.equal(history.status, "cancelled");
+    assert.equal(history.arrivalVia, arrivalVia);
+    assert.ok(history.detail?.requests.every((request) => request.status === "cancelled"));
+    assert.ok(history.detail?.events.some((event) => event.type === "cancelled" && event.actorName === "Roberto Madrid"));
+  });
+}
 
 test("simulated children use available portraits including older persisted simulations", () => {
   const { store } = setup();

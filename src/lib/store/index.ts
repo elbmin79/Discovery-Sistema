@@ -1,4 +1,5 @@
 import { hydrateStudentSurnames } from "../student-surnames";
+import { normalizeParentNames } from "../parent-home";
 import { assertSnapshotIdentity, normalizeSnapshotIdentity } from "../snapshot-integrity";
 import { createSeedSnapshot } from "@/lib/seed/demo-data";
 import { getSupabaseAdmin, isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/admin";
@@ -166,7 +167,7 @@ function normalizeSnapshot(snapshot: Snapshot): Snapshot {
       guardian.readAnnouncementIds = [];
     }
   }
-  return hydrateStudentSurnames(normalizeSnapshotIdentity(snapshot));
+  return normalizeParentNames(hydrateStudentSurnames(normalizeSnapshotIdentity(snapshot)));
 }
 
 async function saveVersioned(snapshot: Snapshot, version: number, archiveRows: HistoryRow[] = [], lateRows: ArchivedLatePickup[] = []) {

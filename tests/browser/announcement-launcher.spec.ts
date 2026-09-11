@@ -22,6 +22,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto("/familia");
     const launcher = page.locator("header").getByRole("button", { name: "Avisos de la escuela", exact: true });
+    const language = page.locator("header").getByRole("button", { name: "ES", exact: true });
+    const [languageBox, launcherBox] = await Promise.all([language.boundingBox(), launcher.boundingBox()]);
+    expect(languageBox!.x).toBeLessThan(launcherBox!.x);
     await expect(launcher.locator("[data-announcement-badge]")).toHaveText("1");
     await expect(page.locator("html")).toHaveAttribute("data-app-badge", "1");
     await launcher.click();

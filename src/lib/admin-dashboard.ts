@@ -16,6 +16,7 @@ export interface AdminRow {
   student: Student;
   grade: string;
   zoneName: string;
+  familyName: string;
   pickerName: string;
   pickerRelation: string;
   vehicleLabel: string;
@@ -69,6 +70,7 @@ export function buildAdminRows(snapshot: Snapshot): AdminRow[] {
       student,
       grade: gradeLabel(student),
       zoneName: zone?.nameEs ?? "—",
+      familyName: student.lastName.trim(),
       pickerName: trip.pickerName,
       pickerRelation: trip.pickerRelationEs,
       vehicleLabel: trip.method === "walk" ? "Caminando" : (vehicle?.label ?? "Auto"),

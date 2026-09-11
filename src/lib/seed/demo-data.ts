@@ -1,5 +1,5 @@
 import { hydrateStudentSurnames } from "../student-surnames";
-import { LEVEL_LABELS, SCHOOL, todayJornada } from "../school";
+import { LEVEL_LABELS, personName, SCHOOL, todayJornada } from "../school";
 import type { PickupEvent, Snapshot } from "../types";
 
 function minutesAgo(minutes: number) {
@@ -667,7 +667,7 @@ export function withDemoFamilyPlans(snapshot: Snapshot): Snapshot {
       id: "t-madrid-today",
       code: "4170",
       guardianId: "g-roberto",
-      pickerName: "Madrid Roberto",
+      pickerName: "Roberto Madrid",
       pickerRelationEs: "Papá",
       pickerRelationEn: "Dad",
       pickerKind: "self",
@@ -680,7 +680,7 @@ export function withDemoFamilyPlans(snapshot: Snapshot): Snapshot {
       id: "t-marquez-today",
       code: "6032",
       guardianId: "g-benjamin",
-      pickerName: "Márquez Benjamín",
+      pickerName: "Benjamín Márquez",
       pickerRelationEs: "Papá",
       pickerRelationEn: "Dad",
       pickerKind: "self",
@@ -712,7 +712,7 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
   const guardianName = (tripId: string) => {
     const trip = snapshot.trips.find((item) => item.id === tripId);
     const guardian = trip && snapshot.guardians.find((item) => item.id === trip.guardianId);
-    return guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined;
+    return guardian ? personName(guardian) : undefined;
   };
 
   const stageStaff = (studentId?: string) => {
@@ -778,7 +778,7 @@ function buildSeedEvents(snapshot: Snapshot): PickupEvent[] {
         type: "late_announced",
         lateId: late.id,
         actorRole: "parent",
-        actorName: guardian ? `${guardian.lastName} ${guardian.firstName}` : undefined,
+        actorName: guardian ? personName(guardian) : undefined,
       });
     }
   }

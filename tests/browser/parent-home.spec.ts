@@ -67,6 +67,22 @@ test("cancel a plan, see the home and school contact, then create a new pickup",
   expect(errors).toEqual([]);
 });
 
+for (const arrivalVia of ["tag", "qr"] as const) {
+  test(`accepted ${arrivalVia} arrival shows updated copy and can cancel pickup`, async ({ page }) => {
+    const trip = await login(page);
+    const response = arrivalVia === "tag"
+      ? await page.request.post("/api/trips/arrive-tag", { data: { tagId: "DSC-0417" } })
+      : await page.request.post("/api/trips/arrive", { data: { token: trip.qrToken, via: "qr" } });
+    expect(response.ok()).toBeTruthy();
+    await expect(page.getByText(arrivalVia === "tag" ? "Tu tag fue aceptado" : "Tu llegada fue aceptada", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Cancelar recogida", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Recogida de hoy cancelada");
+    const snapshot: Snapshot = await (await page.request.get("/api/state")).json();
+    expect(snapshot.trips.some((item) => item.id === trip.id)).toBe(false);
+    expect(snapshot.requests.some((item) => item.tripId === trip.id)).toBe(false);
+  });
+}
+
 test("late notice replaces the plan, persists, appears to the office, and can be updated and cancelled", async ({ page, browser }) => {
   const trip = await login(page);
   await page.getByRole("button", { name: "¿Llegarás tarde? Avisar al colegio", exact: true }).click();

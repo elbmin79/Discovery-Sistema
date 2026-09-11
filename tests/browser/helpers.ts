@@ -33,7 +33,7 @@ export function createMadridPlan(request: APIRequestContext) {
   return createPlan(request, {
     guardianId: "g-roberto",
     studentIds: ["s-sofia", "s-lucas"],
-    pickerName: "Madrid Roberto",
+    pickerName: "Roberto Madrid",
     pickerRelationEs: "Papá",
     pickerRelationEn: "Dad",
     vehicleId: "v-prius",
@@ -44,7 +44,7 @@ export function createMarquezPlan(request: APIRequestContext) {
   return createPlan(request, {
     guardianId: "g-benjamin",
     studentIds: ["s-emiliano", "s-isabela", "s-paula"],
-    pickerName: "Márquez Benjamín",
+    pickerName: "Benjamín Márquez",
     pickerRelationEs: "Papá",
     pickerRelationEn: "Dad",
     vehicleId: "v-kicks",

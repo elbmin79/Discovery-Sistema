@@ -6,7 +6,7 @@ import { lateEligibleStudentIds, lateReplacementTrips } from "@/lib/parent-home"
 import { SchoolContact } from "@/components/parent/parent-dashboard";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { formatTime } from "@/lib/school";
+import { formatTime, personName } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, LatePickup, Locale, PickerKind, PickupTrip, Snapshot } from "@/lib/types";
 
@@ -96,7 +96,7 @@ export function ParentLate({
     if (person) {
       return {
         pickerKind: "authorized" as PickerKind,
-        pickerName: `${person.lastName} ${person.firstName}`,
+        pickerName: personName(person),
         pickerRelationEs: person.relationEs,
         pickerRelationEn: person.relationEn,
         guestPhone: undefined,
@@ -104,7 +104,7 @@ export function ParentLate({
     }
     return {
       pickerKind: "self" as PickerKind,
-      pickerName: `${guardian.lastName} ${guardian.firstName}`,
+      pickerName: personName(guardian),
       pickerRelationEs: guardian.relationEs,
       pickerRelationEn: guardian.relationEn,
       guestPhone: undefined,

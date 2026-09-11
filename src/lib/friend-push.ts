@@ -1,5 +1,5 @@
 import { broadcastSchoolPush } from "@/lib/broadcast-push";
-import { parentName } from "@/lib/parent-home";
+import { parentName, parentPickerName } from "@/lib/parent-home";
 import type { Snapshot } from "@/lib/types";
 
 function kidNames(snapshot: Snapshot, studentIds: string[]) {
@@ -47,7 +47,7 @@ export async function pushFriendPickupDelivered(snapshot: Snapshot, tripId: stri
     kind: "friend_delivered",
     tag: `amigo-entregado-${tripId}-${studentIds.join("-")}`,
     title: `Ya salió: ${kids}`,
-    body: `${trip.pickerName} ya recogió a ${kids} en la escuela.`,
+    body: `${parentPickerName(snapshot, trip)} ya recogió a ${kids} en la escuela.`,
     url: "/familia",
   });
 }
