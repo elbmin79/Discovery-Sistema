@@ -5,7 +5,7 @@ import { Bell, ChevronDown } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { postJson } from "@/hooks/use-snapshot";
-import { friendsOf } from "@/lib/school";
+import { friendsOf, byDismissalTime } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { AuthorizedPerson, Guardian, Locale, Snapshot, Student, Vehicle } from "@/lib/types";
 
@@ -25,24 +25,24 @@ export function ParentSettings({
   onLogout: () => void;
 }) {
   const [editor, setEditor] = useState<Editor>("none");
-  const children = snapshot.students.filter((student) => guardian.studentIds.includes(student.id));
+  const children = snapshot.students.filter((student) => guardian.studentIds.includes(student.id)).sort(byDismissalTime);
   const vehicles = snapshot.vehicles.filter((vehicle) => vehicle.ownerGuardianId === guardian.id);
   const people = snapshot.authorizedPeople.filter((person) =>
     person.studentIds.some((id) => guardian.studentIds.includes(id)),
   );
 
   return (
-    <div className="flex flex-col gap-8 pb-4">
+    <div className="flex flex-col gap-5 pt-4 pb-4">
       <div>
         <p className="text-sm text-muted">{t.settings}</p>
-        <h1 className="font-serif text-3xl text-forest">
+        <h1 className="text-3xl text-forest">
           {guardian.firstName} {guardian.lastName}
         </h1>
-        <p className="mt-2 text-sm text-muted">{t.settingsIntro}</p>
+        <p className="mt-1.5 text-sm text-muted">{t.settingsIntro}</p>
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold tracking-[0.14em] uppercase text-gold-deep">{t.children}</h2>
+        <h2 className="text-xs font-semibold tracking-[0.12em] uppercase text-gold-deep">{t.children}</h2>
         <div className="mt-3 space-y-3">
           {children.map((child) => (
             <article key={child.id} className="flex items-center gap-4 rounded-3xl border border-line bg-paper p-4">

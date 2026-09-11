@@ -13,7 +13,7 @@ import { postJson } from "@/hooks/use-snapshot";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { canCancel } from "@/lib/pickup-machine";
 import { pickupPayload } from "@/lib/qr";
-import { findStudent, findVehicle, findZone, studentGrade } from "@/lib/school";
+import { byDismissalTime, findStudent, findVehicle, findZone, studentGrade } from "@/lib/school";
 import type {
   Locale,
   PickupStatus,
@@ -58,7 +58,8 @@ export function ParentTracker({
   );
   const students = requests
     .map((request) => findStudent(snapshot, request.studentId))
-    .filter((student): student is Student => Boolean(student));
+    .filter((student): student is Student => Boolean(student))
+    .sort(byDismissalTime);
   const vehicle = findVehicle(snapshot, trip.vehicleId);
   const allDelivered = requests.every((request) => request.status === "delivered");
   const canCancelTrip = requests.every((request) => canCancel(request.status));
@@ -87,7 +88,7 @@ export function ParentTracker({
     <div className="flex flex-col gap-6">
       <div>
         <p className="text-sm text-muted">{allDelivered ? t.deliveredTitle : t.trackerTitle}</p>
-        <h1 className="font-serif text-3xl text-forest">
+        <h1 className="text-3xl text-forest">
           {students.map((student) => parentName(student)).join(" y ")}
         </h1>
       </div>
@@ -110,7 +111,7 @@ export function ParentTracker({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="break-words font-semibold text-ink">{parentName(student)}</p>
+                      <p className="break-words text-sm font-semibold text-ink">{parentName(student)}</p>
                       <p className="text-sm text-muted">{studentGrade(student, locale)}</p>
                     </div>
                     <StatusBadge
@@ -213,7 +214,7 @@ function DeliveredScreen({
   return (
     <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-forest px-8 text-center text-paper">
       <p className="text-xs tracking-[0.22em] uppercase text-gold">{t.deliveredTitle}</p>
-      <h1 className="mt-5 font-serif text-4xl leading-tight">{names}</h1>
+      <h1 className="mt-5 text-3xl leading-tight">{names}</h1>
       <p className="mt-3 text-lg text-cream">
         {locale === "es" ? `${plural ? "Ya están" : "Ya está"} con ustedes.` : "They're with you now."}
       </p>
@@ -306,7 +307,7 @@ function TagPass({ vehicle, arrived, t }: { vehicle: Vehicle; arrived: boolean; 
           <span className="mt-1 font-mono text-lg font-semibold tracking-wider">{vehicle.tagId}</span>
         </div>
         <div className="min-w-0">
-          <p className="font-serif text-2xl leading-tight">{vehicle.label}</p>
+          <p className="text-2xl font-semibold leading-tight">{vehicle.label}</p>
           {vehicle.plate ? <p className="mt-1 text-sm text-cream">{vehicle.plate}</p> : null}
           <p className={`mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${arrived ? "text-gold" : "text-cream"}`}>
             <span className={`h-2 w-2 rounded-full ${arrived ? "bg-gold" : "bg-emerald-400 pulse-gold"}`} />
@@ -354,7 +355,7 @@ function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
           )}
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-gold">{t.codeLabel}</p>
-            <p className="mt-1 font-serif text-4xl tracking-[0.18em]">{trip.code.split("").join(" ")}</p>
+            <p className="mt-1 text-3xl font-semibold tracking-[0.12em]">{trip.code.split("").join(" ")}</p>
             <p className="mt-2 text-xs text-cream">Toca para ampliar</p>
           </div>
         </div>

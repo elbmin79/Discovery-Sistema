@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { parentName } from "@/lib/parent-home";
-import { personName } from "@/lib/school";
+import { byDismissalTime, personName } from "@/lib/school";
 import { Choice, Field } from "@/components/parent/picker-choice";
 
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -31,7 +31,7 @@ export function ParentSetup({
   onSubmit: (payload: Omit<CreateTripInput, "guardianId" | "studentIds">) => void;
   initialTrip?: PickupTrip;
 }) {
-  const selected = snapshot.students.filter((student) => selectedIds.includes(student.id));
+  const selected = snapshot.students.filter((student) => selectedIds.includes(student.id)).sort(byDismissalTime);
   const authorized = snapshot.authorizedPeople.filter((person) =>
     person.studentIds.some((id) => selectedIds.includes(id)),
   );
@@ -94,7 +94,7 @@ export function ParentSetup({
       </button>
       <div>
         <p className="text-sm text-muted">{t.pickupOf}</p>
-        <h1 className="font-serif text-3xl text-forest">
+        <h1 className="text-3xl text-forest">
           {selected.map((child) => parentName(child)).join(" y ")}
         </h1>
 

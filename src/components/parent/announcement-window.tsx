@@ -49,7 +49,7 @@ export function AnnouncementWindow({ children, origin, label, closeLabel, onClos
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }}>
       <header className="flex shrink-0 items-center justify-between border-b border-line px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
-        <span className="font-serif text-xl text-forest">{label}</span>
+        <span className="text-xl font-semibold text-forest">{label}</span>
         <button ref={closeButton} type="button" onClick={() => void close()} aria-label={closeLabel} className="flex h-11 w-11 items-center justify-center rounded-full bg-forest/8 text-forest"><X className="h-5 w-5" /></button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{children}</div>

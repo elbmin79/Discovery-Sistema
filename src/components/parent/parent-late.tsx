@@ -6,7 +6,7 @@ import { lateEligibleStudentIds, lateReplacementTrips } from "@/lib/parent-home"
 import { SchoolContact } from "@/components/parent/parent-dashboard";
 import { Choice, Field } from "@/components/parent/picker-choice";
 import { StudentAvatar } from "@/components/ui/avatar";
-import { formatTime, personName } from "@/lib/school";
+import { formatTime, personName, sortByDismissalTime } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, LatePickup, Locale, PickerKind, PickupTrip, Snapshot } from "@/lib/types";
 
@@ -65,10 +65,18 @@ export function ParentLate({
   onCancelNotice: () => void;
 }) {
   const eligibleIds = lateEligibleStudentIds(snapshot, guardian, jornada);
-  const children = snapshot.students.filter((student) => eligibleIds.includes(student.id));
+  const children = sortByDismissalTime(snapshot.students.filter((student) => eligibleIds.includes(student.id)));
   const [selectedIds, setSelectedIds] = useState<string[]>(existing?.studentIds ?? snapshot.requests.filter((request) => request.tripId === initialTrip?.id && eligibleIds.includes(request.studentId)).map((request) => request.studentId));
   const replacements = lateReplacementTrips(snapshot, guardian.id, selectedIds, jornada);
-  const cancelledNames = snapshot.students.filter((student) => snapshot.requests.some((request) => request.studentId === student.id && replacements.some((trip) => trip.id === request.tripId))).map((student) => parentName(student)).join(", ");
+  const cancelledNames = sortByDismissalTime(
+    snapshot.students.filter((student) =>
+      snapshot.requests.some(
+        (request) => request.studentId === student.id && replacements.some((trip) => trip.id === request.tripId),
+      ),
+    ),
+  )
+    .map((student) => parentName(student))
+    .join(", ");
   const [etaAt, setEtaAt] = useState<string | null>(existing?.etaAt ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
 
@@ -123,13 +131,14 @@ export function ParentLate({
         </button>
         <div>
           <p className="text-sm text-muted">{t.lateUpdateTitle}</p>
-          <h1 className="font-serif text-3xl text-forest">{t.lateTitle}</h1>
+          <h1 className="text-3xl text-forest">{t.lateTitle}</h1>
           <p className="mt-1 text-sm text-muted">
             {t.lateCurrentEta.replace("{time}", formatTime(existing.etaAt, locale))}
           </p>
           <p className="mt-1 text-sm text-muted">
-            {snapshot.students
-              .filter((student) => existing.studentIds.includes(student.id))
+            {sortByDismissalTime(
+              snapshot.students.filter((student) => existing.studentIds.includes(student.id)),
+            )
               .map((student) => parentName(student))
               .join(" y ")}
           </p>
@@ -166,7 +175,7 @@ export function ParentLate({
       </button>
       <div>
         <p className="text-sm text-muted">{t.lateIntro}</p>
-        <h1 className="font-serif text-3xl text-forest">{t.lateTitle}</h1>
+        <h1 className="text-3xl text-forest">{t.lateTitle}</h1>
       </div>
 
       <section>

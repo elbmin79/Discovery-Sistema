@@ -11,7 +11,7 @@ import { ParentSchoolNews, SchoolContact } from "@/components/parent/parent-dash
 import { ShareRow } from "@/components/parent/parent-tracker";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { pickupPayload } from "@/lib/qr";
-import { findStudent, findVehicle, greeting, studentGrade } from "@/lib/school";
+import { byDismissalTime, findStudent, findVehicle, greeting, studentGrade } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, Locale, PickupTrip, Snapshot, Student } from "@/lib/types";
 
@@ -47,7 +47,8 @@ export function ParentPlanToday({
   const requests = snapshot.requests.filter((request) => request.tripId === trip.id);
   const students = requests
     .map((request) => findStudent(snapshot, request.studentId))
-    .filter((student): student is Student => Boolean(student));
+    .filter((student): student is Student => Boolean(student))
+    .sort(byDismissalTime);
   const vehicle = findVehicle(snapshot, trip.vehicleId);
   const useTag = trip.pickerKind === "self" && trip.method === "car" && Boolean(vehicle?.tagId);
   const showShare = trip.pickerKind === "guest" || trip.pickerKind === "authorized";
@@ -66,11 +67,11 @@ export function ParentPlanToday({
   }, [trip.code, trip.qrToken, useTag]);
 
   return (
-    <div className="flex flex-col gap-5 pb-3">
+    <div className="flex flex-col gap-4 pb-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted">{greeting(locale)},</p>
-          <h1 className="font-serif text-4xl leading-none text-forest">{guardian.firstName}</h1>
+          <h1 className="text-3xl leading-none text-forest">{guardian.firstName}</h1>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-forest/10 px-3 py-1.5 text-xs font-semibold text-forest">
           <CheckCircle2 className="h-4 w-4" />
@@ -87,8 +88,8 @@ export function ParentPlanToday({
                 <CalendarDays className="h-4 w-4" />
                 {t.todayPlan}
               </p>
-              <p className="mt-3 whitespace-nowrap font-serif text-4xl leading-none tabular-nums min-[400px]:text-5xl">{familyTime}</p>
-              <p className="mt-2 text-sm text-cream">{t.familyPickupTime}</p>
+              <p className="mt-2 whitespace-nowrap text-4xl leading-none tabular-nums">{familyTime}</p>
+              <p className="mt-1.5 text-sm text-cream">{t.familyPickupTime}</p>
             </div>
             <div className="flex flex-wrap -space-x-2 pt-2">
               {students.map((student) => (
@@ -99,7 +100,7 @@ export function ParentPlanToday({
             </div>
           </div>
 
-          <div className="relative mt-5 space-y-2 border-t border-paper/15 pt-4">
+          <div className="relative mt-4 space-y-1.5 border-t border-paper/15 pt-3">
             {students.map((student) => (
               <div key={student.id} className="flex min-w-0 flex-col gap-1 text-sm">
                 <span className="break-words font-semibold">{parentName(student)}</span>
@@ -142,9 +143,9 @@ export function ParentPlanToday({
             {qr ? <Image src={qr} alt={t.qrLabel} width={88} height={88} unoptimized className="h-[88px] w-[88px] rounded-xl" /> : <div className="h-[88px] w-[88px] rounded-xl bg-cream" />}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gold-deep">{t.passReady}</p>
-              <p className="mt-1 font-serif text-3xl tracking-[0.16em] text-forest">{trip.code.split("").join(" ")}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-[0.1em] text-forest">{trip.code.split("").join(" ")}</p>
               <p className="mt-1 text-sm text-muted">{t.codeHint}</p>
-              <p className="mt-2 text-xs font-semibold text-forest">{t.tapToExpand}</p>
+              <p className="mt-1 text-xs font-semibold text-forest">{t.tapToExpand}</p>
             </div>
           </button>
         )}
@@ -155,7 +156,7 @@ export function ParentPlanToday({
       {showShare ? <ShareRow trip={trip} students={students} passUrl={typeof window === "undefined" ? "" : `${window.location.origin}/pase/${trip.qrToken}`} t={t} /> : null}
 
       <div className="grid gap-2">
-        <button type="button" disabled={busy} onClick={onChange} className="flex min-h-12 items-center justify-between rounded-full bg-forest px-5 text-base font-semibold text-paper">
+        <button type="button" disabled={busy} onClick={onChange} className="flex min-h-11 items-center justify-between rounded-full bg-forest px-5 text-sm font-semibold text-paper">
           {t.changeTodayPlan}
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -196,12 +197,5 @@ function Detail({ icon, label, value }: { icon: ReactNode; label: string; value:
 }
 
 function earliestDismissal(students: Student[]) {
-  return [...students].sort((a, b) => dismissalMinutes(a.dismissalTime) - dismissalMinutes(b.dismissalTime))[0]?.dismissalTime ?? "—";
-}
-
-function dismissalMinutes(value: string) {
-  const match = value.match(/(\d{1,2}):(\d{2})\s*([ap])/i);
-  if (!match) return Number.MAX_SAFE_INTEGER;
-  const hour = (Number(match[1]) % 12) + (match[3].toLowerCase() === "p" ? 12 : 0);
-  return hour * 60 + Number(match[2]);
+  return students[0]?.dismissalTime ?? "—";
 }

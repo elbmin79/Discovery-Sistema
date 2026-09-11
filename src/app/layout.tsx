@@ -1,16 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-
-const sans = DM_Sans({
-  variable: "--font-sans-body",
-  subsets: ["latin"],
-});
-
-const serif = Source_Serif_4({
-  variable: "--font-serif-display",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Salida Discovery",
@@ -41,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${sans.variable} ${serif.variable} h-full antialiased`}>
+    <html lang="es" className="h-full antialiased">
       <body className="min-h-full bg-cream text-ink" suppressHydrationWarning>
         {children}
       </body>

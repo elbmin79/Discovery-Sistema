@@ -41,10 +41,10 @@ export function ParentLogin({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="flex flex-1 flex-col justify-center gap-6 py-4">
+      <div className="flex flex-1 flex-col justify-center gap-5 py-4">
         <BrandMark size={64} />
         <div>
-          <h1 className="font-serif text-3xl text-forest">{t.loginTitle}</h1>
+          <h1 className="text-3xl text-forest">{t.loginTitle}</h1>
           <p className="mt-1 text-sm text-muted">{t.loginHint}</p>
         </div>
 
