@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ClipboardList, MonitorSmartphone, Smartphone, TabletSmartphone, Tv } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SchoolBrandToggle } from "@/components/brand/school-brand-toggle";
+import { useBrand } from "@/hooks/use-brand";
 import { postJson } from "@/hooks/use-snapshot";
 
 const EXPERIENCES = [
@@ -47,6 +49,7 @@ const EXPERIENCES = [
 export function DemoHub() {
   const [resetting, setResetting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { profile } = useBrand();
 
   async function resetDemo() {
     setResetting(true);
@@ -69,8 +72,11 @@ export function DemoHub() {
           <BrandMark hero />
           <h1 className="mt-3 font-serif text-2xl text-forest md:mt-8 md:text-5xl">Salida escolar</h1>
           <p className="mt-1 max-w-xl text-sm text-muted md:mt-3 md:text-base">
-            Sistema de salida de Discovery American Preschool & Academy.
+            Sistema de salida de {profile.name}.
           </p>
+          <div className="mt-4 md:mt-6">
+            <SchoolBrandToggle />
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">

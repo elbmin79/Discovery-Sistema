@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Download, Info } from "lucide-react";
 import { BrandRow } from "@/components/brand/brand-mark";
+import { SchoolBrandToggle } from "@/components/brand/school-brand-toggle";
 import { StaffLogin } from "@/components/staff/staff-login";
 import { AdminSchoolPanel } from "@/components/staff/admin-school-panel";
 import { StudentAvatar } from "@/components/ui/avatar";
@@ -169,7 +170,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
   return <div className="flex min-h-dvh flex-col bg-cream">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3 md:px-6">
       <div className="flex items-center gap-4"><Link href="/" className="rounded-lg"><BrandRow /></Link><div className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-gold-deep" /><h1 className="font-serif text-2xl text-forest">Admin Dashboard</h1></div></div>
-      <div className="flex items-center gap-2"><button onClick={() => void exportRange()} disabled={!valid || !page?.total || exporting} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"><Download className="h-4 w-4" />{exporting ? "Exportando…" : "Exportar CSV"}</button><Link href="/personal" className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest">Volver al tablero</Link></div>
+      <div className="flex flex-wrap items-center justify-end gap-3"><SchoolBrandToggle compact /><button onClick={() => void exportRange()} disabled={!valid || !page?.total || exporting} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"><Download className="h-4 w-4" />{exporting ? "Exportando…" : "Exportar CSV"}</button><Link href="/personal" className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-forest">Volver al tablero</Link></div>
     </header>
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
       <div className="mb-4 flex flex-wrap gap-2">
@@ -236,7 +237,7 @@ function AdminDashboard({ staffName }: { staffName: string }) {
 }
 
 function LiveIndicator() {
-  return <span role="status" aria-label="En vivo" className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[11px] font-medium normal-case tracking-normal text-muted"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" />En vivo</span>;
+  return <span role="status" aria-label="En vivo" className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[11px] font-medium normal-case tracking-normal text-muted"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-forest motion-safe:animate-pulse" />En vivo</span>;
 }
 
 function LateNoticesPanel({

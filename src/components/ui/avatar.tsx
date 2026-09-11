@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useBrand } from "@/hooks/use-brand";
+import { brandedAccent } from "@/lib/school-brand";
 import { initials, studentFallbackPhoto, studentPhoto } from "@/lib/school";
 import type { Student } from "@/lib/types";
 
@@ -28,13 +30,15 @@ export function Avatar({
   size?: keyof typeof SIZES;
 }) {
   const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
+  const { brand } = useBrand();
   const visiblePhoto = [photoUrl, fallbackPhotoUrl].find(
     (candidate) => candidate && !failedPhotos.includes(candidate),
   );
+  const tone = brandedAccent(accent, brand);
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-full ${SIZES[size]}`}
-      style={{ background: accent ?? "#1B4D3E" }}
+      className={`relative shrink-0 overflow-hidden rounded-full ${SIZES[size]} ${tone ? "" : "bg-forest"}`}
+      style={tone ? { background: tone } : undefined}
       aria-hidden
     >
       {visiblePhoto ? (

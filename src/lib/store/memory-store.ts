@@ -17,6 +17,7 @@ import type { ArchivedLatePickup, HistoryRow } from "../types";
 import { lateEligibleStudentIds, lateReplacementTrips, normalizeParentNames } from "../parent-home";
 import { jornadaOf, personName, todayJornada } from "../school";
 import { isCalendarEventColor } from "../school-comms";
+import { isSchoolBrandId, normalizeSchoolBrand, SCHOOL_BRANDS, schoolStaffFallback } from "../school-brand";
 import type {
   ArrivalMethod,
   ArrivalVia,
@@ -33,6 +34,7 @@ import type {
   PickupStatus,
   PickupTrip,
   PushSubscriptionRecord,
+  SchoolBrandId,
   Snapshot,
   UpdateTripInput,
   Vehicle,
@@ -277,8 +279,28 @@ export class MemoryPickupStore {
   reset() {
     this.archiveDailyLates(true);
     const keep = [...(this.data.pushSubscriptions ?? [])];
+    const brand = normalizeSchoolBrand(this.data.school.brand);
     this.data = createSeedSnapshot();
     this.data.pushSubscriptions = keep;
+    this.applySchoolBrand(brand);
+    this.emit();
+    return this.snapshot();
+  }
+
+  applySchoolBrand(brand: SchoolBrandId) {
+    const profile = SCHOOL_BRANDS[brand];
+    this.data.school = {
+      ...this.data.school,
+      brand,
+      name: profile.name,
+    };
+  }
+
+  setSchoolBrand(brand: unknown) {
+    if (!isSchoolBrandId(brand)) {
+      throw new Error("Elige Discovery o Altius.");
+    }
+    this.applySchoolBrand(brand);
     this.emit();
     return this.snapshot();
   }
@@ -993,7 +1015,7 @@ export class MemoryPickupStore {
       const fromStatus = request.status;
       request.status = "delivered";
       request.deliveredAt = now;
-      request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      request.deliveredByStaffName = staffName ?? schoolStaffFallback(this.data.school.brand);
       this.logEvent(
         {
           type: "delivered",
@@ -1049,7 +1071,7 @@ export class MemoryPickupStore {
     request.status = next;
     Object.assign(request, applyStatusTimestamp(next, now));
     if (next === "delivered") {
-      request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      request.deliveredByStaffName = staffName ?? schoolStaffFallback(this.data.school.brand);
     }
 
     this.logEvent(
@@ -1059,7 +1081,7 @@ export class MemoryPickupStore {
         requestId: request.id,
         studentId: request.studentId,
         actorRole: "staff",
-        actorName: staffName ?? "Personal de Discovery",
+        actorName: staffName ?? schoolStaffFallback(this.data.school.brand),
         fromStatus,
         toStatus: next,
       },
@@ -1162,7 +1184,7 @@ export class MemoryPickupStore {
     for (const request of requests) {
       request.status = "delivered";
       request.deliveredAt = now;
-      request.deliveredByStaffName = staffName ?? "Personal de Discovery";
+      request.deliveredByStaffName = staffName ?? schoolStaffFallback(this.data.school.brand);
       this.logEvent(
         {
           type: "delivered",

@@ -18,7 +18,7 @@ export const CALENDAR_EVENT_COLORS: {
   fg: string;
   swatch: string;
 }[] = [
-  { id: "forest", label: "Bosque", bg: "#d7e6df", fg: "#12382d", swatch: "#1b4d3e" },
+  { id: "forest", label: "Bosque", bg: "color-mix(in srgb, var(--forest) 18%, white)", fg: "var(--forest-deep)", swatch: "var(--forest)" },
   { id: "gold", label: "Oro", bg: "#f3e6c8", fg: "#5c4518", swatch: "#c4a15a" },
   { id: "sky", label: "Cielo", bg: "#d7e6f2", fg: "#1a3a52", swatch: "#5a8fb5" },
   { id: "coral", label: "Coral", bg: "#f4d8d2", fg: "#6b2f28", swatch: "#c47266" },

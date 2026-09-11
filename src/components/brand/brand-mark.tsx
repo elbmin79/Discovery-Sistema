@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useBrand } from "@/hooks/use-brand";
 
 export function BrandMark({
   size = 72,
@@ -9,13 +12,14 @@ export function BrandMark({
   light?: boolean;
   hero?: boolean;
 }) {
+  const { profile } = useBrand();
   const markSize = hero ? 176 : size;
 
   return (
     <div className={`flex flex-col items-center ${hero ? "gap-2 md:gap-5" : "gap-2"}`}>
       <Image
-        src="/brand/logo.png"
-        alt="Discovery American Preschool & Academy"
+        src={profile.logoSrc}
+        alt={profile.name}
         width={markSize}
         height={markSize}
         className={`rounded-full bg-paper object-contain ${hero ? "h-16 w-16 md:h-44 md:w-44" : ""}`}
@@ -27,7 +31,7 @@ export function BrandMark({
             light ? "text-paper" : "text-forest"
           }`}
         >
-          Discovery
+          {profile.shortName}
         </p>
         <p
           className={`uppercase ${
@@ -36,7 +40,7 @@ export function BrandMark({
               : "mt-1 text-[10px] tracking-[0.22em]"
           } ${light ? "text-gold" : "text-gold-deep"}`}
         >
-          American Preschool & Academy
+          {profile.tagline}
         </p>
       </div>
     </div>
@@ -44,21 +48,23 @@ export function BrandMark({
 }
 
 export function BrandRow({ light = false }: { light?: boolean }) {
+  const { profile } = useBrand();
+
   return (
     <div className="flex items-center gap-3">
       <Image
-        src="/brand/logo.png"
-        alt="Discovery"
+        src={profile.logoSrc}
+        alt={profile.shortName}
         width={40}
         height={40}
         className="rounded-full bg-paper object-contain"
       />
       <div>
         <p className={`font-serif text-lg leading-none ${light ? "text-paper" : "text-forest"}`}>
-          Discovery
+          {profile.shortName}
         </p>
         <p className={`text-[10px] tracking-[0.16em] uppercase ${light ? "text-gold" : "text-muted"}`}>
-          Salida escolar
+          {profile.taglineRow}
         </p>
       </div>
     </div>

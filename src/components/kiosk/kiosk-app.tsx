@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/brand/brand-mark";
 import { KioskScan } from "@/components/kiosk/kiosk-scan";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
+import { useBrand } from "@/hooks/use-brand";
 import { postJson, rememberSnapshot, useSnapshot } from "@/hooks/use-snapshot";
 import { findStudent, findVehicle, findZone, formatTime, studentGrade, studentName } from "@/lib/school";
 import type { Guardian, PickupTrip, Snapshot, Student, Vehicle } from "@/lib/types";
@@ -459,10 +460,11 @@ function IdlePanel({
   onScan: () => void;
   onTag: (target: TagTarget) => void;
 }) {
+  const { profile } = useBrand();
   return (
     <div className="grid w-full max-w-5xl gap-10 lg:grid-cols-2">
       <div>
-        <p className="text-gold">Bienvenido a Discovery</p>
+        <p className="text-gold">Bienvenido a {profile.shortName}</p>
         <h1 className="mt-3 font-serif text-5xl leading-tight">¿Vienes por un alumno?</h1>
         <p className="mt-4 max-w-md text-lg text-cream">
           {mode === "code"

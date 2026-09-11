@@ -25,6 +25,14 @@
     sans-serif;
 }
 
+html[data-brand="altius"] {
+  --forest: #1c3d73;
+  --forest-deep: #132850;
+  --forest-soft: #2d5aa0;
+  --ink: #1a2438;
+  --muted: #5a6578;
+}
+
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -290,10 +298,16 @@ a {
 
 .status-spinner {
   border-radius: 999px;
-  border: 3px solid rgb(27 77 62 / 0.15);
+  border: 3px solid color-mix(in srgb, var(--forest) 15%, transparent);
   border-top-color: var(--forest);
   border-right-color: var(--gold);
   animation: status-spinner-spin 0.85s linear infinite;
+}
+
+.status-scene-glow {
+  background:
+    radial-gradient(circle at 20% 20%, rgb(196 161 90 / 0.18), transparent 45%),
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--forest) 12%, transparent), transparent 40%);
 }
 
 @keyframes sim-blink {

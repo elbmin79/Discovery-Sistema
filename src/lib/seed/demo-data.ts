@@ -22,6 +22,7 @@ export function createSeedSnapshot(): Snapshot {
       name: SCHOOL.name,
       city: SCHOOL.city,
       address: SCHOOL.address,
+      brand: "discovery",
     },
     zones: [
       {

@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { Bell, ChevronDown } from "lucide-react";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { useBrand } from "@/hooks/use-brand";
 import { postJson } from "@/hooks/use-snapshot";
 import { friendsOf, byDismissalTime } from "@/lib/school";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { withSchoolName } from "@/lib/school-brand";
 import type { AuthorizedPerson, Guardian, Locale, Snapshot, Student, Vehicle } from "@/lib/types";
 
 type Editor = "none" | "vehicle" | "authorized";
@@ -101,6 +103,7 @@ export function ParentSettings({
 function PushNotificationsSection({ t }: { t: Dictionary }) {
   const [open, setOpen] = useState(false);
   const push = usePushNotifications();
+  const { profile } = useBrand();
   const { refresh } = push;
 
   useEffect(() => {
@@ -160,7 +163,7 @@ function PushNotificationsSection({ t }: { t: Dictionary }) {
           {push.permission === "unsupported" ? <p className="text-xs text-muted">{t.pushUnsupported}</p> : null}
           {push.permission === "denied" ? <p className="text-xs text-danger">{t.pushDenied}</p> : null}
           {push.error ? <p className="text-xs text-danger">{push.error}</p> : null}
-          <p className="text-[11px] leading-relaxed text-muted">{t.pushIosHint}</p>
+          <p className="text-[11px] leading-relaxed text-muted">{withSchoolName(t.pushIosHint, profile.shortName)}</p>
         </div>
       ) : null}
     </section>

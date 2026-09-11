@@ -9,11 +9,14 @@ import { SystemStatus, useSlowLoading } from "@/components/ui/system-status";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { pickupPayload } from "@/lib/qr";
 import { findStudent, studentName } from "@/lib/school";
+import { forestHex } from "@/lib/school-brand";
+import { useBrand } from "@/hooks/use-brand";
 
 export function GuestPass({ token }: { token: string }) {
   const { snapshot, error, retry } = useSnapshot();
   const [qr, setQr] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const { brand } = useBrand();
   const trip = snapshot?.trips.find((item) => item.qrToken === token && !item.cancelledAt);
   const loadingSlow = useSlowLoading(!snapshot && !error);
 
@@ -22,9 +25,9 @@ export function GuestPass({ token }: { token: string }) {
     QRCode.toDataURL(pickupPayload(trip.code, trip.qrToken), {
       margin: 1,
       width: 320,
-      color: { dark: "#1B4D3E", light: "#FFFDF8" },
+      color: { dark: forestHex(), light: "#FFFDF8" },
     }).then(setQr);
-  }, [trip]);
+  }, [trip, brand]);
 
   if (error && !snapshot) {
     return (

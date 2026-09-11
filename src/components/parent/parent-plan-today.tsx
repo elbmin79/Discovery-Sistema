@@ -12,6 +12,8 @@ import { ShareRow } from "@/components/parent/parent-tracker";
 import { StudentAvatar } from "@/components/ui/avatar";
 import { pickupPayload } from "@/lib/qr";
 import { byDismissalTime, findStudent, findVehicle, greeting, studentGrade } from "@/lib/school";
+import { forestHex } from "@/lib/school-brand";
+import { useBrand } from "@/hooks/use-brand";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Guardian, Locale, PickupTrip, Snapshot, Student } from "@/lib/types";
 
@@ -56,15 +58,16 @@ export function ParentPlanToday({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [qr, setQr] = useState("");
   const [expandedQr, setExpandedQr] = useState(false);
+  const { brand } = useBrand();
 
   useEffect(() => {
     if (useTag) return;
     QRCode.toDataURL(pickupPayload(trip.code, trip.qrToken), {
       margin: 1,
       width: 360,
-      color: { dark: "#1B4D3E", light: "#FFFDF8" },
+      color: { dark: forestHex(), light: "#FFFDF8" },
     }).then(setQr);
-  }, [trip.code, trip.qrToken, useTag]);
+  }, [trip.code, trip.qrToken, useTag, brand]);
 
   return (
     <div className="flex flex-col gap-4 pb-3">
@@ -79,7 +82,7 @@ export function ParentPlanToday({
         </span>
       </div>
 
-      <section className="overflow-hidden rounded-[1.75rem] bg-forest text-paper shadow-[0_18px_45px_rgb(18_56_45/0.18)]">
+      <section className="overflow-hidden rounded-[1.75rem] bg-forest text-paper shadow-[0_18px_45px_color-mix(in_srgb,var(--forest)_18%,transparent)]">
         <div className="relative px-5 pb-5 pt-5">
           <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full border border-gold/20 bg-gold/10" />
           <div className="relative flex flex-wrap items-start justify-between gap-3">

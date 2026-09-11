@@ -14,6 +14,8 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { canCancel } from "@/lib/pickup-machine";
 import { pickupPayload } from "@/lib/qr";
 import { byDismissalTime, findStudent, findVehicle, findZone, studentGrade } from "@/lib/school";
+import { forestHex } from "@/lib/school-brand";
+import { useBrand } from "@/hooks/use-brand";
 import type {
   Locale,
   PickupStatus,
@@ -230,7 +232,7 @@ function DeliveredScreen({
       {!useTag || departed ? (
         <div className="absolute inset-x-0 bottom-0 rounded-t-[2rem] bg-paper px-6 pb-8 pt-6 text-left text-ink shadow-[0_-12px_40px_rgb(0_0_0/0.25)]">
           <p className="flex items-center gap-2 text-xs tracking-[0.18em] uppercase text-gold-deep">
-            {departed ? <span className="h-2 w-2 rounded-full bg-emerald-500" /> : null}
+            {departed ? <span className="h-2 w-2 rounded-full bg-forest" /> : null}
             {noticeTitle}
           </p>
           <p className="mt-2 text-[15px] leading-6 text-ink">{noticeBody}</p>
@@ -310,7 +312,7 @@ function TagPass({ vehicle, arrived, t }: { vehicle: Vehicle; arrived: boolean; 
           <p className="text-2xl font-semibold leading-tight">{vehicle.label}</p>
           {vehicle.plate ? <p className="mt-1 text-sm text-cream">{vehicle.plate}</p> : null}
           <p className={`mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${arrived ? "text-gold" : "text-cream"}`}>
-            <span className={`h-2 w-2 rounded-full ${arrived ? "bg-gold" : "bg-emerald-400 pulse-gold"}`} />
+            <span className={`h-2 w-2 rounded-full ${arrived ? "bg-gold" : "bg-forest-soft pulse-gold"}`} />
             {arrived ? t.status.arrived : t.status.on_the_way}
           </p>
         </div>
@@ -323,14 +325,15 @@ function TagPass({ vehicle, arrived, t }: { vehicle: Vehicle; arrived: boolean; 
 function ArrivalPass({ trip, t }: { trip: PickupTrip; t: Dictionary }) {
   const [qr, setQr] = useState<string>("");
   const [expanded, setExpanded] = useState(false);
+  const { brand } = useBrand();
 
   useEffect(() => {
     QRCode.toDataURL(pickupPayload(trip.code, trip.qrToken), {
       margin: 1,
       width: 520,
-      color: { dark: "#1B4D3E", light: "#FFFDF8" },
+      color: { dark: forestHex(), light: "#FFFDF8" },
     }).then(setQr);
-  }, [trip.code, trip.qrToken]);
+  }, [trip.code, trip.qrToken, brand]);
 
   return (
     <>
@@ -380,7 +383,8 @@ export function ShareRow({
 }) {
   const [copied, setCopied] = useState(false);
   const names = students.map((student) => parentName(student)).join(" y ");
-  const message = `Pase de salida Discovery para ${names}. Código ${trip.code}. ${passUrl}`;
+  const { profile } = useBrand();
+  const message = `Pase de salida ${profile.shortName} para ${names}. Código ${trip.code}. ${passUrl}`;
   const phone = (trip.guestPhone ?? "").replace(/\D/g, "");
 
   return (

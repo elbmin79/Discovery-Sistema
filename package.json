@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/history.test.ts tests/parent-home.test.ts",
+    "test": "tsx --test tests/history.test.ts tests/parent-home.test.ts tests/school-brand.test.ts",
     "test:db": "tsx --test tests/history-postgres.test.ts",
     "test:storage": "node scripts/test-storage-start.mjs && tsx --test tests/history-storage.test.ts",
     "test:e2e": "playwright test",

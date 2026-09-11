@@ -240,7 +240,7 @@ export function TvBoard() {
             <ul className="mt-3 flex gap-6 overflow-hidden xl:gap-8">
               {recent.map((kid) => (
                 <li key={kid.request.id} className="flex w-32 shrink-0 flex-col items-center text-center xl:w-40">
-                  <div className="rounded-full ring-[3px] ring-emerald-400/80">
+                  <div className="rounded-full ring-[3px] ring-forest/80">
                     <StudentAvatar student={kid.student} size="md" />
                   </div>
                   <p className="break-words mt-2 w-full font-serif text-lg leading-tight xl:text-xl">
