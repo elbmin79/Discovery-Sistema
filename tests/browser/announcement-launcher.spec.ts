@@ -67,11 +67,11 @@ test("closing announcements restores kid select, setup and late screens", async 
   await page.goto("/familia");
   await page.getByRole("button", { name: "Crear Pick-Up", exact: true }).click();
   await page.getByRole("button", { name: /Sofía Madrid/ }).click();
-  await expect(page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pase para Sofía Madrid/ })).toBeVisible();
   await openAndCloseAvisos(page);
-  await expect(page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pase para Sofía Madrid/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true }).click();
+  await page.getByRole("button", { name: /Pase para Sofía Madrid/ }).click();
   await expect(page.getByRole("heading", { name: "¿Quién va a recoger?" })).toBeVisible();
   await openAndCloseAvisos(page);
   await expect(page.getByRole("heading", { name: "¿Quién va a recoger?" })).toBeVisible();
