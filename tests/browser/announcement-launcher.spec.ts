@@ -1,23 +1,38 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { createSeedSnapshot } from "../../src/lib/seed/demo-data";
 
+async function openParentWithUnreadAviso(page: Page) {
+  const snapshot = createSeedSnapshot();
+  snapshot.latePickups = [];
+  snapshot.announcements = snapshot.announcements.slice(0, 1);
+  snapshot.guardians.find((guardian) => guardian.id === "g-roberto")!.readAnnouncementIds = [];
+  await page.route("**/api/state", (route) => route.fulfill({ json: snapshot }));
+  await page.route("**/api/school/announcements/*", (route) => {
+    snapshot.guardians.find((guardian) => guardian.id === "g-roberto")!.readAnnouncementIds = snapshot.announcements.map((item) => item.id);
+    snapshot.updatedAt = new Date().toISOString();
+    return route.fulfill({ json: snapshot });
+  });
+  await page.addInitScript(() => {
+    sessionStorage.setItem("discovery-session", JSON.stringify({ role: "parent", guardianId: "g-roberto", username: "roberto", name: "Roberto Madrid" }));
+    Object.defineProperty(navigator, "setAppBadge", { value: async (count: number) => { document.documentElement.dataset.appBadge = String(count); } });
+    Object.defineProperty(navigator, "clearAppBadge", { value: async () => { document.documentElement.dataset.appBadge = "0"; } });
+  });
+  return snapshot;
+}
+
+async function openAndCloseAvisos(page: Page) {
+  const launcher = page.locator("header").getByRole("button", { name: "Avisos de la escuela", exact: true });
+  await launcher.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 1000 });
+  await expect(dialog.locator("header").getByRole("button", { name: "Regresar", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+}
+
 for (const reducedMotion of ["no-preference", "reduce"] as const) {
-  test(`announcement launcher scrolls, opens, clears badges and closes with ${reducedMotion}`, async ({ page }) => {
-    const snapshot = createSeedSnapshot();
-    snapshot.latePickups = [];
-    snapshot.announcements = snapshot.announcements.slice(0, 1);
-    snapshot.guardians.find((guardian) => guardian.id === "g-roberto")!.readAnnouncementIds = [];
-    await page.route("**/api/state", (route) => route.fulfill({ json: snapshot }));
-    await page.route("**/api/school/announcements/*", (route) => {
-      snapshot.guardians.find((guardian) => guardian.id === "g-roberto")!.readAnnouncementIds = snapshot.announcements.map((item) => item.id);
-      snapshot.updatedAt = new Date().toISOString();
-      return route.fulfill({ json: snapshot });
-    });
-    await page.addInitScript(() => {
-      sessionStorage.setItem("discovery-session", JSON.stringify({ role: "parent", guardianId: "g-roberto", username: "roberto", name: "Roberto Madrid" }));
-      Object.defineProperty(navigator, "setAppBadge", { value: async (count: number) => { document.documentElement.dataset.appBadge = String(count); } });
-      Object.defineProperty(navigator, "clearAppBadge", { value: async () => { document.documentElement.dataset.appBadge = "0"; } });
-    });
+  test(`announcement launcher opens instantly, clears badges and closes with ${reducedMotion}`, async ({ page }) => {
+    const snapshot = await openParentWithUnreadAviso(page);
     await page.emulateMedia({ reducedMotion });
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto("/familia");
@@ -27,10 +42,12 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     expect(languageBox!.x).toBeLessThan(launcherBox!.x);
     await expect(launcher.locator("[data-announcement-badge]")).toHaveText("1");
     await expect(page.locator("html")).toHaveAttribute("data-app-badge", "1");
+    const scrollTopBefore = await page.locator("[data-announcements-launcher]").evaluate((button) => button.closest(".overflow-y-auto")!.scrollTop);
     await launcher.click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    expect(await page.locator("[data-announcements-launcher]").evaluate((button) => button.closest('.overflow-y-auto')!.scrollTop)).toBeGreaterThan(0);
+    await expect(dialog).toBeVisible({ timeout: 1000 });
+    expect(await page.locator("[data-announcements-launcher]").evaluate((button) => button.closest(".overflow-y-auto")!.scrollTop)).toBe(scrollTopBefore);
+    await expect(dialog.locator("header").getByRole("button", { name: "Regresar", exact: true })).toBeFocused();
     await expect(dialog.getByRole("button", { name: /Recientes/ })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Anteriores/ })).toBeVisible();
     await page.screenshot({ path: `test-results/announcements-${reducedMotion}.png`, animations: "disabled" });
@@ -43,3 +60,26 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+test("closing announcements restores kid select, setup and late screens", async ({ page }) => {
+  await openParentWithUnreadAviso(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/familia");
+  await page.getByRole("button", { name: "Crear Pick-Up", exact: true }).click();
+  await page.getByRole("button", { name: /Sofía Madrid/ }).click();
+  await expect(page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true })).toBeVisible();
+  await openAndCloseAvisos(page);
+  await expect(page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Pase para Sofía Madrid", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "¿Quién va a recoger?" })).toBeVisible();
+  await openAndCloseAvisos(page);
+  await expect(page.getByRole("heading", { name: "¿Quién va a recoger?" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "← Regresar" }).click();
+  await page.getByRole("button", { name: "¿Llegarás tarde? Avisar al colegio", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Llegaré tarde" })).toBeVisible();
+  await openAndCloseAvisos(page);
+  await expect(page.getByRole("heading", { name: "Llegaré tarde" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear Pick-Up", exact: true })).toHaveCount(0);
+});

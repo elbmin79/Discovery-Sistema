@@ -35,7 +35,7 @@ export function ParentAnnouncements({
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.closest(".overflow-y-auto")?.scrollTo(0, 0);
-    heading.current?.focus({ preventScroll: true });
+    if (selectedId) heading.current?.focus({ preventScroll: true });
   }, [selectedId]);
   const { recent, previous } = useMemo(() => splitAnnouncements(snapshot), [snapshot]);
   const reads = new Set(guardian.readAnnouncementIds ?? []);

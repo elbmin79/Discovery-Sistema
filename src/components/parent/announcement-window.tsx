@@ -3,9 +3,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 
-export function AnnouncementWindow({ children, origin, label, closeLabel, onClose }: {
+export function AnnouncementWindow({ children, label, closeLabel, onClose }: {
   children: ReactNode;
-  origin: { x: number; y: number; width: number; height: number };
   label: string;
   closeLabel: string;
   onClose: () => void;
@@ -15,31 +14,23 @@ export function AnnouncementWindow({ children, origin, label, closeLabel, onClos
   const closing = useRef(false);
 
   useEffect(() => {
-    const element = panel.current!;
     const previous = document.activeElement as HTMLElement | null;
-    const box = element.getBoundingClientRect();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const animation = element.animate([
-      { transform: `translate(${origin.x - box.x}px, ${origin.y - box.y}px) scale(${origin.width / box.width}, ${origin.height / box.height})`, opacity: 0.25, borderRadius: "28px" },
-      { transform: "translate(0, 0) scale(1)", opacity: 1, borderRadius: "0px" },
-    ], { duration: reduced ? 0 : 480, easing: "cubic-bezier(.2,.8,.2,1)" });
     closeButton.current?.focus({ preventScroll: true });
     return () => {
-      animation.cancel();
       requestAnimationFrame(() => { if (previous?.isConnected) previous.focus({ preventScroll: true }); });
     };
-  }, [origin]);
+  }, []);
 
   async function close() {
     if (closing.current) return;
     closing.current = true;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    await panel.current?.animate([{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.94) translateY(12px)" }], { duration: reduced ? 0 : 220, easing: "ease-in", fill: "forwards" }).finished.catch(() => undefined);
+    await panel.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: reduced ? 0 : 160, easing: "ease-in", fill: "forwards" }).finished.catch(() => undefined);
     onClose();
   }
 
   return (
-    <div ref={panel} role="dialog" aria-modal="true" aria-label={label} className="absolute inset-0 z-50 flex origin-top-left flex-col bg-cream" onKeyDown={(event) => {
+    <div ref={panel} role="dialog" aria-modal="true" aria-label={label} className="absolute inset-0 z-50 flex flex-col bg-cream" onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); void close(); }
       if (event.key !== "Tab") return;
       const buttons = [...panel.current!.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]')];
