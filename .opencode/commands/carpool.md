@@ -1,8 +1,11 @@
 ---
-description: Onboarding de contexto completo del proyecto (skill carpool).
+description: Full project-context onboarding (carpool skill). Agent chat is English.
 ---
 
-Carga el skill `carpool` con la herramienta `skill` y aplica sus instrucciones antes de tocar
-código. Resume el contexto al usuario en máximo 3 líneas y pregúntale cuál es la tarea.
-Si el skill no está disponible, lee `docs/plan-tablero-tablet.md` y `docs/plan-retrasos.md`
-como fallback. $ARGUMENTS
+Load the `carpool` skill with the `skill` tool and apply its instructions before
+touching code. Summarize the context to the user in at most three **English** lines
+and confirm the task (or ask what they want to work on).
+If the skill is unavailable, read `docs/plan-tablero-tablet.md` and `docs/plan-retrasos.md`
+as fallback. $ARGUMENTS
+
+Language: agent chat = English; user-facing app copy and store errors = Spanish-first.
