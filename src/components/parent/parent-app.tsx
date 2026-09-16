@@ -55,10 +55,7 @@ function completedTripForGuardian(snapshot: Snapshot, guardianId: string, jornad
 
 export function ParentApp() {
   const { snapshot, error: syncError, retry } = useSnapshot();
-  const [announcementOrigin, setAnnouncementOrigin] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const announcementOpening = useRef(false);
-  const launchSequence = useRef(0);
-  useEffect(() => () => { launchSequence.current++; }, []);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
@@ -109,37 +106,10 @@ export function ParentApp() {
   const unread = snapshot && guardian ? unreadAnnouncements(snapshot, guardian) : [];
   useAppBadge(unread.length, Boolean(guardian));
 
-  async function showAnnouncements() {
-    if (announcementOpening.current || announcementOrigin) return;
-    announcementOpening.current = true;
-    const sequence = ++launchSequence.current;
-    setTab("home");
-    setStep("home");
+  function showAnnouncements() {
+    if (announcementsOpen) return;
     setOpenAnnouncementId(null);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    const scroller = contentRef.current;
-    const button = scroller?.querySelector<HTMLElement>("[data-announcements-launcher]");
-    if (scroller && button) {
-      const start = scroller.scrollTop;
-      const target = Math.min(scroller.scrollHeight - scroller.clientHeight, start + button.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientHeight / 2 + button.clientHeight / 2);
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduced) scroller.scrollTop = target;
-      else await new Promise<void>((resolve) => {
-        const began = performance.now();
-        const tick = (now: number) => {
-          if (sequence !== launchSequence.current) { resolve(); return; }
-          const progress = Math.min(1, (now - began) / 380);
-          scroller.scrollTop = start + (target - start) * (1 - Math.pow(1 - progress, 3));
-          if (progress < 1) requestAnimationFrame(tick); else window.setTimeout(resolve, 160);
-        };
-        requestAnimationFrame(tick);
-      });
-    }
-    if (sequence === launchSequence.current) {
-      const box = (button ?? scroller)?.getBoundingClientRect();
-      setAnnouncementOrigin(box ? { x: box.x, y: box.y, width: box.width, height: box.height } : { x: 0, y: 0, width: 48, height: 48 });
-    }
-    announcementOpening.current = false;
+    setAnnouncementsOpen(true);
   }
 
   useEffect(() => {
@@ -151,7 +121,7 @@ export function ParentApp() {
   useEffect(() => {
     contentRef.current?.scrollTo(0, 0);
     window.scrollTo(0, 0);
-  }, [step, tab, trip?.id, openAnnouncementId]);
+  }, [step, tab, trip?.id]);
 
   async function openAnnouncement(id: string) {
     setOpenAnnouncementId(id);
@@ -262,7 +232,7 @@ export function ParentApp() {
 
   return (
     <PhoneShell paper={Boolean(session && guardian && !trip && step === "home" && tab === "home")}>
-      <div inert={Boolean(announcementOrigin)} className="flex min-h-0 flex-1 flex-col">
+      <div inert={announcementsOpen} className="flex min-h-0 flex-1 flex-col">
       <header className="z-20 flex shrink-0 items-center justify-between gap-2 border-b border-line bg-paper px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3">
         <Link href="/" className="min-w-0 rounded-lg"><BrandRow /></Link>
         <div className="flex shrink-0 items-center gap-2">
@@ -274,7 +244,7 @@ export function ParentApp() {
           <Globe className="h-3.5 w-3.5" />
           {t.language}
         </button>
-        {guardian ? <button type="button" onClick={() => void showAnnouncements()} aria-label={t.announcements} className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-forest shadow-sm transition active:scale-90"><Megaphone className="h-5 w-5" strokeWidth={1.7} />{unread.length > 0 ? <span data-announcement-badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11px] font-semibold tabular-nums text-white ring-2 ring-cream">{unread.length > 99 ? "99+" : unread.length}</span> : null}</button> : null}
+        {guardian ? <button type="button" onClick={showAnnouncements} aria-label={t.announcements} className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-forest shadow-sm transition active:scale-90"><Megaphone className="h-5 w-5" strokeWidth={1.7} />{unread.length > 0 ? <span data-announcement-badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11px] font-semibold tabular-nums text-white ring-2 ring-cream">{unread.length > 99 ? "99+" : unread.length}</span> : null}</button> : null}
         </div>
       </header>
 
@@ -324,7 +294,7 @@ export function ParentApp() {
               setError(null);
               setNotice(null);
               setOpenAnnouncementId(null);
-              setAnnouncementOrigin(null);
+              setAnnouncementsOpen(false);
               setSession(next);
             }}
           />
@@ -398,7 +368,7 @@ export function ParentApp() {
               setSelected([]);
               setStep("home");
             }}
-            onAvisos={() => void showAnnouncements()}
+            onAvisos={showAnnouncements}
             onCalendar={() => setStep("calendario")}
             busy={busy}
           />
@@ -439,7 +409,7 @@ export function ParentApp() {
               setLateMode(activeLate ? "edit" : "create");
               setStep("late");
             }}
-            onAvisos={() => void showAnnouncements()}
+            onAvisos={showAnnouncements}
             onCalendar={() => setStep("calendario")}
           />
         ) : step === "home" ? (
@@ -463,7 +433,7 @@ export function ParentApp() {
               setLateMode(activeLate ? "edit" : "create");
               setStep("late");
             }}
-            onAvisos={() => void showAnnouncements()}
+            onAvisos={showAnnouncements}
             onCalendar={() => setStep("calendario")}
           />
         ) : (
@@ -547,9 +517,9 @@ export function ParentApp() {
         </nav>
       ) : null}
       </div>
-      {announcementOrigin && snapshot && guardian ? (
-        <AnnouncementWindow origin={announcementOrigin} label={t.announcements} closeLabel={t.back} onClose={() => setAnnouncementOrigin(null)}>
-          <ParentAnnouncements snapshot={snapshot} guardian={guardian} locale={locale} t={t} selectedId={openAnnouncementId} onOpen={(id) => void openAnnouncement(id)} onBack={() => openAnnouncementId ? setOpenAnnouncementId(null) : setAnnouncementOrigin(null)} />
+      {announcementsOpen && snapshot && guardian ? (
+        <AnnouncementWindow label={t.announcements} closeLabel={t.back} onClose={() => setAnnouncementsOpen(false)}>
+          <ParentAnnouncements snapshot={snapshot} guardian={guardian} locale={locale} t={t} selectedId={openAnnouncementId} onOpen={(id) => void openAnnouncement(id)} onBack={() => openAnnouncementId ? setOpenAnnouncementId(null) : setAnnouncementsOpen(false)} />
         </AnnouncementWindow>
       ) : null}
     </PhoneShell>
