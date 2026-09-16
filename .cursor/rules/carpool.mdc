@@ -1,18 +1,24 @@
 ---
-description: Onboarding de contexto completo del sistema de salida Discovery (carpool). Aplicar siempre en este repo antes de tocar código.
+description: >-
+  Required Discovery carpool dismissal context. Always apply in this repo before
+  touching code. Agent chat is English; app UI/store strings stay Spanish-first.
 alwaysApply: true
 ---
 
-# Contexto obligatorio (carpool)
+# Required context (carpool)
 
-Antes de cualquier cambio en este repositorio, lee `.opencode/skills/carpool/SKILL.md` con la
-herramienta de lectura de archivos: contiene el contexto completo del producto — idea central
-("adaptamos el software a la escuela"), restricciones reales (línea de carpool continua,
-salida escalonada por grado, sin pantallas en sitio, maestros con 1 toque, sin anuncios
-"voy en camino", sin walk-ins), superficies (`/familia`, `/kiosco`, `/personal`, `/admin`,
-`/pantalla`), arquitectura (Snapshot como contrato, store dual memoria/Supabase, polling 2s,
-máquina de estados, retardos sin estados, familias amigas), mapa de archivos, convenciones
-(cero comentarios, español-first, tokens oro/forest/danger, sin revivir "Bitácora" ni
-"En el kiosco") y quirks del entorno.
+Before any change in this repository, read `.opencode/skills/carpool/SKILL.md` with the
+file-read tool: it has the full product context — core idea
+("we adapt the software to the school"), real constraints (continuous carpool line,
+staggered dismissal by grade, no on-site screens, teachers with 1 tap, no
+"on the way" announcements, no walk-ins), surfaces (`/familia`, `/kiosco`, `/personal`,
+`/admin`, `/pantalla`), architecture (Snapshot as contract, dual memory/Supabase store,
+2s polling, state machine, late pickups with no states, friend families), file map,
+conventions (zero comments, Spanish-first UI, gold/forest/danger tokens, do not revive
+"Bitácora" or "En el kiosco"), and environment quirks.
 
-Resume el contexto en máximo 3 líneas y confirma la tarea antes de editar.
+Summarize the context in at most three **English** lines and confirm the task before editing.
+
+Language: agent ↔ human (chat, reviews, status, commits, PR bodies) = **English only**.
+App / user-facing code = **Spanish-first** (UI copy, staff surfaces, store errors).
+`/familia` may keep ES/EN; staff = Spanish. Do not reply in Spanish.

@@ -8,20 +8,25 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Contexto del proyecto (carpool)
+# Language (cost rule)
 
-Cuando el usuario escriba `/carpool`, lee y aplica `.opencode/skills/carpool/SKILL.md`.
-Resume el contexto en máximo 3 líneas. Si incluye una tarea después del comando,
-confirma tu interpretación y continúa; si no, pregunta qué quiere trabajar.
-Invocar el comando solo para cargar contexto no requiere modificar código ni ejecutar tests.
+- **Agent ↔ human** (chat, reviews, status, commits, PR bodies): **English only.** Do not summarize or reply in Spanish.
+- **App / user-facing code:** **Spanish-first.** UI copy, staff surfaces, and store errors stay Spanish. `/familia` may keep ES/EN dictionaries; staff = Spanish.
 
-Antes de modificar código, lee `.opencode/skills/carpool/SKILL.md`: contiene el contexto
-completo del producto (idea, restricciones reales, superficies, arquitectura, mapa de
-archivos, convenciones y buenas prácticas). Resúmelo en máximo 3 líneas y confirma la tarea.
+# Project context (carpool)
 
-# Pre-flight de PR (/pr)
+When the user writes `/carpool`, read and apply `.opencode/skills/carpool/SKILL.md`.
+Summarize the context in at most three **English** lines. If the invocation includes a task,
+confirm your understanding and proceed; otherwise, ask what they want to work on.
+Loading context alone does not require code changes or running tests.
 
-Cuando el usuario escriba `/pr` (o pida verificar/abrir un pull request / subir cambios
-con checks de prod), lee y aplica `.opencode/skills/pr/SKILL.md`. Analiza el diff local
-vs `main`, corre verificaciones, arregla lo automático, **detente** si hace falta acción
-manual en Supabase o Vercel, y solo entonces commit/push/PR.
+Before modifying code, read `.opencode/skills/carpool/SKILL.md`: it has the full product
+context (idea, real constraints, surfaces, architecture, file map, conventions, and best
+practices). Summarize in at most three English lines and confirm the task.
+
+# Pre-flight of PR (/pr)
+
+When the user writes `/pr` (or asks to verify/open a pull request / push changes
+with prod checks), read and apply `.opencode/skills/pr/SKILL.md`. Analyze the local
+diff vs `main`, run verifications, fix what is automatic, **stop** if manual action
+is needed in Supabase or Vercel, and only then commit/push/PR.
