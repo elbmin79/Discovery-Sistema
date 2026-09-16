@@ -1,127 +1,137 @@
 ---
 name: carpool
-description: Onboarding de contexto completo del sistema de salida escolar Discovery (school carpool pickup/dismissal). Cargar al iniciar cualquier sesión en este repo o cuando se invoque /carpool — arquitectura, conceptos de producto, flujos y buenas prácticas, sin re-explorar el códigobase. Use when starting work on discovery-sistema with zero prior context.
+description: >-
+  Full product-context onboarding for Discovery school carpool dismissal.
+  Load at session start or when /carpool is invoked — architecture, product
+  concepts, flows, and conventions without re-exploring the codebase.
+  Use when starting work on discovery-sistema with zero prior context.
+  Agent chat is English; app UI/store strings stay Spanish-first.
 ---
 
-# carpool — onboarding de contexto (Discovery Salida)
+# carpool — Discovery dismissal context
 
-Objetivo: que un modelo con 0 contexto entienda TODO el producto y su arquitectura leyendo
-solo este archivo, y luego abra únicamente los archivos que va a tocar. Densidad > exhaustividad.
+Goal: a model with zero context understands the product and architecture from
+**this file alone**, then opens only the files it will touch. Density > exhaustiveness.
 
-## 1. El producto (idea central)
+## 0. Language (cost rule)
 
-Sistema de **salida escolar (carpool dismissal)** para *Discovery American Preschool &
-Academy* (Mexicali, B.C.). Nació como POC de ventas → hoy es el producto real en desarrollo.
+- **Agent ↔ human (chat, reviews, status):** **English only.** Do not summarize or reply in Spanish.
+- **App / user-facing code:** **Spanish-first.** UI copy, staff surfaces, store errors thrown to the UI stay Spanish. `/familia` keeps ES/EN dictionaries; staff = Spanish.
+- **Git:** commit messages and PR bodies in **English**. Spanish only inside user-facing string literals.
 
-Regla de oro comercial: **"No le pedimos a la escuela que se adapte al software; adaptamos
-el software a la escuela."** La personalización es el diferenciador frente a Skolable / Vámonos!
-(ambos estudiados; Skolable es parent-driven y frágil: sin motor de horarios, geofence ruidoso,
-taps por alumno).
+## 1. Product (core idea)
 
-Realidad operativa del cliente (restricciones duras):
-- **Línea de carpool continua** que nunca se detiene; salida **escalonada por grado**
-  (kínder → primaria, ~30 min por grupo).
-- **Sin pantallas en sitio** (todo es teléfono/tablet en mano del personal; `/pantalla` es solo TV informativa).
-- **Maestros con carga mínima**: un toque por acción; NUNCA gestionan excepciones (eso es oficina/Admin).
-- **El padre NO anuncia "voy en camino"**: genera un **pase QR inerte** que solo cobra vida al
-  escanearse en el kiosco. No hay walk-ins (todo es auto).
-- **Hermanos** se recogen juntos; familias amigas (friend families) con autorización del dueño.
+School **carpool dismissal** system for *Discovery American Preschool & Academy*
+(Mexicali, B.C.). Started as a sales POC → now the real product in development.
 
-## 2. Superficies (rutas)
+Commercial golden rule: **"We don't ask the school to adapt to the software; we
+adapt the software to the school."** Customization is the differentiator vs
+Skolable / Vámonos! (both studied; Skolable is parent-driven and fragile: no
+schedule engine, noisy geofence, per-student taps).
 
-| Ruta | Qué es |
+Hard operational constraints:
+- **Continuous carpool line** that never stops; dismissal **staggered by grade**
+  (kínder → primaria, ~30 min per group).
+- **No on-site screens for staff workflow** (phone/tablet in hand; `/pantalla` is TV info only).
+- **Teachers: minimal load** — one tap per action; they NEVER manage exceptions (office/Admin does).
+- **Parent does NOT announce "on the way"**: they generate an **inert QR pass** that only
+  becomes live when scanned at the kiosk. No walk-ins (everything is by car).
+- **Siblings** picked up together; friend families with owner authorization.
+
+## 2. Surfaces (routes)
+
+| Route | What it is |
 |---|---|
-| `/` | Demo hub: tarjetas por superficie + "Nueva jornada" (`POST /api/demo/reset`) |
-| `/familia` | App del padre (PhoneShell): **Plan de hoy** listo con hijos/horario/picker/auto/tag o QR, cambio del día, "¿Llegarás tarde?", familias amigas + inbox, cuenta |
-| `/kiosco` | Entrada: QR/código **y modo tag** (foto automática, llegada sin aviso previo) |
-| `/personal` | Tablet del maestro: columnas **Esperando → Notificados** (1 toque: Notificar → Entregar), fotos de auto, chip **Tardes** (hoja solo-lectura), botón "＋ Simular llegadas" |
-| `/admin` | **Admin Dashboard** (antes *Bitácora*; `/bitacora` redirige): summary cards, sección **Retrasos** (oro, countdown, rojo si ETA+15min), tabla Recogidas + timeline, feed Movimientos, CSV |
-| `/pantalla` | Carrusel para TV (Siguientes/Entregados, foto del auto) |
-| `/pase/[token]` | Pase de invitado compartible (WhatsApp/SMS/copia) |
+| `/` | Demo hub: surface cards + "Nueva jornada" (`POST /api/demo/reset`) |
+| `/familia` | Parent app (PhoneShell): **Plan de hoy** with kids/schedule/picker/car/tag or QR, day change, "¿Llegarás tarde?", friend families + inbox, account |
+| `/kiosco` | Entry: QR/code **and tag mode** (auto photo, arrive without prior notice) |
+| `/personal` | Teacher tablet: columns **Esperando → Notificados** (1 tap: Notificar → Entregar), car photos, **Tardes** chip (read-only sheet), "＋ Simular llegadas" |
+| `/admin` | **Admin Dashboard** (was *Bitácora*; `/bitacora` redirects): summary cards, **Retrasos** (gold, countdown, red if ETA+15min), Recogidas table + timeline, Movimientos feed, CSV |
+| `/pantalla` | TV carousel (Siguientes/Entregados, car photo) |
+| `/pase/[token]` | Shareable guest pass (WhatsApp/SMS/copy) |
 
-Cuentas demo — padres: `roberto/madrid`, `benjamin/marquez`, `jose/vazquez`,
+Demo accounts — parents: `roberto/madrid`, `benjamin/marquez`, `jose/vazquez`,
 `ian/ramirez`, `joseluis/torres`; staff: `gabriela/salida`,
 `alejandra/preescolar`, `luis/primaria`.
 
-## 3. Arquitectura
+## 3. Architecture
 
-- **Next.js 16** App Router + Turbopack, React 19, Tailwind v4 (tokens en `globals.css`:
+- **Next.js 16** App Router + Turbopack, React 19, Tailwind v4 (tokens in `globals.css`:
   `forest/gold/cream/paper/ink/muted/line/danger`), `lucide-react`, `qrcode`.
-  ⚠️ Next 16 difiere de tu entrenamiento: lee `node_modules/next/dist/docs/` antes de APIs
-  no triviales (ver `AGENTS.md`). Tipos globales `PageProps`/`LayoutProps`/`RouteContext`.
-- **Fuente de verdad = `Snapshot`** (`src/lib/types.ts`): school, zones, students, guardians
-  (con `friendCode`, `friendIds`), authorizedPeople, vehicles (`photoUrl`, `tagId`), staff,
+  ⚠️ Next 16 differs from training data: read `node_modules/next/dist/docs/` before
+  non-trivial APIs (see `AGENTS.md`). Global types `PageProps`/`LayoutProps`/`RouteContext`.
+- **Source of truth = `Snapshot`** (`src/lib/types.ts`): school, zones, students, guardians
+  (with `friendCode`, `friendIds`), authorizedPeople, vehicles (`photoUrl`, `tagId`), staff,
   trips, requests, guestPasses, **latePickups**, **events**, authorizations.
-- **Store** (`src/lib/store/memory-store.ts`): clase `MemoryPickupStore` con métodos de
-  mutación que **lanzan errores en español** (se muestran tal cual en UI vía `postJson`).
-  Doble modo (`store/index.ts`): singleton en `globalThis` si no hay Supabase; con
-  `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY` (`.env.local`, **nunca leer ni commitear**)
-  guarda el snapshot completo como UNA fila JSON en `pickup_state` (id `live`, concurrencia
-  optimista por `version`, 8 reintentos). El estado **persiste entre reinicios**;
-  `/api/demo/reset` resiembra.
-- **Sync cliente**: polling de `GET /api/state` cada 2s (`useSnapshot`, singleton +
-  `rememberSnapshot`); `postJson` ingesta el snapshot de la respuesta al instante.
-  `/api/events` (SSE) existe pero **no se usa**.
-- **Máquina de estados** (`pickup-machine.ts`): `on_the_way` (pase listo, invisible para la
-  escuela) → `arrived` (kiosco) → `preparing` → `ready` → `delivered`; `cancelled`.
-  Helpers `canAdvance/canUndo/canCancel/canComplete`; `DELIVERED_VISIBLE_MS` controla
-  visibilidad de entregados en tablero/TV.
-- **Auditoría**: cada mutación loguea un `PickupEvent` (`trip_created, arrived,
+- **Store** (`src/lib/store/memory-store.ts`): `MemoryPickupStore` mutation methods
+  **throw Spanish errors** (shown as-is in UI via `postJson`). Dual mode (`store/index.ts`):
+  `globalThis` singleton if no Supabase; with `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY`
+  (`.env.local`, **never read or commit**) persists the full snapshot as ONE JSON row in
+  `pickup_state` (id `live`, optimistic concurrency via `version`, 8 retries). State
+  **survives restarts**; `/api/demo/reset` reseeds.
+- **Client sync**: poll `GET /api/state` every 2s (`useSnapshot`, singleton +
+  `rememberSnapshot`); `postJson` ingests the response snapshot immediately.
+  `/api/events` (SSE) exists but **is unused**.
+- **State machine** (`pickup-machine.ts`): `on_the_way` (pass ready, invisible to school)
+  → `arrived` (kiosk) → `preparing` → `ready` → `delivered`; `cancelled`.
+  Helpers `canAdvance/canUndo/canCancel/canComplete`; `DELIVERED_VISIBLE_MS` controls
+  delivered visibility on board/TV.
+- **Audit**: each mutation logs a `PickupEvent` (`trip_created, arrived,
   status_changed, delivered, cancelled, authorization_*, departed, late_announced,
-  late_eta_changed, late_cancelled`). El feed "Movimientos" y los timelines salen de ahí.
-- **Retrasos** (`LatePickup`): SOLO `announced | cancelled`. Es un mensaje: alumnos + quién +
-  ETA + nota. **Sin máquina de estados**: el countdown ámbar→rojo (ETA+15min) es derivado en UI
-  (`lateIsOverdue/lateCountdownLabel` en `admin-dashboard.ts`). El kiosco NO lo toca.
-- **Familias amigas**: `addFriend/removeFriend` por `friendCode`; recogida cruzada crea
-  `authorization` (pending→approved/denied) que el dueño resuelve en su inbox (`/familia`).
-- **Cierre del ciclo del trip**: salida por tag, confirmación en app, o auto a 30 min
-  (`closeTrip/closeExpiredTrips`, evento `departed`).
+  late_eta_changed, late_cancelled`). Movimientos feed and timelines come from this.
+- **Late pickups** (`LatePickup`): ONLY `announced | cancelled`. A message: students + who +
+  ETA + note. **No state machine**: amber→red countdown (ETA+15min) is UI-derived
+  (`lateIsOverdue/lateCountdownLabel` in `admin-dashboard.ts`). Kiosk does not touch it.
+- **Friend families**: `addFriend/removeFriend` by `friendCode`; cross-pickup creates
+  `authorization` (pending→approved/denied) that the owner resolves in inbox (`/familia`).
+- **Trip close**: tag exit, in-app confirm, or auto at 30 min
+  (`closeTrip/closeExpiredTrips`, `departed` event).
 
-## 4. Mapa de archivos clave
+## 4. Key file map
 
-- `src/lib/types.ts` — contrato de datos (Snapshot y entidades).
-- `src/lib/store/{index,memory-store}.ts` — persistencia + mutaciones.
+- `src/lib/types.ts` — data contract (Snapshot and entities).
+- `src/lib/store/{index,memory-store}.ts` — persistence + mutations.
 - `src/lib/pickup-machine.ts`, `src/lib/school.ts` (lookups/labels/`vehiclePhoto`),
-  `src/lib/admin-dashboard.ts` (rows/CSV/retardos), `src/lib/i18n/dictionaries.ts` (es/en),
-  `src/lib/seed/demo-data.ts` (seed; fallback SVG de auto; fotos reales en `public/cars/*.jpg`
-  — Wikimedia CC BY-SA, atribución en producción; avatares `public/students/*.png`).
+  `src/lib/admin-dashboard.ts` (rows/CSV/late), `src/lib/i18n/dictionaries.ts` (es/en),
+  `src/lib/seed/demo-data.ts` (seed; car SVG fallback; real photos in `public/cars/*.jpg`
+  — Wikimedia CC BY-SA, attribution in production; avatars `public/students/*.png`).
 - `src/components/{parent,kiosk,staff,tv,demo,ui,brand}/…`
 - `src/app/api/…`: `state`, `demo/{reset,populate}`, `trips` (+`arrive`, `arrive-tag`,
   `[id]/{cancel,deliver,depart,status}`), `requests/[id]/{status,authorization}`,
   `late`, `late/[id]`, `account/{vehicles,photo,authorized,friends}`, `auth/login`, `events`.
 - `docs/`: `plan-tablero-tablet.md`, `plan-retrasos.md`, `flujo-completo-opciones.md`,
-  `phase-1-bitacora.md` (histórico).
+  `phase-1-bitacora.md` (historical).
 
-## 5. Convenciones y buenas prácticas (no negociables)
+## 5. Conventions (non-negotiable)
 
-- **CERO comentarios en código** (regla del repo). Errores de store en español, directos.
-- UI: español-first; solo `/familia` tiene toggle ES/EN (diccionarios). Staff = español.
-- Lenguaje visual: **oro = espera/atención**, **forest = progreso/ok**, **danger = vencido/riesgo**;
-  cards `rounded-2xl/3xl`, `tabular-nums` para horas, sin modales en tablet (caos),
-  botones grandes (min-h-11), un toque por acción.
-- React compiler lint: **nada de `Date.now()/Math.random()` en render** (ticks por estado,
-  patrón `Clock`), **nada de `setState` síncrono en effects**.
-- Renombres históricos que NO debes revivir: *Bitácora* → **Admin Dashboard** (`/admin`);
-  estado *"En el kiosco"* y botones *"Marcar llegó/Cerrar retraso"* **eliminados por decisión
-  de producto** (el aviso de retraso es solo mensaje). No reintroducir anuncios "voy en camino"
-  ni walk-ins.
-- Git: ramas `feat|chore/*` → PR a `main`; commits en español; cuerpos de PR con
-  `--body-file` (PowerShell 5.1 rompe multiline/quotes). **Nunca commitear `.env.local`.**
-- Verificación estándar: `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+- **ZERO comments in code** (repo rule). Store errors in Spanish, direct.
+- UI: Spanish-first; only `/familia` has ES/EN toggle (dictionaries). Staff = Spanish.
+- Visual language: **gold = wait/attention**, **forest = progress/ok**, **danger = overdue/risk**;
+  cards `rounded-2xl/3xl`, `tabular-nums` for times, no modals on tablet (chaos),
+  large buttons (min-h-11), one tap per action.
+- React compiler lint: **no `Date.now()/Math.random()` in render** (ticks via state,
+  `Clock` pattern), **no sync `setState` in effects**.
+- Historical renames you must NOT revive: *Bitácora* → **Admin Dashboard** (`/admin`);
+  *"En el kiosco"* state and *"Marcar llegó/Cerrar retraso"* buttons **removed by product
+  decision** (late notice is message-only). Do not reintroduce "on the way" announcements
+  or walk-ins.
+- Git: branches `feat|chore/*` → PR to `main`; **commits and PR bodies in English**;
+  PR bodies via `--body-file` (PowerShell 5.1 breaks multiline/quotes). **Never commit `.env.local`.**
+- Standard verify: `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
-## 6. Quirks del entorno (Windows PowerShell 5.1)
+## 6. Environment quirks (Windows PowerShell 5.1)
 
-- Sin `&&`: usa `; if ($?) { … }`. JSON bodies: bytes UTF-8
-  (`[System.Text.Encoding]::UTF8.GetBytes(...)`), leer respuestas con `RawContentStream`.
-- Dev server: `Start-Process node node_modules\next\dist\bin\next dev` (ignorar el ruido
-  "ChildProcess.kill" del wrapper); el build NO debe pipearse a `Select-Object`
-  (enmascara el exit code).
-- La app puede estar en **modo Supabase**: el estado persiste; tras tocar el seed,
+- No `&&`: use `; if ($?) { … }`. JSON bodies: UTF-8 bytes
+  (`[System.Text.Encoding]::UTF8.GetBytes(...)`), read responses with `RawContentStream`.
+- Dev server: `Start-Process node node_modules\next\dist\bin\next dev` (ignore
+  "ChildProcess.kill" wrapper noise); build must NOT pipe to `Select-Object`
+  (masks exit code).
+- App may be in **Supabase mode**: state persists; after touching seed,
   `POST /api/demo/reset`.
 
-## 7. Cómo trabajar con este skill
+## 7. How to use this skill
 
-1. Lee este archivo; resume contexto en ≤3 líneas al usuario.
-2. Abre SOLO los archivos a modificar (el Snapshot es el contrato; todo lo demás deriva).
-3. Respeta §5 antes de escribir UI/UX o store.
-4. Al terminar: lint + tsc (+ build si tocaste rutas), smoke por API, y ofrece PR si aplica.
+1. Read this file; summarize context in ≤3 **English** lines to the user.
+2. Open ONLY the files to change (Snapshot is the contract; everything else derives).
+3. Respect §5 before writing UI/UX or store — Spanish strings in the app, English in chat.
+4. When done: lint + tsc (+ build if you touched routes), smoke via API, offer a PR if useful.
