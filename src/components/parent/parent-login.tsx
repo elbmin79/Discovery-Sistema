@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { QuickAccountSelect } from "@/components/ui/quick-account-select";
 import { FAMILY_ACCOUNTS } from "@/lib/auth/accounts";
@@ -8,6 +8,14 @@ import { useBrand } from "@/hooks/use-brand";
 import { postJson } from "@/hooks/use-snapshot";
 import type { DemoSession } from "@/lib/types";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 export function ParentLogin({
   t,
@@ -21,12 +29,8 @@ export function ParentLogin({
   const [quickUsername, setQuickUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
+  const ready = useIsClient();
   const { profile } = useBrand();
-
-  useEffect(() => {
-    setReady(true);
-  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
