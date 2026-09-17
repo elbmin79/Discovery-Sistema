@@ -59,12 +59,14 @@ export function ParentApp() {
   const contentRef = useRef<HTMLDivElement>(null);
   const { locale, t, toggle } = useLocale();
   const { session, setSession, clearSession } = useSession("parent");
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    const tick = () => setNow(new Date());
+    tick();
+    const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
   }, []);
-  const jornada = todayJornada(now);
+  const jornada = todayJornada(now ?? undefined);
   const [notice, setNotice] = useState<"planCancelled" | "lateSent" | "lateSentReplaced" | "lateUpdated" | "lateCancelled" | null>(null);
   const [tab, setTab] = useState<"home" | "settings">("home");
   const [step, setStep] = useState<"home" | "select" | "setup" | "late" | "calendario">("home");
