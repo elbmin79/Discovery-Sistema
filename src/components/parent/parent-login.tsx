@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { QuickAccountSelect } from "@/components/ui/quick-account-select";
 import { FAMILY_ACCOUNTS } from "@/lib/auth/accounts";
@@ -21,7 +21,12 @@ export function ParentLogin({
   const [quickUsername, setQuickUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
   const { profile } = useBrand();
+
+  useEffect(() => {
+    setReady(true);
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -50,63 +55,81 @@ export function ParentLogin({
           <p className="mt-1 text-sm text-muted">{t.loginHint}</p>
         </div>
 
-        <form onSubmit={submit} className="space-y-3">
-          <label className="block text-sm font-medium text-ink">
-            {t.loginUser}
-            <input
-              value={username}
-              onChange={(event) => {
-                setUsername(event.target.value);
-                setQuickUsername("");
-              }}
-              autoComplete="username"
-              className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
-            />
-          </label>
-          <label className="block text-sm font-medium text-ink">
-            {t.loginPassword}
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                setQuickUsername("");
-              }}
-              autoComplete="current-password"
-              className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
-            />
-          </label>
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
-          >
-            {t.loginAction}
-          </button>
-        </form>
+        {ready ? (
+          <form onSubmit={submit} className="space-y-3" autoComplete="on">
+            <label className="block text-sm font-medium text-ink">
+              {t.loginUser}
+              <input
+                value={username}
+                onChange={(event) => {
+                  setUsername(event.target.value);
+                  setQuickUsername("");
+                }}
+                name="username"
+                autoComplete="username"
+                className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
+              />
+            </label>
+            <label className="block text-sm font-medium text-ink">
+              {t.loginPassword}
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setQuickUsername("");
+                }}
+                name="password"
+                autoComplete="current-password"
+                className="mt-1 w-full rounded-2xl border border-line bg-paper px-4 py-3 text-base outline-none focus:border-forest"
+              />
+            </label>
+            {error ? <p className="text-sm text-danger">{error}</p> : null}
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full rounded-full bg-forest py-4 text-lg font-semibold text-paper disabled:opacity-50"
+            >
+              {t.loginAction}
+            </button>
+          </form>
+        ) : (
+          <div className="space-y-3" aria-hidden>
+            <div className="block text-sm font-medium text-ink">
+              {t.loginUser}
+              <div className="mt-1 h-[3.25rem] w-full rounded-2xl border border-line bg-paper" />
+            </div>
+            <div className="block text-sm font-medium text-ink">
+              {t.loginPassword}
+              <div className="mt-1 h-[3.25rem] w-full rounded-2xl border border-line bg-paper" />
+            </div>
+            <div className="h-14 w-full rounded-full bg-forest/40" />
+          </div>
+        )}
 
-        <QuickAccountSelect
-          accounts={FAMILY_ACCOUNTS}
-          value={quickUsername}
-          familyHint
-          label={t.quickAccount}
-          placeholder={t.quickAccountPick}
-          noneLabel={t.quickAccountNone}
-          onChange={(account) => {
-            if (!account) {
-              setQuickUsername("");
-              setUsername("");
-              setPassword("");
+        {ready ? (
+          <QuickAccountSelect
+            accounts={FAMILY_ACCOUNTS}
+            value={quickUsername}
+            familyHint
+            label={t.quickAccount}
+            placeholder={t.quickAccountPick}
+            noneLabel={t.quickAccountNone}
+            onChange={(account) => {
+              if (!account) {
+                setQuickUsername("");
+                setUsername("");
+                setPassword("");
+                setError(null);
+                return;
+              }
+              setQuickUsername(account.username);
+              setUsername(account.username);
+              setPassword(account.password);
               setError(null);
-              return;
-            }
-            setQuickUsername(account.username);
-            setUsername(account.username);
-            setPassword(account.password);
-            setError(null);
-          }}
-        />
+            }}
+          />
+        ) : null}
       </div>
 
       <footer className="mt-auto shrink-0 pb-3 pt-2 text-center text-[10px] leading-4 text-muted/70">

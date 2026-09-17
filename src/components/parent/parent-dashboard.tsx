@@ -36,7 +36,7 @@ export function ParentDashboard({
   childrenList: Student[];
   locale: Locale;
   t: Dictionary;
-  now: Date;
+  now: Date | null;
   hasLate: boolean;
   unreadCount: number;
   onCreate: () => void;
@@ -49,7 +49,7 @@ export function ParentDashboard({
     <div className="flex flex-col gap-3 pb-1">
       <header className="relative grid min-h-24 grid-cols-[minmax(0,1fr)_96px] items-center gap-1 pt-2 min-[400px]:grid-cols-[minmax(0,1fr)_112px]">
         <div className="relative z-10">
-          <p className="mb-1.5 text-xs font-medium text-muted">{now.toLocaleDateString(locale === "es" ? "es-MX" : "en-US", { timeZone: SCHOOL_TIMEZONE, weekday: "long", month: "long", day: "numeric" })}</p>
+          <p className="mb-1.5 text-xs font-medium text-muted">{now ? now.toLocaleDateString(locale === "es" ? "es-MX" : "en-US", { timeZone: SCHOOL_TIMEZONE, weekday: "long", month: "long", day: "numeric" }) : " "}</p>
           <h1 className="text-[31px] leading-[1.08] tracking-[-0.028em] text-forest-deep min-[400px]:text-[33px]">{t.homeHello.replace("{name}", guardian.firstName)}</h1>
           <p className="mt-1 text-sm leading-snug text-muted">{t.homeWelcome}</p>
         </div>
@@ -61,28 +61,31 @@ export function ParentDashboard({
           <h2 className="shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-forest-deep">{t.homeChildrenToday}</h2>
           <span className="h-px flex-1 bg-line" />
         </div>
-        <div className="flex flex-col gap-2">
+        <ul className="divide-y divide-line/70 overflow-hidden rounded-xl border border-line/60">
           {childrenList.map((child) => (
-            <div key={child.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line/60 px-3 py-2.5">
-              <StudentAvatar student={child} size="lg" />
-              <div className="min-w-0">
-                <p className="break-words text-sm font-medium text-ink">{child.firstName} {child.lastName}</p>
-                <p className="mt-0.5 text-xs leading-tight text-muted">{LEVEL_LABELS[child.level][locale]}</p>
-                <p className="mt-0.5 text-base font-semibold whitespace-nowrap tabular-nums tracking-tight text-ink">{child.dismissalTime}</p>
+            <li key={child.id} className="flex min-w-0 items-center gap-2.5 px-3 py-2">
+              <StudentAvatar student={child} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{child.firstName} {child.lastName}</p>
+                <p className="mt-0.5 truncate text-xs leading-tight text-muted">
+                  {LEVEL_LABELS[child.level][locale]}
+                  <span className="text-line"> · </span>
+                  <span className="font-semibold tabular-nums tracking-tight text-ink">{child.dismissalTime}</span>
+                </p>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
-      <section aria-label={withSchoolName(t.homeToday, profile.shortName)} className="relative overflow-hidden rounded-xl border border-[#e7e5df] bg-white/50 p-3.5">
-        <p className="flex items-center gap-2 text-xs text-muted"><span className="h-1.5 w-1.5 rounded-full bg-muted" />{t.homeNoPlan}</p>
-        <div className="relative mt-2 pr-14 min-[400px]:pr-16">
-          <h2 className="text-[25px] leading-[1.15] tracking-[-0.028em] text-forest-deep">{t.homePickupTitle}</h2>
-          <p className="mt-1 text-sm leading-snug text-muted">{t.homePickupHint}</p>
-          <Image src="/illustrations/pickup-pass.png" alt="" width={160} height={160} sizes="80px" className="absolute -top-3 -right-2 h-16 w-16 object-contain" />
+      <section aria-label={withSchoolName(t.homeToday, profile.shortName)} className="relative overflow-hidden rounded-xl border border-[#e7e5df] bg-white/50 p-3">
+        <p className="flex items-center gap-2 text-[11px] text-muted"><span className="h-1.5 w-1.5 rounded-full bg-muted" />{t.homeNoPlan}</p>
+        <div className="relative mt-1.5 pr-14 min-[400px]:pr-16">
+          <h2 className="text-[22px] leading-[1.12] tracking-[-0.028em] text-forest-deep">{t.homePickupTitle}</h2>
+          <p className="mt-0.5 text-xs leading-snug text-muted">{t.homePickupHint}</p>
+          <Image src="/illustrations/pickup-pass.png" alt="" width={160} height={160} sizes="80px" className="absolute -top-2 -right-2 h-14 w-14 object-contain" />
         </div>
-        <button type="button" onClick={onCreate} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-semibold text-paper shadow-[inset_0_1px_0_#ffffff12] transition-colors hover:bg-forest-deep focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest">{t.createPickup}<ArrowRight className="h-4 w-4" /></button>
+        <button type="button" onClick={onCreate} className="mt-2.5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-semibold text-paper shadow-[inset_0_1px_0_#ffffff12] transition-colors hover:bg-forest-deep focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest">{t.createPickup}<ArrowRight className="h-4 w-4" /></button>
       </section>
 
       <button type="button" aria-label={hasLate ? t.lateUpdate : t.lateCta} onClick={onLate} className="flex min-h-14 items-center gap-3 rounded-xl border border-[#e7e5df] bg-white/40 px-3.5 py-3 text-left transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold-deep">
