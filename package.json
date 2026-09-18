@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "history:backfill": "tsx scripts/history-maintenance.ts backfill",
     "history:retention": "tsx scripts/history-maintenance.ts retention",
-    "verify:supabase": "tsx scripts/verify-supabase.ts"
+    "verify:supabase": "tsx scripts/verify-supabase.ts",
+    "release": "node scripts/cut-release.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

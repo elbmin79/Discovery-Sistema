@@ -30,3 +30,8 @@ When the user writes `/pr` (or asks to verify/open a pull request / push changes
 with prod checks), read and apply `.opencode/skills/pr/SKILL.md`. Analyze the local
 diff vs `main`, run verifications, fix what is automatic, **stop** if manual action
 is needed in Supabase or Vercel, and only then commit/push/PR.
+
+# Release (promote-only)
+
+Production is **promote-only** on Vercel (merge to `main` stages; Promote goes live).
+See `docs/release.md`. After promote: `npm run release -- patch` (or minor/major).
